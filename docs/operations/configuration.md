@@ -14,6 +14,9 @@ inspect safely with `python -m invar_comms config-check` (secrets redacted).
 | `INVAR_META_APP_SECRET` | *(unset)* | Webhook signature verification |
 | `INVAR_META_WEBHOOK_VERIFY_TOKEN` | *(unset)* | Webhook subscription handshake |
 | `INVAR_META_ACCESS_TOKEN` | *(unset)* | Send API (future adapter) |
+| `INVAR_CHATWOOT_BASE_URL` | *(unset)* | Chatwoot deployment URL (ADR-0007; empty until live spike) |
+| `INVAR_CHATWOOT_BOT_TOKEN` | *(unset)* | Agent Bot access token (least-privilege; secret) |
+| `INVAR_CHATWOOT_WEBHOOK_SECRET` | *(unset)* | Verifies signed Chatwoot webhooks (secret) |
 | `INVAR_AI_PROVIDER_NAME` | `fake` | `fake` until a provider is selected via ADR |
 | `INVAR_AI_PROVIDER_API_KEY` | *(unset)* | Never required by the domain core |
 

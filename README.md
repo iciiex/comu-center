@@ -18,6 +18,11 @@ What exists today:
 - **Meta/Instagram preparation only**: unit-tested webhook handshake and
   `X-Hub-Signature-256` verification helpers. Live sending is *not* implemented
   and raises `LiveSendDisabled`. See `docs/integrations/meta-instagram.md`.
+- **Chatwoot spike (desk phase) done**: ADR-0007 — Chatwoot CE will own the
+  Instagram connection, the core attaches as an Agent Bot. Signed-webhook
+  verification + event mapping implemented and tested
+  (`adapters/chatwoot.py`); no Chatwoot is deployed yet — live phase in
+  `docs/spikes/0001-chatwoot-ce.md`.
 - CI (lint incl. security rules, type-check, tests, config validation,
   dependency audit, secret-pattern scan), Docker Compose dev skeleton
   (PostgreSQL, not exposed), and the docs below.

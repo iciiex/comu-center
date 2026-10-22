@@ -25,10 +25,12 @@ No live integrations.
    processing with idempotency + `control_version` CAS; audit store; FTS
    knowledge search (incl. Persian tokenization check) behind the eligibility
    gate. Preserve every foundation invariant as an integration test.
-3. **HTTP + Meta test integration** *(~1–2 weeks + Meta lead time)*
-   Thin FastAPI (or equivalent — small ADR) webhook endpoint using the
-   foundation's verification helpers; payload normalization verified against a
-   real test app; Send API client with 24h-window enforcement; test users
+3. **HTTP + live integration wiring** *(~1–2 weeks + Meta lead time; narrowed
+   by ADR-0007 — no direct Meta send in the PoC hot path)*
+   Thin FastAPI (or equivalent — small ADR) endpoint receiving Chatwoot Agent
+   Bot webhooks (signature verification already implemented); REST client for
+   Create Message / Toggle Status using the adapter's payload builders;
+   operator-identity mapping for takeover/resume (spike R6); test IG account
    end-to-end; then App Review submission. Live switches stay off until the
    acceptance criteria pass. *Parallel business track from day 1:* Meta app +
    business verification, DAMIISH FAQ v1 approval, escalation policy, privacy

@@ -35,6 +35,9 @@ class Settings:
     meta_access_token: str = field(default="", repr=False)
     ai_provider_name: str = "fake"
     ai_provider_api_key: str = field(default="", repr=False)
+    chatwoot_base_url: str = ""
+    chatwoot_bot_token: str = field(default="", repr=False)
+    chatwoot_webhook_secret: str = field(default="", repr=False)
 
     def validate(self) -> None:
         if self.env_name not in {"local", "test", "production"}:
@@ -70,6 +73,9 @@ class Settings:
                 f"meta_access_token: {present(self.meta_access_token)}",
                 f"ai_provider_name: {self.ai_provider_name}",
                 f"ai_provider_api_key: {present(self.ai_provider_api_key)}",
+                f"chatwoot_base_url: {self.chatwoot_base_url or 'not set'}",
+                f"chatwoot_bot_token: {present(self.chatwoot_bot_token)}",
+                f"chatwoot_webhook_secret: {present(self.chatwoot_webhook_secret)}",
             ]
         )
 
@@ -92,6 +98,9 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         meta_access_token=source.get("INVAR_META_ACCESS_TOKEN", ""),
         ai_provider_name=source.get("INVAR_AI_PROVIDER_NAME", "fake"),
         ai_provider_api_key=source.get("INVAR_AI_PROVIDER_API_KEY", ""),
+        chatwoot_base_url=source.get("INVAR_CHATWOOT_BASE_URL", "").rstrip("/"),
+        chatwoot_bot_token=source.get("INVAR_CHATWOOT_BOT_TOKEN", ""),
+        chatwoot_webhook_secret=source.get("INVAR_CHATWOOT_WEBHOOK_SECRET", ""),
     )
     settings.validate()
     return settings

@@ -1,6 +1,8 @@
 # ADR-0002: Chatwoot Community Edition as the (external) operator inbox
 
-Status: accepted as direction; **adoption gated on a PoC spike** — not yet deployed.
+Status: accepted as direction; desk spike done 2026-10-22
+(`docs/spikes/0001-chatwoot-ce.md`), integration shape decided in **ADR-0007**;
+**live deployment still pending** the spike's live-phase checklist.
 
 **Context.** Operators need a real inbox (queues, assignment, history) for the
 DAMIISH pilot. Building one is commodity work with high maintenance cost.

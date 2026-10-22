@@ -8,6 +8,7 @@
 | 0004 | Server-side conversation control with control_version guard |
 | 0005 | Defer Dify and n8n (licensing + no demonstrated need) |
 | 0006 | Official Meta APIs only; prepare, don't fake |
+| 0007 | Chatwoot owns the Instagram connection; core integrates as Agent Bot |
 
 Format: Context · Decision · Consequences · Alternatives rejected.
 Supersede, don't rewrite: a changed decision gets a new ADR.
