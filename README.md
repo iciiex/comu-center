@@ -28,9 +28,11 @@ What exists today:
   (PostgreSQL, not exposed), and the docs below.
 
 What does **not** exist yet (planned, see `docs/roadmap.md`): HTTP API/webhook
-endpoint, database persistence, operator inbox deployment (Chatwoot CE spike),
-any real AI provider, and any Meta connectivity. Nothing in this repo has
-messaged a real customer.
+endpoint, the **PostgreSQL** adapter (persistence contracts + a tested SQLite
+adapter exist — ADR-0008; `python -m invar_comms db-init` creates the local
+store), a deployed operator inbox (Chatwoot desk spike ✅, live deployment
+pending), any real AI provider, and any Meta connectivity. Nothing in this
+repo has messaged a real customer.
 
 ## Quick start (local)
 
