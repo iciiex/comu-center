@@ -60,7 +60,22 @@ def make_handler(settings: Settings, outbox: Outbox) -> type[BaseHTTPRequestHand
             except ValueError:
                 self._json(400, {"error": "invalid content-length"})
                 return None
-            if length < 0 or length > MAX_BODY_BYTES:
+            if length < 0:
+                self._json(400, {"error": "invalid content-length"})
+                return None
+            if length > MAX_BODY_BYTES:
+                # Discard the oversized body in bounded chunks before replying,
+                # so well-behaved clients get a clean 413 instead of a broken
+                # pipe. Absurd declarations just get their connection closed.
+                if length <= 16 * MAX_BODY_BYTES:
+                    remaining = length
+                    while remaining > 0:
+                        chunk = self.rfile.read(min(remaining, 65_536))
+                        if not chunk:
+                            break
+                        remaining -= len(chunk)
+                else:
+                    self.close_connection = True
                 self._json(413, {"error": "body too large"})
                 return None
             return self.rfile.read(length)
