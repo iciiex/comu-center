@@ -42,8 +42,8 @@ marked *planned* does not exist yet.
 | Domain core `invar_comms/domain` | Contracts & invariants: message v1, control state machine, authorization, knowledge eligibility, audit events. No I/O. | Implemented, tested |
 | Application `invar_comms/application` | Orchestration & send policy; the only path from suggestion to send. | Implemented (in-memory) |
 | Ports `invar_comms/ports` | Provider/channel/retrieval interfaces. | Implemented |
-| Adapters `invar_comms/adapters` | Fakes now; Meta IG stub (webhook verification only, sending disabled). | Fakes done; Meta stub |
-| Operator inbox | Human queue, assignment, reply UI. **Buy (Chatwoot CE), don't build** — ADR-0002. | Planned spike |
+| Adapters `invar_comms/adapters` | Fakes; Meta IG stub (verification only); Chatwoot event mapping + REST client; SQLite store; stdlib HTTP intake (verify → outbox → worker → processing). | Implemented & tested; live Chatwoot/Meta wiring pending infra |
+| Operator inbox | Human queue, assignment, reply UI. **Buy (Chatwoot CE), don't build** — ADR-0002/0007. | Desk spike done; live deployment pending Docker host |
 | Persistence | Messages/conversations/knowledge/audit + outbox. PostgreSQL is the production target (FTS first). | Repository contracts + SQLite adapter implemented & tested (ADR-0008); Postgres adapter pending infra |
 | Product adapters | DAMIISH/MAYGOOSH-specific knowledge & policies, *data and config*, not forks of the core. No AI access to product production DBs. | Planned |
 

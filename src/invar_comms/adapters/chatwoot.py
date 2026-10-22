@@ -99,6 +99,7 @@ class ChatwootSignal:
     conversation_key: str  # deterministic Invar conversation id: cw-{account}-{conv}
     message: InternalMessage | None = None
     detail: str = ""
+    actor_ref: str | None = None  # Chatwoot user id for operator-originated signals
 
 
 def _parse_timestamp(value: object) -> datetime:
@@ -168,9 +169,11 @@ def normalize_event(
 
     message_type = str(payload.get("message_type") or "").lower()
     if message_type == "outgoing" or sender_type == "user":
+        sender_id = sender.get("id")
         return ChatwootSignal(
             ChatwootSignalKind.OPERATOR_REPLIED, key,
-            detail=f"operator_chatwoot_id={sender.get('id')}",
+            detail=f"operator_chatwoot_id={sender_id}",
+            actor_ref=str(sender_id) if sender_id is not None else None,
         )
     if message_type != "incoming":
         return ChatwootSignal(ChatwootSignalKind.IGNORED, key,

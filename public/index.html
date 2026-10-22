@@ -24,7 +24,8 @@
 <main class="wrap">
   <section class="grid cards" aria-label="وضعیت اجزا">
     <article class="card"><h3>هسته‌ی دامنه (Python)</h3><p class="status ok">✅ پیاده‌سازی و تست‌شده</p><p>قرارداد پیام نسخه ۱، ماشین وضعیت کنترل مکالمه، مجوزدهی محصول‌محور، گیت دانش تأییدشده و ثبت رویداد (Audit).</p></article>
-    <article class="card"><h3>تست‌ها و CI</h3><p class="status ok">✅ ۳۶ تست پاس‌شده — CI سبز</p><p>ruff (شامل قوانین امنیتی)، mypy، pytest، ممیزی وابستگی و اسکن سکرت روی هر PR.</p></article>
+    <article class="card"><h3>تست‌ها و CI</h3><p class="status ok">✅ ۵۹ تست پاس‌شده — CI سبز</p><p>ruff (شامل قوانین امنیتی)، mypy، pytest، ممیزی وابستگی و اسکن سکرت روی هر PR.</p></article>
+    <article class="card"><h3>پایداری، صف پردازش و HTTP</h3><p class="status ok">✅ پیاده‌سازی و تست‌شده</p><p>ذخیره‌ی durable (SQLite پشت قرارداد ریپازیتوری)، صف Outbox با ورکر، و اندپوینت وب‌هوک امضاشده‌ی Chatwoot/Meta — PostgreSQL هدف نهایی است (ADR-0008/0009).</p></article>
     <article class="card"><h3>اینباکس اپراتور (Chatwoot)</h3><p class="status mid">🟡 اسپایک مستنداتی انجام شد (ADR-0007)</p><p>تصمیم: Chatwoot مالک اتصال اینستاگرام، هسته‌ی اینوار در نقش Agent Bot. استقرار زنده در انتظار هاست Docker است.</p></article>
     <article class="card"><h3>Meta / Instagram</h3><p class="status mid">🟡 فقط آماده‌سازی</p><p>تأیید امضای وب‌هوک پیاده شده؛ ارسال زنده عمداً غیرفعال است و هیچ پیامی به مشتری واقعی ارسال نشده.</p></article>
   </section>
@@ -66,7 +67,7 @@
     <ol class="roadmap">
       <li><strong>فاز زنده‌ی اسپایک Chatwoot</strong> روی هاست Docker + اکانت تست اینستاگرام (بدون مشتری واقعی).</li>
       <li><strong>آداپتر PostgreSQL</strong> پشت قرارداد پایداریِ آماده (هسته‌اش ✅ انجام شد) + جست‌وجوی تمام‌متن.</li>
-      <li><strong>اتصال HTTP</strong> به وب‌هوک Chatwoot و تست سرتاسری با کاربر تست، سپس Meta App Review.</li>
+      <li><strong>تست سرتاسری زنده</strong> با کاربر تست اینستاگرام (لایه‌ی HTTP آماده است ✅)، سپس Meta App Review.</li>
     </ol>
     <p class="note">ورودی‌های سمت کسب‌وکار که مسیر بحرانی را تعیین می‌کنند: ساخت Meta App و احراز کسب‌وکار، تأیید FAQ نسخه ۱ دامی‌ش، سیاست ارجاع به انسان و سیاست حریم خصوصی.</p>
     <p>

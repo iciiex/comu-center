@@ -27,12 +27,13 @@ What exists today:
   dependency audit, secret-pattern scan), Docker Compose dev skeleton
   (PostgreSQL, not exposed), and the docs below.
 
-What does **not** exist yet (planned, see `docs/roadmap.md`): HTTP API/webhook
-endpoint, the **PostgreSQL** adapter (persistence contracts + a tested SQLite
-adapter exist — ADR-0008; `python -m invar_comms db-init` creates the local
-store), a deployed operator inbox (Chatwoot desk spike ✅, live deployment
-pending), any real AI provider, and any Meta connectivity. Nothing in this
-repo has messaged a real customer.
+What does **not** exist yet (planned, see `docs/roadmap.md`): the
+**PostgreSQL** adapter (persistence contracts + a tested SQLite adapter exist
+— ADR-0008), a *deployed* operator inbox (Chatwoot desk spike ✅; the signed
+webhook HTTP endpoint, event processing, and REST client exist and are tested
+— ADR-0009 — but no live Chatwoot is connected), any real AI provider, and any
+Meta connectivity. `python -m invar_comms serve` / `worker` run the intake
+pipeline locally. Nothing in this repo has messaged a real customer.
 
 ## Quick start (local)
 

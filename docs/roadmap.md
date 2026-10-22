@@ -25,16 +25,17 @@ No live integrations.
    contract-tested. Remaining: PostgreSQL adapter against the same contracts
    on a real hosted DB (needs the Docker/hosting step), migration tooling,
    and FTS incl. the Persian tokenization check, ~3–5 days once infra exists.)*
-3. **HTTP + live integration wiring** *(~1–2 weeks + Meta lead time; narrowed
-   by ADR-0007 — no direct Meta send in the PoC hot path)*
-   Thin FastAPI (or equivalent — small ADR) endpoint receiving Chatwoot Agent
-   Bot webhooks (signature verification already implemented); REST client for
-   Create Message / Toggle Status using the adapter's payload builders;
-   operator-identity mapping for takeover/resume (spike R6); test IG account
-   end-to-end; then App Review submission. Live switches stay off until the
-   acceptance criteria pass. *Parallel business track from day 1:* Meta app +
-   business verification, DAMIISH FAQ v1 approval, escalation policy, privacy
-   policy — these, not code, are the likely critical path.
+3. **HTTP + live integration wiring** *(engineering core ✅ 2026-10-22 —
+   stdlib HTTP adapter (ADR-0009) with signed Chatwoot/Meta webhook intake →
+   outbox → processing with full send gate; Chatwoot REST client for Create
+   Message / Toggle Status, stub-tested; `serve`/`worker` CLI smoke-tested
+   end-to-end. Resume attribution (spike R6) is deliberately conservative:
+   a bare `pending` flip never resumes the AI, unmapped operator replies still
+   block it fail-safe. Remaining is not code-shaped: live Chatwoot + test IG
+   account on a Docker host, operator-identity mapping data, then Meta App
+   Review. Live switches stay off until the acceptance criteria pass.
+   *Parallel business track:* Meta app + business verification, DAMIISH FAQ
+   v1 approval, escalation policy, privacy policy — the likely critical path.)*
 
 Then: AI provider selection (terms/privacy/Persian quality/cost) behind the
 `AIProvider` port with shadow-mode (suggest-only) evaluation before any
