@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "invar-comms"
+version = "0.1.0"
+description = "Invar AI Operations & Communications Platform — provider-independent core (foundation)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary — see LICENSE.md" }
+authors = [{ name = "Invar" }]
+# The domain/application core intentionally has ZERO runtime dependencies.
+# Frameworks (HTTP, ORM, queues) belong in adapters added by later, justified work.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "pip-audit>=2.7",
+]
+
+[project.scripts]
+invar-comms = "invar_comms.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+# E/F pyflakes+pycodestyle, I imports, B bugbear, S bandit (security), UP pyupgrade
+select = ["E", "F", "I", "B", "S", "UP"]
+ignore = [
+  "S106", # hardcoded_password_funcarg: false positives on test fixtures / param names
+  "S107",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"] # asserts are the test mechanism
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "src"
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+files = ["src/invar_comms"]

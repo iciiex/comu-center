@@ -1,0 +1,44 @@
+# Local development only. Not a production deployment definition.
+# - PostgreSQL is NOT published to the host by default (no public DB exposure).
+#   Uncomment the `ports:` block only for local debugging on a trusted machine.
+# - Chatwoot is intentionally NOT included here yet: it is an external system to be
+#   evaluated in a dedicated spike (see docs/open-source-evaluation.md, docs/roadmap.md).
+name: invar-comms-dev
+
+services:
+  db:
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_DB: invar_comms
+      POSTGRES_USER: invar
+      # Local-dev placeholder only. Use a secrets manager / unique password elsewhere.
+      POSTGRES_PASSWORD: ${INVAR_POSTGRES_PASSWORD:-change-me-local-only}
+    volumes:
+      - invar_pgdata:/var/lib/postgresql/data
+    # ports:
+    #   - "127.0.0.1:5432:5432"  # localhost only, for local debugging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U invar -d invar_comms"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  core:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      INVAR_ENV: local
+      INVAR_ENABLED_PRODUCTS: damiish
+      INVAR_AI_SEND_ENABLED: "false"
+      INVAR_META_LIVE_SEND_ENABLED: "false"
+    # No HTTP server exists yet, so no ports are published.
+    restart: "no"
+
+volumes:
+  invar_pgdata:
