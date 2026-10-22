@@ -1,0 +1,33 @@
+# Secrets & local config — NEVER commit real credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local data / backups
+data/
+backups/
+*.sqlite3
+*.dump
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+*~

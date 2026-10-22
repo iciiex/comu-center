@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -e ".[dev]"
+
+      - name: Lint (ruff, incl. bandit security rules)
+        run: ruff check src tests
+
+      - name: Type-check (mypy)
+        run: mypy
+
+      - name: Tests (pytest)
+        run: pytest
+
+      - name: Configuration validation smoke test
+        run: python -m invar_comms config-check
+        env:
+          INVAR_ENV: test
+          INVAR_ENABLED_PRODUCTS: damiish
+
+      - name: Dependency vulnerability audit (pip-audit)
+        # The runtime core has zero dependencies; this audits the dev/tooling set.
+        run: pip-audit --skip-editable
+
+      - name: Secret-pattern scan (fail on high-confidence patterns)
+        # Lightweight guardrail; adopt a dedicated scanner (e.g. gitleaks) before
+        # handling real credentials in CI. This step fails the build on a match —
+        # it never silently passes.
+        run: |
+          if git grep -nE -- \
+            -e 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' \
+            -e '(ghp_|github_pat_|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})' \
+            -- ':!.github/workflows/ci.yml' ; then
+            echo "::error::Potential secret detected in tracked files"
+            exit 1
+          fi
+          echo "No high-confidence secret patterns found."
