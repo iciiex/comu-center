@@ -5,6 +5,8 @@ Routes:
 - POST /webhooks/chatwoot  signed Chatwoot Agent Bot events -> outbox (202)
 - GET  /webhooks/meta      Meta subscription handshake (exit-path prep)
 - POST /webhooks/meta      signed Meta events -> outbox (202)
+- GET  /api/conversations  operator inbox API (requires X-Operator-Token)
+- GET  /api/conversations/{id}  messages + audit for one conversation
 
 Security posture: signatures are verified on the RAW body before any parsing;
 missing configuration fails closed (503), bad signatures 401, oversized
@@ -15,10 +17,11 @@ Nothing here sends messages.
 
 from __future__ import annotations
 
+import hmac
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any
-from urllib.parse import parse_qs, urlparse
+from typing import TYPE_CHECKING, Any
+from urllib.parse import parse_qs, unquote, urlparse
 
 from .. import __version__
 from ..config import Settings
@@ -27,10 +30,15 @@ from ..ports.repositories import Outbox
 from .chatwoot import verify_chatwoot_signature
 from .meta_instagram import verify_payload_signature, verify_webhook_subscription
 
+if TYPE_CHECKING:
+    from .sqlite_store import SqliteStore
+
 MAX_BODY_BYTES = 1_048_576  # 1 MiB
 
 
-def make_handler(settings: Settings, outbox: Outbox) -> type[BaseHTTPRequestHandler]:
+def make_handler(
+    settings: Settings, outbox: Outbox, store: SqliteStore | None = None
+) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
         server_version = "InvarComms/0.1"
 
@@ -92,9 +100,61 @@ def make_handler(settings: Settings, outbox: Outbox) -> type[BaseHTTPRequestHand
             job_id = outbox.enqueue(job_type, payload)
             self._json(202, {"accepted": True, "job_id": job_id})
 
+        def _operator_authorized(self) -> bool:
+            if not settings.operator_token or store is None:
+                return False
+            provided = self.headers.get("X-Operator-Token") or ""
+            return hmac.compare_digest(provided, settings.operator_token)
+
         # -- routes ---------------------------------------------------------
         def do_GET(self) -> None:  # noqa: N802
             path = urlparse(self.path).path
+            if path == "/api/conversations" or path.startswith("/api/conversations/"):
+                if not settings.operator_token or store is None:
+                    self._json(503, {"error": "operator API not configured"})
+                    return
+                if not self._operator_authorized():
+                    self._json(401, {"error": "unauthorized"})
+                    return
+                if path == "/api/conversations":
+                    self._json(200, {"conversations": [
+                        {
+                            "conversation_id": c.conversation_id,
+                            "product_id": c.product_id,
+                            "channel": str(c.contact.channel),
+                            "external_contact_id": c.contact.external_contact_id,
+                            "control_state": str(c.state),
+                            "control_version": c.control_version,
+                            "human_owner_id": c.human_owner_id,
+                        } for c in store.conversations_list()
+                    ]})
+                    return
+                conversation_id = unquote(path.removeprefix("/api/conversations/"))
+                conversation = store.conversation_load(conversation_id)
+                if conversation is None:
+                    self._json(404, {"error": "conversation not found"})
+                    return
+                self._json(200, {
+                    "conversation_id": conversation_id,
+                    "control_state": str(conversation.state),
+                    "messages": [
+                        {
+                            "external_message_id": m.external_message_id,
+                            "direction": str(m.direction),
+                            "text": m.text,
+                            "occurred_at": m.occurred_at.isoformat(),
+                        } for m in store.messages_list(conversation_id)
+                    ],
+                    "audit": [
+                        {
+                            "event_type": str(e.event_type),
+                            "actor_id": e.actor_id,
+                            "detail": e.detail,
+                            "occurred_at": e.occurred_at.isoformat(),
+                        } for e in store.audit_list(conversation_id)
+                    ],
+                })
+                return
             if path == "/health":
                 self._json(200, {
                     "status": "ok", "service": "invar-comms",
@@ -170,7 +230,10 @@ def make_handler(settings: Settings, outbox: Outbox) -> type[BaseHTTPRequestHand
     return Handler
 
 
-def build_server(settings: Settings, outbox: Outbox) -> ThreadingHTTPServer:
+def build_server(
+    settings: Settings, outbox: Outbox, store: SqliteStore | None = None
+) -> ThreadingHTTPServer:
     return ThreadingHTTPServer(
-        (settings.http_host, settings.http_port), make_handler(settings, outbox)
+        (settings.http_host, settings.http_port),
+        make_handler(settings, outbox, store),
     )

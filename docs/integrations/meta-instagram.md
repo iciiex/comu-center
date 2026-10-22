@@ -1,7 +1,12 @@
 # Meta / Instagram integration plan (prepare, do not fake)
 
-Status: **not connected**. Implemented today: webhook handshake + signature
-verification helpers (tested). Sending raises `LiveSendDisabled`.
+Status: **implemented, not yet connected to a real account**. Implemented and
+tested today (ADR-0010): handshake + signature verification, webhook
+normalization of `entry[].messaging[]`, Graph send client
+(`POST /{version}/{ig_id}/messages`, refuses to run unless live switches +
+credentials are set), and processing through the core send gate — proven
+end-to-end against local stub AI/Graph servers. Connecting a real account is
+an owner-side task: `docs/operations/instagram-ai-setup-fa.md`.
 Verify every platform fact below against current official Meta documentation at
 build time — policies, permission names, and windows change.
 
