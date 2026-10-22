@@ -11,6 +11,7 @@
 | 0007 | Chatwoot owns the Instagram connection; core integrates as Agent Bot |
 | 0008 | SQLite adapter now (contract proof), PostgreSQL stays the target |
 | 0009 | Stdlib HTTP adapter for the PoC (no web framework yet) |
+| 0010 | Direct Meta integration for the single-account product mode |
 
 Format: Context · Decision · Consequences · Alternatives rejected.
 Supersede, don't rewrite: a changed decision gets a new ADR.

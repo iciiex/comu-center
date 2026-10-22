@@ -42,6 +42,12 @@ Then: AI provider selection (terms/privacy/Persian quality/cost) behind the
 auto-send; operator runbook; backup/restore drill; limited pilot with named
 test customers.
 
+> Update (ADR-0010): the **direct single-account product path is built and
+> stub-proven end-to-end** — Meta normalization/send, OpenAI-compatible AI
+> adapter (free tiers/local Ollama), token-gated inbox API, `kb-import`, and a
+> Persian owner setup guide. Next is the owner's live hookup (their Meta app +
+> public HTTPS), then shadow-mode evaluation on real FAQ traffic.
+
 ## Phase 2 — Harden & learn (after pilot evidence)
 Observability/alerts, retention & privacy implementation, lead classification
 v1, quality dashboards (resolution/escalation rates), pgvector *only if* FAQ

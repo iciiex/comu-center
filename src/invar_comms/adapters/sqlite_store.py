@@ -28,7 +28,15 @@ from ..domain.audit import AuditEvent, AuditEventType
 from ..domain.conversation import ControlState, Conversation
 from ..domain.errors import ConcurrencyConflict
 from ..domain.knowledge import ApprovalStatus, KnowledgeDocument, Sensitivity
-from ..domain.messages import Channel, ContactRef, InternalMessage
+from ..domain.messages import (
+    Channel,
+    ContactRef,
+    ContentType,
+    DeliveryStatus,
+    Direction,
+    InternalMessage,
+    ProcessingStatus,
+)
 from ..ports.repositories import OutboxJob
 
 SCHEMA = """
@@ -183,6 +191,49 @@ class SqliteStore:
             control_version=int(row["control_version"]),
             human_owner_id=row["human_owner_id"],
         )
+
+    def conversations_list(self, *, limit: int = 100) -> list[Conversation]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM conversations ORDER BY updated_at DESC LIMIT ?",
+                (max(limit, 0),),
+            ).fetchall()
+        result: list[Conversation] = []
+        for row in rows:
+            loaded = self.conversation_load(row["conversation_id"])
+            if loaded is not None:
+                result.append(loaded)
+        return result
+
+    def messages_list(self, conversation_id: str, *,
+                      limit: int = 200) -> list[InternalMessage]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM messages WHERE conversation_id=? "
+                "ORDER BY id LIMIT ?",
+                (conversation_id, max(limit, 0)),
+            ).fetchall()
+        messages: list[InternalMessage] = []
+        for row in rows:
+            messages.append(InternalMessage(
+                product_id=row["product_id"],
+                channel=Channel(row["channel"]),
+                channel_account_id=row["channel_account_id"],
+                external_contact_id=row["external_contact_id"],
+                conversation_id=row["conversation_id"],
+                external_event_id=row["external_event_id"],
+                external_message_id=row["external_message_id"],
+                direction=Direction(row["direction"]),
+                content_type=ContentType(row["content_type"]),
+                occurred_at=_parse(row["occurred_at"]) or datetime.now(UTC),
+                text=row["body_text"],
+                processing_status=ProcessingStatus(row["processing_status"]),
+                delivery_status=DeliveryStatus(row["delivery_status"]),
+                schema_version=int(row["schema_version"]),
+                correlation_id=row["correlation_id"],
+                metadata=json.loads(row["metadata_json"] or "{}"),
+            ))
+        return messages
 
     def conversation_save(
         self, conversation: Conversation, *, expected_version: int

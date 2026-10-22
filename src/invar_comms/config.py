@@ -43,6 +43,15 @@ class Settings:
     http_port: int = 8000
     # Format: "7=damiish:instagram:ig-acct-1,9=maygoosh:instagram:ig-acct-2"
     chatwoot_inbox_map: str = ""
+    # OpenAI-compatible AI provider (Gemini/Groq/OpenRouter/Ollama)
+    ai_api_base_url: str = ""
+    ai_model: str = ""
+    # Direct Meta integration: "17841400008460056=damiish,..."
+    meta_account_map: str = ""
+    meta_ig_account_id: str = ""
+    meta_graph_base_url: str = "https://graph.instagram.com"
+    meta_api_version: str = "v25.0"
+    operator_token: str = field(default="", repr=False)
 
     def validate(self) -> None:
         if self.env_name not in {"local", "test", "production"}:
@@ -61,6 +70,14 @@ class Settings:
             raise ValidationError(
                 "Meta live sending requires app secret, webhook verify token and access token"
             )
+        if self.meta_live_send_enabled and not self.meta_ig_account_id:
+            raise ValidationError(
+                "Meta live sending requires INVAR_META_IG_ACCOUNT_ID")
+        if self.ai_provider_name == "openai_compat" and not (
+                self.ai_api_base_url and self.ai_model):
+            raise ValidationError(
+                "openai_compat provider requires INVAR_AI_API_BASE_URL "
+                "and INVAR_AI_MODEL")
         if self.env_name == "production" and self.ai_send_enabled and not self.database_url:
             raise ValidationError("production AI sending requires INVAR_DATABASE_URL (audit store)")
 
@@ -86,6 +103,13 @@ class Settings:
                 f"sqlite_path: {self.sqlite_path}",
                 f"http: {self.http_host}:{self.http_port}",
                 f"chatwoot_inbox_map: {self.chatwoot_inbox_map or 'not set'}",
+                f"ai_api_base_url: {self.ai_api_base_url or 'not set'}",
+                f"ai_model: {self.ai_model or 'not set'}",
+                f"meta_account_map: {self.meta_account_map or 'not set'}",
+                f"meta_ig_account_id: {self.meta_ig_account_id or 'not set'}",
+                f"meta_graph_base_url: {self.meta_graph_base_url}",
+                f"meta_api_version: {self.meta_api_version}",
+                f"operator_token: {present(self.operator_token)}",
             ]
         )
 
@@ -119,6 +143,14 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         http_host=source.get("INVAR_HTTP_HOST", "127.0.0.1"),
         http_port=http_port,
         chatwoot_inbox_map=source.get("INVAR_CHATWOOT_INBOX_MAP", ""),
+        ai_api_base_url=source.get("INVAR_AI_API_BASE_URL", "").rstrip("/"),
+        ai_model=source.get("INVAR_AI_MODEL", ""),
+        meta_account_map=source.get("INVAR_META_ACCOUNT_MAP", ""),
+        meta_ig_account_id=source.get("INVAR_META_IG_ACCOUNT_ID", ""),
+        meta_graph_base_url=source.get(
+            "INVAR_META_GRAPH_BASE_URL", "https://graph.instagram.com").rstrip("/"),
+        meta_api_version=source.get("INVAR_META_API_VERSION", "v25.0"),
+        operator_token=source.get("INVAR_OPERATOR_TOKEN", ""),
     )
     settings.validate()
     return settings
