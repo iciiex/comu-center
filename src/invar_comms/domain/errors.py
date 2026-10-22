@@ -27,3 +27,12 @@ class AISendBlocked(DomainError):
 
 class LiveSendDisabled(DomainError):
     """Live sending to an external platform is not enabled / not implemented."""
+
+
+class ConcurrencyConflict(DomainError):
+    """Optimistic-concurrency check failed (stored control_version changed).
+
+    Raised by repositories on compare-and-swap saves: another writer changed
+    the conversation control state first, so this write must be discarded
+    and re-evaluated — never silently overwritten.
+    """

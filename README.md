@@ -27,10 +27,13 @@ What exists today:
   dependency audit, secret-pattern scan), Docker Compose dev skeleton
   (PostgreSQL, not exposed), and the docs below.
 
-What does **not** exist yet (planned, see `docs/roadmap.md`): HTTP API/webhook
-endpoint, database persistence, operator inbox deployment (Chatwoot CE spike),
-any real AI provider, and any Meta connectivity. Nothing in this repo has
-messaged a real customer.
+What does **not** exist yet (planned, see `docs/roadmap.md`): the
+**PostgreSQL** adapter (persistence contracts + a tested SQLite adapter exist
+— ADR-0008), a *deployed* operator inbox (Chatwoot desk spike ✅; the signed
+webhook HTTP endpoint, event processing, and REST client exist and are tested
+— ADR-0009 — but no live Chatwoot is connected), any real AI provider, and any
+Meta connectivity. `python -m invar_comms serve` / `worker` run the intake
+pipeline locally. Nothing in this repo has messaged a real customer.
 
 ## Quick start (local)
 
@@ -61,6 +64,14 @@ Optional Docker dev environment (requires Docker; PostgreSQL stays unexposed):
 docker compose config   # validate
 docker compose up db    # database only; the `core` service is a CLI skeleton
 ```
+
+## Demo site (Vercel)
+
+A static showcase + interactive simulation of the conversation-control rules
+lives in `public/` with a serverless health check in `api/health.py`. Deploy
+by importing this repo on Vercel (zero configuration — see
+`docs/operations/vercel-demo.md`). It is a demo: no channel is connected and
+nothing can message a customer from it.
 
 ## Safety defaults
 

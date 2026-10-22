@@ -38,12 +38,19 @@ class Settings:
     chatwoot_base_url: str = ""
     chatwoot_bot_token: str = field(default="", repr=False)
     chatwoot_webhook_secret: str = field(default="", repr=False)
+    sqlite_path: str = "data/invar_comms.sqlite3"
+    http_host: str = "127.0.0.1"
+    http_port: int = 8000
+    # Format: "7=damiish:instagram:ig-acct-1,9=maygoosh:instagram:ig-acct-2"
+    chatwoot_inbox_map: str = ""
 
     def validate(self) -> None:
         if self.env_name not in {"local", "test", "production"}:
             raise ValidationError(f"INVAR_ENV must be local|test|production, got {self.env_name!r}")
         if not self.enabled_products:
             raise ValidationError("INVAR_ENABLED_PRODUCTS must name at least one product")
+        if not 1 <= self.http_port <= 65535:
+            raise ValidationError(f"INVAR_HTTP_PORT out of range: {self.http_port}")
         if self.meta_live_send_enabled and not self.ai_send_enabled:
             raise ValidationError(
                 "Meta live sending requires INVAR_AI_SEND_ENABLED=true (explicit, separate switch)"
@@ -76,12 +83,19 @@ class Settings:
                 f"chatwoot_base_url: {self.chatwoot_base_url or 'not set'}",
                 f"chatwoot_bot_token: {present(self.chatwoot_bot_token)}",
                 f"chatwoot_webhook_secret: {present(self.chatwoot_webhook_secret)}",
+                f"sqlite_path: {self.sqlite_path}",
+                f"http: {self.http_host}:{self.http_port}",
+                f"chatwoot_inbox_map: {self.chatwoot_inbox_map or 'not set'}",
             ]
         )
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     source = os.environ if env is None else env
+    try:
+        http_port = int(source.get("INVAR_HTTP_PORT", "8000"))
+    except ValueError as exc:
+        raise ValidationError("INVAR_HTTP_PORT must be an integer") from exc
     products = frozenset(
         p.strip()
         for p in source.get("INVAR_ENABLED_PRODUCTS", "damiish").split(",")
@@ -101,6 +115,10 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         chatwoot_base_url=source.get("INVAR_CHATWOOT_BASE_URL", "").rstrip("/"),
         chatwoot_bot_token=source.get("INVAR_CHATWOOT_BOT_TOKEN", ""),
         chatwoot_webhook_secret=source.get("INVAR_CHATWOOT_WEBHOOK_SECRET", ""),
+        sqlite_path=source.get("INVAR_SQLITE_PATH", "data/invar_comms.sqlite3"),
+        http_host=source.get("INVAR_HTTP_HOST", "127.0.0.1"),
+        http_port=http_port,
+        chatwoot_inbox_map=source.get("INVAR_CHATWOOT_INBOX_MAP", ""),
     )
     settings.validate()
     return settings
