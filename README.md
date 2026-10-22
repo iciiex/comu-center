@@ -62,6 +62,14 @@ docker compose config   # validate
 docker compose up db    # database only; the `core` service is a CLI skeleton
 ```
 
+## Demo site (Vercel)
+
+A static showcase + interactive simulation of the conversation-control rules
+lives in `public/` with a serverless health check in `api/health.py`. Deploy
+by importing this repo on Vercel (zero configuration — see
+`docs/operations/vercel-demo.md`). It is a demo: no channel is connected and
+nothing can message a customer from it.
+
 ## Safety defaults
 
 - AI sending and Meta live sending are **off** unless explicitly enabled
