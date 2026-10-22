@@ -38,6 +38,7 @@ class Settings:
     chatwoot_base_url: str = ""
     chatwoot_bot_token: str = field(default="", repr=False)
     chatwoot_webhook_secret: str = field(default="", repr=False)
+    sqlite_path: str = "data/invar_comms.sqlite3"
 
     def validate(self) -> None:
         if self.env_name not in {"local", "test", "production"}:
@@ -76,6 +77,7 @@ class Settings:
                 f"chatwoot_base_url: {self.chatwoot_base_url or 'not set'}",
                 f"chatwoot_bot_token: {present(self.chatwoot_bot_token)}",
                 f"chatwoot_webhook_secret: {present(self.chatwoot_webhook_secret)}",
+                f"sqlite_path: {self.sqlite_path}",
             ]
         )
 
@@ -101,6 +103,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         chatwoot_base_url=source.get("INVAR_CHATWOOT_BASE_URL", "").rstrip("/"),
         chatwoot_bot_token=source.get("INVAR_CHATWOOT_BOT_TOKEN", ""),
         chatwoot_webhook_secret=source.get("INVAR_CHATWOOT_WEBHOOK_SECRET", ""),
+        sqlite_path=source.get("INVAR_SQLITE_PATH", "data/invar_comms.sqlite3"),
     )
     settings.validate()
     return settings

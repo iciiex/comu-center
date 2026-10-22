@@ -11,6 +11,7 @@ inspect safely with `python -m invar_comms config-check` (secrets redacted).
 | `INVAR_AI_SEND_ENABLED` | `false` | Global AI-send kill-switch. Off = suggestions/escalation only |
 | `INVAR_META_LIVE_SEND_ENABLED` | `false` | Second, separate switch; requires AI-send on + all Meta secrets, else startup error |
 | `INVAR_DATABASE_URL` | *(unset)* | Required in production before AI sending (audit persistence) |
+| `INVAR_SQLITE_PATH` | `data/invar_comms.sqlite3` | Local dev/test store only (ADR-0008); create with `python -m invar_comms db-init` |
 | `INVAR_META_APP_SECRET` | *(unset)* | Webhook signature verification |
 | `INVAR_META_WEBHOOK_VERIFY_TOKEN` | *(unset)* | Webhook subscription handshake |
 | `INVAR_META_ACCESS_TOKEN` | *(unset)* | Send API (future adapter) |

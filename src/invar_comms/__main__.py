@@ -1,4 +1,4 @@
-"""CLI entry points: `python -m invar_comms health|config-check`."""
+"""CLI entry points: `python -m invar_comms health|config-check|db-init`."""
 
 from __future__ import annotations
 
@@ -24,7 +24,22 @@ def main(argv: list[str] | None = None) -> int:
         print(settings.redacted_summary())
         print("configuration: valid")
         return 0
-    print(f"unknown command {command!r}; expected 'health' or 'config-check'", file=sys.stderr)
+    if command == "db-init":
+        try:
+            settings = load_settings()
+        except ValidationError as exc:
+            print(f"configuration error: {exc}", file=sys.stderr)
+            return 2
+        from .adapters.sqlite_store import SqliteStore
+
+        with SqliteStore(settings.sqlite_path) as store:
+            print(f"sqlite store ready: {settings.sqlite_path}")
+            print(f"tables: {', '.join(store.table_names())}")
+        return 0
+    print(
+        f"unknown command {command!r}; expected 'health', 'config-check' or 'db-init'",
+        file=sys.stderr,
+    )
     return 2
 
 

@@ -19,12 +19,12 @@ No live integrations.
    operator UX for "AI blocked until resume", roles/MFA reality in CE.
    Output: spike report + ADR confirming/revising ADR-0002; kill criteria =
    CE cannot represent our control states without forking.
-2. **Persistence + worker** *(~1–2 weeks)*
-   PostgreSQL repositories implementing the ports; apply/adapt
-   `db/migrations/0001_initial.sql` (migration tool ADR); DB-backed outbox/job
-   processing with idempotency + `control_version` CAS; audit store; FTS
-   knowledge search (incl. Persian tokenization check) behind the eligibility
-   gate. Preserve every foundation invariant as an integration test.
+2. **Persistence + worker** *(core ✅ 2026-10-22 — repository/outbox ports +
+   SQLite adapter with CAS `control_version`, restart-safe idempotency,
+   append-only audit, eligibility-filtered knowledge search, outbox worker;
+   contract-tested. Remaining: PostgreSQL adapter against the same contracts
+   on a real hosted DB (needs the Docker/hosting step), migration tooling,
+   and FTS incl. the Persian tokenization check, ~3–5 days once infra exists.)*
 3. **HTTP + live integration wiring** *(~1–2 weeks + Meta lead time; narrowed
    by ADR-0007 — no direct Meta send in the PoC hot path)*
    Thin FastAPI (or equivalent — small ADR) endpoint receiving Chatwoot Agent

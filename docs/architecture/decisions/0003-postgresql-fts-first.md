@@ -1,7 +1,8 @@
 # ADR-0003: PostgreSQL for operational data; full-text search before vectors
 
-Status: accepted as direction; persistence not yet implemented (schema proposed
-in `db/migrations/0001_initial.sql`).
+Status: accepted as direction. Persistence contracts implemented and proven
+via the SQLite adapter (ADR-0008); the PostgreSQL adapter itself is not yet
+built (schema proposed in `db/migrations/0001_initial.sql`).
 
 **Context.** Messages, conversations, knowledge, and audit need one durable,
 transactional store; conversation control needs atomic compare-and-swap on

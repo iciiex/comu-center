@@ -22,6 +22,7 @@ from ..domain.messages import InternalMessage, MessageDeduplicator
 from ..ports.ai_provider import AIProvider, ReplyRequest
 from ..ports.channel import ChannelAdapter
 from ..ports.knowledge_retrieval import KnowledgeRetriever
+from ..ports.repositories import Deduplicator
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,7 @@ class ConversationService:
         ai_actor: Actor,
         ai_send_enabled: bool = False,
         min_confidence: float = 0.7,
+        dedupe: Deduplicator | None = None,
     ) -> None:
         self._ai = ai
         self._channel = channel
@@ -51,7 +53,9 @@ class ConversationService:
         self._ai_actor = ai_actor
         self._ai_send_enabled = ai_send_enabled
         self._min_confidence = min_confidence
-        self._dedupe = MessageDeduplicator()
+        # Default: in-memory dedupe (tests). Persistent deployments inject a
+        # store-backed deduplicator so redeliveries survive restarts.
+        self._dedupe: Deduplicator = dedupe if dedupe is not None else MessageDeduplicator()
 
     def handle_inbound(
         self, conversation: Conversation, message: InternalMessage

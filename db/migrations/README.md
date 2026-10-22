@@ -1,9 +1,10 @@
 # Database migrations
 
-**Status: proposed, not yet executed by the application.** The foundation core is
-in-memory; the PostgreSQL persistence adapter is PoC task 2 (see
-`docs/roadmap.md`). `0001_initial.sql` is the reviewed starting point for that
-work so the domain contracts and the eventual schema evolve together.
+**Status: proposed, not yet executed against PostgreSQL.** The repository
+contracts are implemented and proven by the SQLite adapter
+(`adapters/sqlite_store.py`, ADR-0008) whose schema mirrors this one;
+`0001_initial.sql` remains the starting point for the PostgreSQL adapter so
+the domain contracts and the production schema evolve together.
 
 Discipline (from day one):
 
