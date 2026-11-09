@@ -12,7 +12,7 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from app.scoring import award_mission_approval
+from app.scoring import ScoringError, award_mission_approval, reverse_event
 
 
 class DomainError(Exception):
@@ -278,10 +278,51 @@ def review_submission(
 
 
 def score_event_for_source(conn: sqlite3.Connection, submission_id: str) -> sqlite3.Row | None:
+    """The *award* event for a submission (never a correction event)."""
     return conn.execute(
-        "SELECT * FROM score_events WHERE source_type = 'mission_submission' AND source_id = ?",
+        """SELECT * FROM score_events
+           WHERE source_type = 'mission_submission' AND source_id = ?
+             AND corrects_event_id IS NULL
+           ORDER BY created_at LIMIT 1""",
         (submission_id,),
     ).fetchone()
+
+
+def score_event_detail(conn: sqlite3.Connection, event_id: str) -> sqlite3.Row | None:
+    """Score event plus the org/submission context needed for authorization."""
+    return conn.execute(
+        """SELECT se.*, s.id AS submission_id, s.status AS submission_status,
+                  s.user_id AS owner_id, m.organization_id, m.title AS mission_title,
+                  u.full_name AS user_name
+           FROM score_events se
+           LEFT JOIN submissions s ON s.id = se.source_id
+           LEFT JOIN missions m ON m.id = s.mission_id
+           LEFT JOIN users u ON u.id = se.user_id
+           WHERE se.id = ?""",
+        (event_id,),
+    ).fetchone()
+
+
+def reversal_for(conn: sqlite3.Connection, event_id: str) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM score_events WHERE corrects_event_id = ?", (event_id,)
+    ).fetchone()
+
+
+def reverse_score_event(
+    conn: sqlite3.Connection, event: sqlite3.Row, actor, reason: str
+) -> tuple[sqlite3.Row, bool]:
+    """Correct an event with a negative event; maps scoring codes to domain codes."""
+    try:
+        return reverse_event(conn, event, actor.id, reason)
+    except ScoringError as exc:
+        code = str(exc)
+        messages = {
+            "REASON_REQUIRED": "برای اصلاح امتیاز، ثبت دلیل الزامی است.",
+            "ALREADY_REVERSED": "این امتیاز قبلاً اصلاح شده است.",
+            "CANNOT_REVERSE_CORRECTION": "رویداد اصلاحی خودش قابل اصلاح نیست.",
+        }
+        raise DomainError(code, messages.get(code, "امکان اصلاح این امتیاز وجود ندارد.")) from exc
 
 
 # ---------------------------------------------------------------------- wallet / board
@@ -297,7 +338,8 @@ def wallet_balance(conn: sqlite3.Connection, user_id: str) -> int:
 def score_history(conn: sqlite3.Connection, user_id: str, limit: int = 30) -> list[sqlite3.Row]:
     return conn.execute(
         """
-        SELECT se.*, m.title AS mission_title
+        SELECT se.*, m.title AS mission_title,
+               CASE WHEN se.corrects_event_id IS NULL THEN 'award' ELSE 'correction' END AS kind
         FROM score_events se
         LEFT JOIN submissions s ON s.id = se.source_id
         LEFT JOIN missions m ON m.id = s.mission_id

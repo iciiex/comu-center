@@ -144,3 +144,143 @@ def award_mission_approval(
 
     event = conn.execute("SELECT * FROM score_events WHERE id = ?", (event_id,)).fetchone()
     return event, True
+
+
+def reversal_of(conn: sqlite3.Connection, event_id: str) -> sqlite3.Row | None:
+    """Return the correction event that reverses ``event_id``, if any."""
+    return conn.execute(
+        "SELECT * FROM score_events WHERE corrects_event_id = ?", (event_id,)
+    ).fetchone()
+
+
+def reverse_event(
+    conn: sqlite3.Connection,
+    event: sqlite3.Row,
+    actor_id: str | None,
+    reason: str,
+) -> tuple[sqlite3.Row, bool]:
+    """Correct a score event with a new, negative event.
+
+    History is never edited or deleted: the reversal points at the original via
+    ``corrects_event_id`` and carries the negative points. Event, ledger entry,
+    wallet projection, outbox row and audit row are written in one transaction.
+
+    Raises ``ScoringError`` for: empty reason, reversing a reversal, reversing
+    the same event twice.
+    """
+    if not reason or not reason.strip():
+        raise ScoringError("REASON_REQUIRED")
+    if event["corrects_event_id"]:
+        raise ScoringError("CANNOT_REVERSE_CORRECTION")
+    if float(event["points"]) <= 0:
+        raise ScoringError("CANNOT_REVERSE_CORRECTION")
+    if reversal_of(conn, event["id"]) is not None:
+        raise ScoringError("ALREADY_REVERSED")
+
+    key = f"score.reversed:{event['id']}"
+    existing = _existing(conn, key)
+    if existing is not None:
+        raise ScoringError("ALREADY_REVERSED")
+
+    version = conn.execute(
+        "SELECT version FROM scoring_rule_versions WHERE id = ?",
+        (event["rule_version_id"],),
+    ).fetchone()
+    points = -abs(float(event["points"]))
+    occurred_at = _now()
+    explain = {
+        "rule_code": event["rule_code"],
+        "rule_version": version["version"] if version else None,
+        "calculation_type": "correction",
+        "conditions": {"event": "score.reversed"},
+        "input": {"corrects_event_id": event["id"], "original_points": event["points"]},
+        "output": {"points": points},
+        "reason": reason.strip(),
+        "is_sample": False,
+    }
+    event_id = str(uuid.uuid4())
+    try:
+        with conn:
+            conn.execute(
+                """
+                INSERT INTO score_events
+                  (id, user_id, source_type, source_id, rule_code, rule_version_id,
+                   points, occurred_at, idempotency_key, corrects_event_id, reason,
+                   explain_json, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    event_id,
+                    event["user_id"],
+                    event["source_type"],
+                    event["source_id"],
+                    event["rule_code"],
+                    event["rule_version_id"],
+                    points,
+                    occurred_at,
+                    key,
+                    event["id"],
+                    reason.strip(),
+                    json.dumps(explain, ensure_ascii=False),
+                    occurred_at,
+                ),
+            )
+            conn.execute(
+                """INSERT INTO point_transactions
+                   (id, user_id, score_event_id, amount, created_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (str(uuid.uuid4()), event["user_id"], event_id, points, occurred_at),
+            )
+            conn.execute(
+                """INSERT INTO point_wallets (user_id, balance, updated_at)
+                   VALUES (?, ?, ?)
+                   ON CONFLICT(user_id) DO UPDATE
+                     SET balance = balance + excluded.balance,
+                         updated_at = excluded.updated_at""",
+                (event["user_id"], points, occurred_at),
+            )
+            conn.execute(
+                """INSERT INTO outbox_events
+                   (id, event_type, payload_json, created_at, published_at)
+                   VALUES (?, 'score.reversed', ?, ?, NULL)""",
+                (
+                    str(uuid.uuid4()),
+                    json.dumps(
+                        {
+                            "score_event_id": event_id,
+                            "corrects_event_id": event["id"],
+                            "user_id": event["user_id"],
+                            "points": points,
+                        },
+                        ensure_ascii=False,
+                    ),
+                    occurred_at,
+                ),
+            )
+            conn.execute(
+                """INSERT INTO audit_logs
+                   (id, actor_id, action, entity_type, entity_id, detail_json, created_at)
+                   VALUES (?, ?, 'score.reversed', 'score_event', ?, ?, ?)""",
+                (
+                    str(uuid.uuid4()),
+                    actor_id,
+                    event_id,
+                    json.dumps(
+                        {
+                            "corrects_event_id": event["id"],
+                            "points": points,
+                            "reason": reason.strip(),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    occurred_at,
+                ),
+            )
+    except sqlite3.IntegrityError as exc:
+        # Concurrent duplicate: the unique correction index won the race.
+        if reversal_of(conn, event["id"]) is not None:
+            raise ScoringError("ALREADY_REVERSED") from exc
+        raise
+
+    created = conn.execute("SELECT * FROM score_events WHERE id = ?", (event_id,)).fetchone()
+    return created, True

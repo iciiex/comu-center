@@ -17,7 +17,10 @@
         <div class="hero" style="margin:12px 0 8px">
           <div class="hero__label">امتیاز ثبت‌شده</div>
           <div class="hero__points">+{{ event['points']|fa }}<small>امتیاز</small></div>
-          <div class="hero__foot"><span>پس از تأیید اپراتور</span></div>
+          <div class="hero__foot">
+            <span>پس از تأیید اپراتور</span>
+            {% if reversal %}<span class="pill pill--amber">اصلاح‌شده</span>{% endif %}
+          </div>
         </div>
       {% endif %}
       <p class="small muted mb-0">این امتیاز قابل ردیابی است: منبع، قانون و نسخه قانون در پایین آمده است.</p>
@@ -69,6 +72,36 @@
       </p>
     </div>
   {% endfor %}
+
+  {% if reversal %}
+    <div class="card card--flat" style="border-color:#f3c2be; background:#fff6f5">
+      <div class="card__title">این امتیاز اصلاح شده است</div>
+      <p class="small" style="margin:6px 0">
+        دلیل ثبت‌شده: {{ reversal['reason'] }}
+      </p>
+      <p class="tiny muted mb-0">
+        امتیاز اصلاحی {{ reversal['points']|fa }} · {{ reversal['occurred_at']|jdatetime }}
+        · رخداد اصلاحی <span style="direction:ltr">{{ reversal['id'][:8] }}…</span>
+      </p>
+    </div>
+  {% elif can_correct %}
+    <div class="card card--flat">
+      <div class="card__title">اصلاح امتیاز</div>
+      <p class="small muted" style="margin:4px 0 10px">
+        اصلاح، تاریخچه را حذف نمی‌کند: یک رخداد منفی جدید ثبت می‌شود و موجودی کیف و رتبه‌بندی
+        به‌صورت خودکار به‌روز می‌شوند. این عمل فقط برای مدیر سیستم مجاز است.
+      </p>
+      <form method="post" action="{{ url('/admin/score-events/' ~ event['id'] ~ '/reverse') }}" class="stack">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="field">
+          <label for="reason">دلیل اصلاح (الزامی)</label>
+          <textarea id="reason" name="reason" rows="3" required minlength="5"
+                    placeholder="مثلاً: تصویر تکراری بود و مأموریت دوباره انجام نشده است."></textarea>
+        </div>
+        <button class="btn btn--ghost" type="submit">ثبت اصلاح امتیاز</button>
+      </form>
+    </div>
+  {% endif %}
 
   {% if explain %}
     <div class="card card--flat">

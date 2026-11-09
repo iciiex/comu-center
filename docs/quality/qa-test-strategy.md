@@ -3,7 +3,7 @@
 - Status: **PARTIAL** — automated tests exist for the demo path; full strategy is doc 10.
 - Mode: P
 
-## Implemented automated coverage (34 tests)
+## Implemented automated coverage (43 tests)
 - Health/mode banner; login page and demo users.
 - Mission eligibility: date window, status, org (BR-001).
 - Submit → review → score end-to-end; second approval blocked; no duplicate events.
@@ -21,6 +21,9 @@
 - Persian 404 page for unknown routes.
 - Review queue pagination and page clamping.
 - Evidence retention purge: only old rows/files removed, audit row written, `--dry-run` deletes nothing.
+- Score corrections: negative event + ledger + wallet + outbox + audit; double correction 409; blank reason 409;
+  correction-of-correction rejected; admin-only (operator/visitor 403); cross-org 403; unknown event 404;
+  CSRF required; `/score` marks the correction; totals return to zero.
 
 ## Not covered yet
 - Sales import, reports, notifications (features not built).

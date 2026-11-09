@@ -16,10 +16,20 @@
       <div class="card card--flat" style="padding:14px 16px">
         <div class="card__row" style="align-items:flex-start">
           <div>
-            <div class="card__title" style="font-size:13.5px">{{ item['mission_title'] or 'رویداد امتیاز' }}</div>
+            <div class="card__title" style="font-size:13.5px">
+              {{ item['mission_title'] or 'رویداد امتیاز' }}
+              {% if item['kind'] == 'correction' %}<span class="pill pill--amber">اصلاح</span>{% endif %}
+            </div>
             <div class="card__meta">{{ item['occurred_at']|jdatetime }} · {{ item['rule_code'] }}</div>
+            {% if item['kind'] == 'correction' and item['reason'] %}
+              <div class="tiny muted">دلیل: {{ item['reason'] }}</div>
+            {% endif %}
           </div>
-          <span class="pill pill--points">+{{ item['points']|fa }}</span>
+          {% if item['kind'] == 'correction' %}
+            <span class="pill pill--amber">{{ item['points']|fa }}</span>
+          {% else %}
+            <span class="pill pill--points">+{{ item['points']|fa }}</span>
+          {% endif %}
         </div>
       </div>
     {% endfor %}

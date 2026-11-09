@@ -49,6 +49,7 @@
   {% if request.query_params.get('created') %}<div class="alert alert--ok">مأموریت به‌صورت پیش‌نویس ساخته شد؛ برای نمایش، آن را منتشر کنید.</div>{% endif %}
   {% if request.query_params.get('versioned') %}<div class="alert alert--info">نسخه جدید قانون امتیاز منتشر شد؛ امتیازهای گذشته تغییر نکرد.</div>{% endif %}
   {% if request.query_params.get('published') %}<div class="alert alert--ok">مأموریت منتشر شد.</div>{% endif %}
+  {% if request.query_params.get('reversed') %}<div class="alert alert--info">امتیاز اصلاح شد: یک رخداد منفی ثبت و موجودی کیف به‌روزرسانی شد. تاریخچه حذف نشده است.</div>{% endif %}
 
   {% block content %}{% endblock %}
 
