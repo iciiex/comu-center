@@ -1,18 +1,20 @@
-# Database migrations
+# Migrations
 
-**Status: proposed, not yet executed against PostgreSQL.** The repository
-contracts are implemented and proven by the SQLite adapter
-(`adapters/sqlite_store.py`, ADR-0008) whose schema mirrors this one;
-`0001_initial.sql` remains the starting point for the PostgreSQL adapter so
-the domain contracts and the production schema evolve together.
+Prototype policy (MODE: P):
 
-Discipline (from day one):
+- `0001_init.sql` is the complete schema and runs at app startup (idempotent `CREATE ... IF NOT EXISTS`).
+- There is **no** migration runner yet. Adding `0002_*.sql` without one is not supported; use
+  `make seed` for demo resets.
 
-1. Migrations are append-only and numbered; never edit an applied migration.
-2. Every migration is reviewed with its rollback/forward-fix plan.
-3. Apply with the migration tool chosen in PoC task 2 (candidate: Alembic, or
-   plain ordered SQL applied in a transaction — decide then, record an ADR).
-4. Back up before migrating any environment that holds real data
-   (`docs/operations/backup-and-recovery.md`).
-5. Product isolation is structural: every operational row carries `product_id`,
-   and uniqueness constraints are scoped by product/channel account.
+Before production (Harden):
+
+1. Adopt a versioned migration runner with explicit up/down.
+2. Move to PostgreSQL; the schema is written to be portable (UUID text keys, NUMERIC points,
+   partial unique index, ISO timestamps).
+3. No destructive migration without a tested backup/restore and a rollback plan.
+
+Rules that must survive any migration:
+
+- `score_events` is append-only.
+- `point_wallets.balance` is a projection of `point_transactions`, never the source of truth.
+- `scoring_rule_versions` is versioned; changes never rewrite history.

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}وضعیت مأموریت · کیلوس کلاب{% endblock %}
+{% block content %}
+  <p class="small" style="margin:4px 2px"><a href="/missions/{{ submission['mission_id'] }}">→ بازگشت به مأموریت</a></p>
+
+  {% if submission['status'] == 'submitted' %}
+    <div class="card" style="border-color:#f0d7a8; background:#fffaf0">
+      <h1 class="card__title">در انتظار بررسی</h1>
+      <p class="small muted mb-0">
+        درخواست شما ثبت شد و در صف بررسی اپراتور است. پس از تأیید، امتیاز به‌صورت خودکار ثبت می‌شود.
+      </p>
+    </div>
+  {% elif submission['status'] == 'approved' %}
+    <div class="card" style="border-color:#bfe3cb; background:#f3fbf6">
+      <h1 class="card__title">تأیید شد ✓</h1>
+      {% if event %}
+        <div class="hero" style="margin:12px 0 8px">
+          <div class="hero__label">امتیاز ثبت‌شده</div>
+          <div class="hero__points">+{{ event['points']|fa }}<small>امتیاز</small></div>
+          <div class="hero__foot"><span>پس از تأیید اپراتور</span></div>
+        </div>
+      {% endif %}
+      <p class="small muted mb-0">این امتیاز قابل ردیابی است: منبع، قانون و نسخه قانون در پایین آمده است.</p>
+    </div>
+  {% else %}
+    <div class="card" style="border-color:#f3c2be; background:#fff6f5">
+      <h1 class="card__title">رد شد</h1>
+      <p class="small mb-0">دلیل: {{ submission['rejection_reason'] or '—' }}</p>
+      <p class="tiny muted mb-0">برای این درخواست امتیازی ثبت نشده است.</p>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card__row" style="align-items:flex-start">
+      <div>
+        <div class="card__title">{{ submission['mission_title'] }}</div>
+        <div class="card__meta">{{ submission['created_at']|jdatetime }}</div>
+      </div>
+      <span class="pill pill--points">{{ submission['mission_points']|fa }} امتیاز</span>
+    </div>
+    {% if submission['note'] %}
+      <p class="small" style="margin:12px 0 0">{{ submission['note'] }}</p>
+    {% endif %}
+    {% if submission['rejection_reason'] %}
+      <div class="alert alert--error" style="margin:12px 0 0">دلیل رد: {{ submission['rejection_reason'] }}</div>
+    {% endif %}
+
+    <ul class="timeline mt-2">
+      <li><span class="dot dot--on"></span><span>ثبت درخواست — {{ submission['created_at']|jdatetime }}</span></li>
+      <li>
+        <span class="dot {{ 'dot--on' if submission['status'] != 'submitted' }}"></span>
+        <span>بررسی —
+          {% if submission['reviewed_at'] %}{{ submission['reviewed_at']|jdatetime }}{% else %}در انتظار{% endif %}
+        </span>
+      </li>
+      <li>
+        <span class="dot {{ 'dot--on' if event }}"></span>
+        <span>ثبت امتیاز — {% if event %}{{ event['occurred_at']|jdatetime }}{% else %}پس از تأیید{% endif %}</span>
+      </li>
+    </ul>
+  </div>
+
+  {% for evidence in evidences %}
+    <div class="card card--flat">
+      <div class="card__meta">تصویر شاهد</div>
+      <img class="evidence" src="/evidence/{{ evidence['id'] }}" alt="تصویر شاهد مأموریت">
+      <p class="tiny muted" style="margin:8px 0 0; direction:ltr; text-align:left">
+        sha256: {{ evidence['sha256'][:24] }}… · {{ evidence['content_type'] }}
+      </p>
+    </div>
+  {% endfor %}
+
+  {% if explain %}
+    <div class="card card--flat">
+      <div class="card__title">چرا این امتیاز؟</div>
+      <p class="small muted" style="margin:4px 0 10px">
+        قانون <b>{{ explain['rule_code'] }}</b> · نسخه {{ explain['rule_version']|fa }}
+        {% if explain['is_sample'] %}<span class="pill pill--amber">نمونه</span>{% endif %}
+      </p>
+      <pre class="explain">{{ explain | tojson(indent=2) }}</pre>
+    </div>
+  {% endif %}
+{% endblock %}

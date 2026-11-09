@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}صف بررسی · کیلوس کلاب{% endblock %}
+{% block content %}
+  <div class="section-head">
+    <h2>صف بررسی مأموریت‌ها</h2>
+    <span class="tiny muted">{{ rows|length|fa }} درخواست</span>
+  </div>
+
+  <div class="adminnav">
+    <a href="/admin/submissions?status=submitted" class="{{ 'is-active' if status == 'submitted' }}">در انتظار</a>
+    <a href="/admin/submissions?status=approved" class="{{ 'is-active' if status == 'approved' }}">تأییدشده</a>
+    <a href="/admin/submissions?status=rejected" class="{{ 'is-active' if status == 'rejected' }}">ردشده</a>
+  </div>
+
+  {% if rows %}
+    <div class="card card--flat">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ویزیتور</th><th>مأموریت</th><th>زمان ثبت</th><th>شاهد</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>{{ row['user_name'] }}</td>
+              <td>{{ row['mission_title'] }}</td>
+              <td class="tiny muted">{{ row['created_at']|jdatetime }}</td>
+              <td>{{ row['evidence_count']|fa }} تصویر</td>
+              <td><a class="btn btn--ghost btn--sm" href="/admin/submissions/{{ row['id'] }}">بررسی</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card center muted small">در این وضعیت درخواستی وجود ندارد.</div>
+  {% endif %}
+
+  <p class="tiny muted">
+    هر تأیید فقط یک رخداد امتیاز ایجاد می‌کند؛ تأیید دوباره امتیاز جدید نمی‌سازد (idempotency).
+  </p>
+{% endblock %}

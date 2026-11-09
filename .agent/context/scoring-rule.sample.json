@@ -1,0 +1,40 @@
+{
+  "_note": "SAMPLE ONLY — not an approved business rule. Replace values after OD-04/OD-05 decisions.",
+  "sample": true,
+  "status": "PROPOSED",
+  "rule_code": "MISSION_PHOTO_APPROVED_SAMPLE",
+  "event_type": "mission.approved",
+  "conditions": {
+    "mission_type": "photo_submission"
+  },
+  "calculation": {
+    "type": "fixed",
+    "points": 10
+  },
+  "effective_from": "2026-11-01T00:00:00+03:30",
+  "effective_to": null,
+  "priority": 100,
+  "version": 1,
+  "idempotency": {
+    "key_template": "mission.approved:{submission_id}",
+    "source_unique": ["source_type", "source_id", "rule_code", "rule_version_id"]
+  },
+  "explain_fields": ["rule_code", "version", "conditions_matched", "input", "points"],
+  "test_cases": [
+    {
+      "name": "approve_once",
+      "input": { "submission_id": "demo-sub-1", "mission_type": "photo_submission" },
+      "expect": { "points": "10", "events_created": 1 }
+    },
+    {
+      "name": "approve_twice_is_idempotent",
+      "input": { "submission_id": "demo-sub-1", "mission_type": "photo_submission" },
+      "expect": { "points": "10", "events_created": 0, "returns_existing": true }
+    },
+    {
+      "name": "non_photo_mission_does_not_match",
+      "input": { "submission_id": "demo-sub-2", "mission_type": "survey" },
+      "expect": { "points": "0", "events_created": 0 }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}امتیازهای من · کیلوس کلاب{% endblock %}
+{% block content %}
+  <section class="hero">
+    <div class="hero__label">موجودی امتیاز</div>
+    <div class="hero__points">{{ balance|fa }}<small>امتیاز</small></div>
+    <div class="hero__foot">
+      <span>امتیاز داخلی است و قابل برداشت یا تبدیل به پول نیست (OD-08).</span>
+    </div>
+  </section>
+
+  <div class="section-head"><h2>تاریخچه امتیاز</h2><span class="tiny muted">{{ history|length|fa }} رکورد</span></div>
+
+  {% if history %}
+    {% for item in history %}
+      <div class="card card--flat" style="padding:14px 16px">
+        <div class="card__row" style="align-items:flex-start">
+          <div>
+            <div class="card__title" style="font-size:13.5px">{{ item['mission_title'] or 'رویداد امتیاز' }}</div>
+            <div class="card__meta">{{ item['occurred_at']|jdatetime }} · {{ item['rule_code'] }}</div>
+          </div>
+          <span class="pill pill--points">+{{ item['points']|fa }}</span>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="card center muted small">
+      هنوز امتیازی ثبت نشده است. پس از تأیید اولین مأموریت، اینجا نمایش داده می‌شود.
+    </div>
+  {% endif %}
+
+  <div class="card card--flat tiny muted">
+    هر رکورد از یک «رخداد امتیاز» ساخته می‌شود؛ رخدادها حذف یا ویرایش نمی‌شوند و اصلاح فقط با رخداد جدید ثبت می‌شود.
+  </div>
+{% endblock %}

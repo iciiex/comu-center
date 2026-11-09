@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}خطا · کیلوس کلاب{% endblock %}
+{% block content %}
+  <div class="card center" style="padding:36px 22px">
+    <div style="font-size:40px">⛔</div>
+    <h1 class="card__title" style="font-size:18px">خطای {{ code|fa }}</h1>
+    <p class="muted small">{{ message }}</p>
+    <div class="row" style="justify-content:center; margin-top:14px">
+      <a class="btn btn--ghost" href="/home">بازگشت به خانه</a>
+      <a class="btn" href="/login">ورود</a>
+    </div>
+  </div>
+{% endblock %}

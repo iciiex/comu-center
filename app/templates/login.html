@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}ورود نمایشی · کیلوس کلاب{% endblock %}
+{% block content %}
+  <div class="card">
+    <h1 class="card__title">ورود به نسخه نمایشی</h1>
+    <p class="card__meta">
+      روش ورود واقعی (OTP / شناسه پرسنلی) هنوز تأیید نشده است (OD-01).
+      در این نسخه، یکی از کاربران نمونه را انتخاب کنید.
+    </p>
+    <form method="post" action="/demo-login" class="stack mt-2">
+      <div class="field">
+        <label for="user_id">کاربر نمایشی</label>
+        <select id="user_id" name="user_id" required>
+          {% for person in people %}
+            <option value="{{ person['id'] }}">
+              {{ person['full_name'] }} —
+              {% if person['role'] == 'visitor' %}ویزیتور{% elif person['role'] == 'operator' %}اپراتور{% else %}مدیر سیستم{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        <p class="field__hint">همه حساب‌ها و داده‌ها نمونه‌اند؛ هیچ پیامک واقعی ارسال نمی‌شود.</p>
+      </div>
+      <button class="btn btn--block" type="submit">ورود</button>
+    </form>
+  </div>
+
+  <div class="card card--flat">
+    <div class="card__title">این نسخه چه کاری انجام می‌دهد؟</div>
+    <ul class="small muted" style="padding-inline-start:18px; margin:8px 0 0">
+      <li>نمایش مأموریت‌های فعال طبق قواعد دسترسی</li>
+      <li>ثبت انجام مأموریت با تصویر شاهد</li>
+      <li>بررسی و تأیید توسط اپراتور</li>
+      <li>ثبت امتیاز قابل توضیح و بدون تکرار</li>
+      <li>کیف امتیاز و رتبه‌بندی دوره</li>
+    </ul>
+  </div>
+{% endblock %}

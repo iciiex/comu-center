@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>{% block title %}کیلوس کلاب{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+{% set wide = request.url.path.startswith('/admin') %}
+<div class="demo-strip">
+  محیط نمایشی (Prototype) — داده‌ها <b>نمونه</b> هستند و هیچ امتیاز یا پاداش واقعی ایجاد نمی‌شود.
+</div>
+
+<div class="shell {{ 'shell--wide' if wide }}">
+  <header class="topbar">
+    <a class="brand" href="{{ '/admin/submissions' if user and user.is_staff else '/home' }}">
+      <span class="brand__mark">ک</span>
+      <span class="brand__text">
+        <strong>کیلوس کلاب</strong>
+        <span>انگیزش و عملکرد شبکه فروش</span>
+      </span>
+    </a>
+    {% if user %}
+      <div class="userchip">
+        <span>{{ user.full_name }}</span>
+        <span class="userchip__role">
+          {% if user.role == 'visitor' %}ویزیتور{% elif user.role == 'operator' %}اپراتور{% else %}مدیر سیستم{% endif %}
+        </span>
+        <form method="post" action="/logout" class="mb-0">
+          <button class="btn btn--ghost btn--sm" type="submit">خروج</button>
+        </form>
+      </div>
+    {% endif %}
+  </header>
+
+  {% if wide and user %}
+    <nav class="adminnav">
+      <a href="/admin/submissions" class="{{ 'is-active' if active == 'queue' }}">صف بررسی</a>
+      <a href="/admin/missions" class="{{ 'is-active' if active == 'missions' }}">مأموریت‌ها</a>
+      <a href="/home">نمای ویزیتور</a>
+    </nav>
+  {% endif %}
+
+  {% if error %}<div class="alert alert--error">{{ error }}</div>{% endif %}
+  {% if request.query_params.get('ok') %}<div class="alert alert--ok">تأیید انجام شد و امتیاز ثبت شد.</div>{% endif %}
+  {% if request.query_params.get('created') %}<div class="alert alert--ok">مأموریت به‌صورت پیش‌نویس ساخته شد؛ برای نمایش، آن را منتشر کنید.</div>{% endif %}
+  {% if request.query_params.get('versioned') %}<div class="alert alert--info">نسخه جدید قانون امتیاز منتشر شد؛ امتیازهای گذشته تغییر نکرد.</div>{% endif %}
+  {% if request.query_params.get('published') %}<div class="alert alert--ok">مأموریت منتشر شد.</div>{% endif %}
+
+  {% block content %}{% endblock %}
+
+  <p class="footer-note">
+    Kiloos Club · Prototype · داده نمونه · <span class="tiny">MODE: P</span>
+  </p>
+</div>
+
+{% if user and not wide %}
+<nav class="nav">
+  <a href="/home" class="{{ 'is-active' if active == 'home' }}"><span class="nav__icon">⌂</span>خانه</a>
+  <a href="/missions" class="{{ 'is-active' if active == 'missions' }}"><span class="nav__icon">◎</span>مأموریت‌ها</a>
+  <a href="/leaderboard" class="{{ 'is-active' if active == 'leaderboard' }}"><span class="nav__icon">▲</span>رقابت</a>
+  <a href="/score" class="{{ 'is-active' if active == 'score' }}"><span class="nav__icon">✦</span>امتیازهای من</a>
+</nav>
+{% endif %}
+</body>
+</html>
