@@ -15,7 +15,7 @@
 
 <div class="shell {{ 'shell--wide' if wide }}">
   <header class="topbar">
-    <a class="brand" href="{{ '/admin/submissions' if user and user.is_staff else '/home' }}">
+    <a class="brand" href="{{ url('/admin/submissions' if user and user.is_staff else '/home') }}">
       <span class="brand__mark">ک</span>
       <span class="brand__text">
         <strong>کیلوس کلاب</strong>
@@ -28,7 +28,8 @@
         <span class="userchip__role">
           {% if user.role == 'visitor' %}ویزیتور{% elif user.role == 'operator' %}اپراتور{% else %}مدیر سیستم{% endif %}
         </span>
-        <form method="post" action="/logout" class="mb-0">
+        <form method="post" action="{{ url('/logout') }}" class="mb-0">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
           <button class="btn btn--ghost btn--sm" type="submit">خروج</button>
         </form>
       </div>
@@ -37,9 +38,9 @@
 
   {% if wide and user %}
     <nav class="adminnav">
-      <a href="/admin/submissions" class="{{ 'is-active' if active == 'queue' }}">صف بررسی</a>
-      <a href="/admin/missions" class="{{ 'is-active' if active == 'missions' }}">مأموریت‌ها</a>
-      <a href="/home">نمای ویزیتور</a>
+      <a href="{{ url('/admin/submissions') }}" class="{{ 'is-active' if active == 'queue' }}">صف بررسی</a>
+      <a href="{{ url('/admin/missions') }}" class="{{ 'is-active' if active == 'missions' }}">مأموریت‌ها</a>
+      <a href="{{ url('/home') }}">نمای ویزیتور</a>
     </nav>
   {% endif %}
 
@@ -58,10 +59,10 @@
 
 {% if user and not wide %}
 <nav class="nav">
-  <a href="/home" class="{{ 'is-active' if active == 'home' }}"><span class="nav__icon">⌂</span>خانه</a>
-  <a href="/missions" class="{{ 'is-active' if active == 'missions' }}"><span class="nav__icon">◎</span>مأموریت‌ها</a>
-  <a href="/leaderboard" class="{{ 'is-active' if active == 'leaderboard' }}"><span class="nav__icon">▲</span>رقابت</a>
-  <a href="/score" class="{{ 'is-active' if active == 'score' }}"><span class="nav__icon">✦</span>امتیازهای من</a>
+  <a href="{{ url('/home') }}" class="{{ 'is-active' if active == 'home' }}"><span class="nav__icon">⌂</span>خانه</a>
+  <a href="{{ url('/missions') }}" class="{{ 'is-active' if active == 'missions' }}"><span class="nav__icon">◎</span>مأموریت‌ها</a>
+  <a href="{{ url('/leaderboard') }}" class="{{ 'is-active' if active == 'leaderboard' }}"><span class="nav__icon">▲</span>رقابت</a>
+  <a href="{{ url('/score') }}" class="{{ 'is-active' if active == 'score' }}"><span class="nav__icon">✦</span>امتیازهای من</a>
 </nav>
 {% endif %}
 </body>

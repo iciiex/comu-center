@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.seed import PNG_1PX
-from tests.conftest import ADMIN, OPERATOR, OTHER_VISITOR, VISITOR, login, row_id
+from tests.conftest import ADMIN, OPERATOR, OTHER_VISITOR, VISITOR, login, post, row_id
 
 MISSION_ONE = "ثبت تصویر یخچال فروشگاه"
 MISSION_TWO = "چیدمان قفسه محصولات هدف"
@@ -16,7 +16,9 @@ MISSION_TWO = "چیدمان قفسه محصولات هدف"
 
 def submit(client: TestClient, settings: Settings, mission_title: str, request_id: str = "req-1"):
     mission_id = row_id(settings, "SELECT id FROM missions WHERE title = ?", (mission_title,))
-    return client.post(
+    return post(
+        client,
+        settings,
         f"/missions/{mission_id}/submissions",
         data={"request_id": request_id, "note": "نمونه ارسال تست"},
         files={"evidence": ("evidence.png", PNG_1PX, "image/png")},
@@ -60,7 +62,7 @@ def test_full_flow_approval_scores_once(client: TestClient, settings: Settings) 
     assert response.status_code == 200
     assert "در انتظار بررسی" in response.text
 
-    client.post("/logout")
+    post(client, settings, "/logout")
     login(client, settings, OPERATOR)
     queue = client.get("/admin/submissions")
     assert "سارا محمدی" in queue.text
@@ -71,14 +73,20 @@ def test_full_flow_approval_scores_once(client: TestClient, settings: Settings) 
            WHERE u.mobile = ? ORDER BY s.created_at DESC LIMIT 1""",
         (VISITOR,),
     )
-    approved = client.post(
-        f"/admin/submissions/{submission_id}/review", data={"decision": "approve", "reason": ""}
+    approved = post(
+        client,
+        settings,
+        f"/admin/submissions/{submission_id}/review",
+        data={"decision": "approve", "reason": ""},
     )
     assert approved.status_code == 200
 
     # Second decision is rejected by the state machine — no second score event.
-    again = client.post(
-        f"/admin/submissions/{submission_id}/review", data={"decision": "approve", "reason": ""}
+    again = post(
+        client,
+        settings,
+        f"/admin/submissions/{submission_id}/review",
+        data={"decision": "approve", "reason": ""},
     )
     assert again.status_code == 409
     assert "قبلاً بررسی شده" in again.text
@@ -106,7 +114,7 @@ def test_full_flow_approval_scores_once(client: TestClient, settings: Settings) 
     finally:
         conn.close()
 
-    client.post("/logout")
+    post(client, settings, "/logout")
     login(client, settings, VISITOR)
     score_page = client.get("/score")
     assert "۱۰" in score_page.text
@@ -122,15 +130,20 @@ def test_reject_requires_reason_and_awards_nothing(client: TestClient, settings:
         ("req-reject",),
     )
 
-    client.post("/logout")
+    post(client, settings, "/logout")
     login(client, settings, OPERATOR)
-    missing_reason = client.post(
-        f"/admin/submissions/{submission_id}/review", data={"decision": "reject", "reason": ""}
+    missing_reason = post(
+        client,
+        settings,
+        f"/admin/submissions/{submission_id}/review",
+        data={"decision": "reject", "reason": ""},
     )
     assert missing_reason.status_code == 409
     assert "دلیل" in missing_reason.text
 
-    rejected = client.post(
+    rejected = post(
+        client,
+        settings,
         f"/admin/submissions/{submission_id}/review",
         data={"decision": "reject", "reason": "تصویر شاهد واضح نیست."},
     )
@@ -152,7 +165,7 @@ def test_visitors_and_operators_have_no_admin_powers(
     login(client, settings, VISITOR)
     assert client.get("/admin/submissions").status_code == 403
 
-    client.post("/logout")
+    post(client, settings, "/logout")
     login(client, settings, OPERATOR)
     assert client.get("/admin/submissions").status_code == 200
     assert client.get("/admin/missions/new").status_code == 403
@@ -181,7 +194,9 @@ def test_mission_edit_publishes_new_rule_version(
     mission_id = row_id(settings, "SELECT id FROM missions WHERE title = ?", (MISSION_ONE,))
 
     login(client, settings, ADMIN)
-    response = client.post(
+    response = post(
+        client,
+        settings,
         f"/admin/missions/{mission_id}",
         data={
             "title": MISSION_ONE,
@@ -247,9 +262,11 @@ def test_approve_redirect_keeps_queue_filter(client: TestClient, settings: Setti
         settings, "SELECT id FROM submissions WHERE request_id = ?", ("req-redirect",)
     )
 
-    client.post("/logout")
+    post(client, settings, "/logout")
     login(client, settings, OPERATOR)
-    response = client.post(
+    response = post(
+        client,
+        settings,
         f"/admin/submissions/{submission_id}/review",
         data={"decision": "approve", "reason": ""},
         follow_redirects=False,

@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import create_app
+from app.security import COOKIE_NAME, csrf_for
 
 
 @pytest.fixture
@@ -36,6 +37,30 @@ def db(client: TestClient, settings: Settings) -> Iterator[sqlite3.Connection]:
         yield conn
     finally:
         conn.close()
+
+
+def csrf(client: TestClient, settings: Settings) -> str:
+    """CSRF value for the session currently held by the test client."""
+    token = (client.cookies.get(COOKIE_NAME) or "").strip('"')
+    assert token, "no session cookie; call login() first"
+    return csrf_for(token, settings.secret)
+
+
+def post(
+    client: TestClient,
+    settings: Settings,
+    path: str,
+    *,
+    data: dict | None = None,
+    files: dict | None = None,
+    follow_redirects: bool = True,
+):
+    """POST a form with a valid CSRF token (unlike the real form, this is explicit)."""
+    payload = dict(data or {})
+    payload["csrf"] = csrf(client, settings)
+    if files is not None:
+        return client.post(path, data=payload, files=files, follow_redirects=follow_redirects)
+    return client.post(path, data=payload, follow_redirects=follow_redirects)
 
 
 def login(client: TestClient, settings: Settings, mobile: str) -> None:

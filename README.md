@@ -17,6 +17,12 @@ make check     # ruff + pytest
 make seed      # بازسازی دیتابیس دمو
 ```
 
+نگهداری (پاک‌سازی شاهدهای قدیمی — سیاست نمونه، D-003):
+
+```bash
+.venv/bin/python -m app.maintenance purge-evidence --dry-run
+```
+
 بدون Make:
 
 ```bash
@@ -26,6 +32,10 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 ```
 
 اولین اجرا، دیتابیس `var/kiloos.db` را می‌سازد و داده نمونه را seed می‌کند (`var/` در git نیست).
+
+سشن با توکن امضاشده کار می‌کند: کوکی `kiloos_session` و در محیط‌هایی که کوکی بلاک می‌شود (پیش‌نمایش
+داخل iframe) همان توکن به‌صورت `?s=` در URL. این یک راه‌حل موقت دمو است (D-002)؛ همه‌ی فرم‌ها
+فیلد CSRF دارند و ورود دمو محدودیت نرخ دارد.
 
 ### حساب‌های نمایشی
 

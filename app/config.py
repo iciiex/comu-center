@@ -10,12 +10,30 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEV_FALLBACK_KEY = "dev-only-change-me"
 
 
+def _int_env(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        value = int(raw)
+    except ValueError as exc:  # pragma: no cover - configuration error path
+        raise RuntimeError(f"{name} must be an integer, got {raw!r}") from exc
+    if value <= 0:
+        raise RuntimeError(f"{name} must be positive, got {value}")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     env: str
     db_path: Path
     evidence_dir: Path
     secret: str
+    session_ttl_seconds: int = 12 * 60 * 60
+    login_rate_limit: int = 10
+    login_rate_window: int = 60
+    evidence_retention_days: int = 90
+    queue_page_size: int = 20
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -24,6 +42,11 @@ class Settings:
             db_path=Path(os.getenv("KILOOS_DB", REPO_ROOT / "var" / "kiloos.db")),
             evidence_dir=Path(os.getenv("KILOOS_EVIDENCE_DIR", REPO_ROOT / "var" / "evidence")),
             secret=os.getenv("KILOOS_SECRET", DEV_FALLBACK_KEY),
+            session_ttl_seconds=_int_env("KILOOS_SESSION_TTL", 12 * 60 * 60),
+            login_rate_limit=_int_env("KILOOS_LOGIN_RATE_LIMIT", 10),
+            login_rate_window=_int_env("KILOOS_LOGIN_RATE_WINDOW", 60),
+            evidence_retention_days=_int_env("KILOOS_EVIDENCE_RETENTION_DAYS", 90),
+            queue_page_size=_int_env("KILOOS_QUEUE_PAGE_SIZE", 20),
         )
 
     def validate(self) -> None:

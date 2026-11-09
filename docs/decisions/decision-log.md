@@ -43,3 +43,55 @@ PostgreSQL/OTP/CSRF/storage تصمیم‌گیری شود.
 
 **Affected docs:** `docs/architecture/decisions/0001-fastapi-sqlite-prototype.md`،
 `docs/architecture/database-erd.md`، `docs/engineering/api-spec.md`
+
+---
+
+## D-002 — حمل سشن با توکن امضاشده در URL (فقط دمو)
+
+- Status: PROPOSED
+- Date: 2026-11-09
+- Approved by: —
+- Owners: Engineering / Security
+- Related: OD-01 / MS-01 / ADR-0001
+
+**Problem:** پیش‌نمایش مشترک داخل iframe اجرا می‌شود و مرورگر کوکی سشن را به‌عنوان third-party بلاک
+می‌کند؛ نتیجه: هر ورود بلافاصله به `/login` برمی‌گشت (۳۰۳).
+
+**Decision (موقت):** همان توکن امضاشده‌ی سشن (`HMAC-SHA256`، TTL پیش‌فرض ۱۲ ساعت) علاوه بر کوکی
+`kiloos_session`، به‌صورت `?s=` در URL هم پذیرفته و در لینک‌ها/فرم‌ها/ریدایرکت‌ها منتقل می‌شود.
+در حالت کوکی، URL تمیز می‌ماند.
+
+**Rationale:** بدون آن، دموی MS-01 در محیط ارائه کار نمی‌کند؛ هیچ راه دیگری (کوکی first-party،
+SameSite=None، ذخیره‌سازی محلی) در iframe قابل اتکا نبود.
+
+**Consequences / ریسک‌ها:** توکن در history، لاگ سرور و Referer دیده می‌شود؛ `Referrer-Policy: no-referrer`
+و TTL کوتاه ریسک را کم می‌کند ولی حذف نمی‌کند. ورود و خروج، کوکی را هم ست/پاک می‌کند تا مسیر
+معمولی سالم بماند.
+
+**Exit condition:** پیش از کاربر واقعی، یکی از این دو: (۱) میزبانی first-party بدون iframe، یا
+(۲) OTP واقعی + سشن سمت سرور (OD-01). در آن نقطه `?s=` حذف می‌شود و تست‌های fallback هم برداشته می‌شوند.
+
+**Affected docs:** `docs/engineering/api-spec.md` (Session transport)، `docs/handoffs/current-state.md`،
+`app/security.py`، `app/main.py`
+
+---
+
+## D-003 — سیاست نگهداری شاهد تصویری (پیش‌فرض نمونه)
+
+- Status: PROPOSED
+- Date: 2026-11-09
+- Approved by: —
+- Owners: Operations / Legal
+- Related: OD-03 / evidence retention (open architecture decision)
+
+**Decision (موقت):** شاهدهای تصویری قدیمی‌تر از `KILOOS_EVIDENCE_RETENTION_DAYS` (پیش‌فرض ۹۰ روز)
+با دستور دستی `python -m app.maintenance purge-evidence` حذف می‌شوند: فایل پاک، ردیف
+`submission_evidences` حذف، و یک رکورد `audit_logs` با `action='evidence.purged'` شامل
+`submission_id`، `sha256` و `storage_path` باقی می‌ماند.
+
+**Rationale:** جلوگیری از رشد بی‌پایان فایل‌ها هم‌زمان با حفظ قابلیت ردیابی تصمیم‌ها.
+
+**Consequences:** ۹۰ روز یک عدد نمونه است و باید توسط کارفرما تأیید شود؛ تا آن زمان هیچ حذف خودکار
+زمان‌بندی‌شده‌ای وجود ندارد (دستور دستی + `--dry-run`).
+
+**Affected docs:** `docs/operations/runbook.md`، `app/maintenance.py`

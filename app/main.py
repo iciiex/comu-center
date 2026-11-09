@@ -7,16 +7,21 @@ Scope: the end-to-end demo path from `.agent/playbooks/prototype-9-days.md`.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import sqlite3
+import threading
+import time
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from jinja2 import pass_context
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import db, repo
 from app.config import Settings
@@ -25,7 +30,12 @@ from app.repo import DomainError
 from app.security import (
     CurrentUser,
     clear_session,
+    csrf_for,
+    csrf_token,
     current_user,
+    make_token,
+    read_token,
+    session_token,
     set_session,
 )
 
@@ -57,6 +67,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     templates.env.filters["jdatetime"] = lambda v: format_jalali(v, with_time=True)
     app.state.templates = templates
 
+    def url_session(request: Request) -> str | None:
+        """The token to keep in internal links — only when it came from the URL."""
+        candidate = request.query_params.get("s")
+        if candidate and read_token(
+            candidate, settings.secret, ttl_seconds=settings.session_ttl_seconds
+        ):
+            return candidate
+        return None
+
+    def with_token(path: str, token: str | None) -> str:
+        if not token:
+            return path
+        separator = "&" if "?" in path else "?"
+        return f"{path}{separator}s={token}"
+
+    @pass_context
+    def url(ctx, path: str) -> str:
+        return with_token(path, ctx.get("s"))
+
+    templates.env.globals["url"] = url
+
+    def go(path: str, request: Request) -> RedirectResponse:
+        return RedirectResponse(with_token(path, url_session(request)), status_code=303)
+
     def page(
         request: Request,
         name: str,
@@ -70,6 +104,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "user": user,
             "active": context.pop("active", ""),
             "demo": True,
+            "s": url_session(request),
+            "csrf": csrf_token(request),
         }
         base.update(context)
         return templates.TemplateResponse(
@@ -116,6 +152,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def _login_required(request: Request, exc: LoginRequired) -> RedirectResponse:
         return RedirectResponse("/login", status_code=303)
 
+    ERROR_MESSAGES = {
+        400: "درخواست نامعتبر است.",
+        403: "دسترسی به این بخش مجاز نیست.",
+        404: "صفحه یا مورد درخواستی یافت نشد.",
+        405: "این عملیات مجاز نیست.",
+        422: "داده‌های ارسالی معتبر نیست.",
+        429: "تعداد درخواست‌ها بیش از حد مجاز است.",
+    }
+
     @app.exception_handler(HTTPException)
     async def _http_error(request: Request, exc: HTTPException) -> HTMLResponse:
         return page(
@@ -124,6 +169,91 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             {"message": exc.detail or "خطای غیرمنتظره", "code": exc.status_code},
             status_code=exc.status_code,
         )
+
+    @app.exception_handler(StarletteHTTPException)
+    async def _starlette_error(
+        request: Request, exc: StarletteHTTPException
+    ) -> HTMLResponse:
+        detail = exc.detail if isinstance(exc.detail, str) else ""
+        message = (
+            detail
+            if detail and detail not in {"Not Found", "Method Not Allowed"}
+            else ERROR_MESSAGES.get(exc.status_code, "خطای غیرمنتظره")
+        )
+        return page(
+            request,
+            "error.html",
+            {"message": message, "code": exc.status_code},
+            status_code=exc.status_code,
+        )
+
+    # ---------------------------------------------------------- hardening
+    SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+    CSRF_EXEMPT = {"/demo-login"}  # no session exists yet; documented in api-spec
+
+    app.state.login_attempts: dict[str, list[float]] = {}
+    app.state.login_lock = threading.Lock()
+
+    def login_rate_limited(key: str) -> bool:
+        """In-memory token bucket. Single-process only (documented limitation)."""
+        moment = time.monotonic()
+        window = settings.login_rate_window
+        with app.state.login_lock:
+            hits = [t for t in app.state.login_attempts.get(key, []) if moment - t < window]
+            limited = len(hits) >= settings.login_rate_limit
+            if not limited:
+                hits.append(moment)
+            app.state.login_attempts[key] = hits
+            return limited
+
+    async def csrf_guard(request: Request) -> None:
+        """Reject form posts whose CSRF value does not match the session token.
+
+        Implemented as a route dependency (not middleware) so the parsed form is
+        cached and multipart uploads stay intact for the handler.
+        """
+        if request.method in SAFE_METHODS or request.url.path in CSRF_EXEMPT:
+            return
+        token = session_token(request)
+        if token is None:
+            raise LoginRequired()
+        form = await request.form()
+        supplied = str(form.get("csrf") or "")
+        if not hmac.compare_digest(supplied, csrf_for(token, settings.secret)):
+            raise HTTPException(
+                status_code=403,
+                detail="اعتبار فرم منقضی شده است؛ صفحه را دوباره بارگذاری کنید.",
+            )
+
+    @app.middleware("http")
+    async def hardening(request: Request, call_next):
+        if request.method == "POST" and request.url.path == "/demo-login":
+            client_ip = request.client.host if request.client else "unknown"
+            if login_rate_limited(client_ip):
+                return page(
+                    request,
+                    "error.html",
+                    {
+                        "code": 429,
+                        "message": (
+                            "تلاش‌های ورود بیش از حد مجاز است؛ "
+                            "یک دقیقه بعد دوباره امتحان کنید."
+                        ),
+                    },
+                    status_code=429,
+                )
+
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+        # frame-ancestors stays open on purpose: the shared preview embeds this app
+        # in an iframe. Narrow it before real users (documented in api-spec).
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
+            "form-action 'self'; base-uri 'self'; frame-ancestors *"
+        )
+        return response
 
     # ------------------------------------------------------------------ public
     @app.get("/health")
@@ -141,7 +271,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/", response_class=HTMLResponse)
     def root(request: Request, conn: sqlite3.Connection = Depends(conn_dep)):
         user = current_user(request, conn)
-        return RedirectResponse("/home" if user else "/login", status_code=303)
+        return go("/home" if user else "/login", request)
 
     @app.get("/login", response_class=HTMLResponse)
     def login_page(request: Request, conn: sqlite3.Connection = Depends(conn_dep)):
@@ -164,11 +294,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if row is None:
             raise HTTPException(status_code=404, detail="کاربر نمایشی یافت نشد.")
         target = "/admin/submissions" if row["role"] in {"operator", "admin"} else "/home"
-        response = RedirectResponse(target, status_code=303)
-        set_session(response, row["id"], settings.secret)
+        token = make_token(row["id"], settings.secret)
+        response = RedirectResponse(with_token(target, token), status_code=303)
+        set_session(response, row["id"], settings.secret, token)
         return response
 
-    @app.post("/logout")
+    @app.post("/logout", dependencies=[Depends(csrf_guard)])
     def logout() -> RedirectResponse:
         response = RedirectResponse("/login", status_code=303)
         clear_session(response)
@@ -235,7 +366,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             user=user,
         )
 
-    @app.post("/missions/{mission_id}/submissions", response_class=HTMLResponse)
+    @app.post(
+        "/missions/{mission_id}/submissions",
+        response_class=HTMLResponse,
+        dependencies=[Depends(csrf_guard)],
+    )
     async def submit_mission(
         mission_id: str,
         request: Request,
@@ -293,7 +428,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except DomainError as exc:
             return render_error(exc.message, 409 if exc.code == "MAX_ATTEMPTS_REACHED" else 422)
 
-        return RedirectResponse(f"/submissions/{submission['id']}", status_code=303)
+        return go(f"/submissions/{submission['id']}", request)
 
     @app.get("/submissions/{submission_id}", response_class=HTMLResponse)
     def submission_page(
@@ -382,18 +517,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def admin_queue(
         request: Request,
         status: str = "submitted",
+        page_no: int = Query(1, alias="page", ge=1),
         user: CurrentUser = Depends(require_staff),
         conn: sqlite3.Connection = Depends(conn_dep),
     ):
         if status not in {"submitted", "approved", "rejected"}:
             status = "submitted"
+        size = settings.queue_page_size
+        total = repo.count_queue(conn, user.organization_id, status)
+        pages = max(1, -(-total // size))
+        page_no = min(max(1, page_no), pages)
         return page(
             request,
             "admin_queue.html",
             {
                 "active": "queue",
                 "status": status,
-                "rows": repo.list_queue(conn, user.organization_id, status),
+                "total": total,
+                "page": page_no,
+                "pages": pages,
+                "rows": repo.list_queue(
+                    conn,
+                    user.organization_id,
+                    status,
+                    limit=size,
+                    offset=(page_no - 1) * size,
+                ),
             },
             user=user,
         )
@@ -423,7 +572,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             user=user,
         )
 
-    @app.post("/admin/submissions/{submission_id}/review", response_class=HTMLResponse)
+    @app.post(
+        "/admin/submissions/{submission_id}/review",
+        response_class=HTMLResponse,
+        dependencies=[Depends(csrf_guard)],
+    )
     def admin_decide(
         submission_id: str,
         request: Request,
@@ -454,7 +607,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 user=user,
             )
         suffix = "&ok=1" if created else ""
-        return RedirectResponse(f"/admin/submissions?status=submitted{suffix}", status_code=303)
+        return go(f"/admin/submissions?status=submitted{suffix}", request)
 
     @app.get("/admin/missions", response_class=HTMLResponse)
     def admin_missions(
@@ -484,7 +637,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             user=user,
         )
 
-    @app.post("/admin/missions/new", response_class=HTMLResponse)
+    @app.post(
+        "/admin/missions/new",
+        response_class=HTMLResponse,
+        dependencies=[Depends(csrf_guard)],
+    )
     def admin_mission_create(
         request: Request,
         title: str = Form(""),
@@ -514,7 +671,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 status_code=422,
                 user=user,
             )
-        return RedirectResponse("/admin/missions?created=1", status_code=303)
+        return go("/admin/missions?created=1", request)
 
     @app.get("/admin/missions/{mission_id}", response_class=HTMLResponse)
     def admin_mission_edit(
@@ -541,7 +698,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             user=user,
         )
 
-    @app.post("/admin/missions/{mission_id}", response_class=HTMLResponse)
+    @app.post(
+        "/admin/missions/{mission_id}",
+        response_class=HTMLResponse,
+        dependencies=[Depends(csrf_guard)],
+    )
     def admin_mission_update(
         mission_id: str,
         request: Request,
@@ -576,11 +737,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 user=user,
             )
         suffix = "?versioned=1" if new_version else "?saved=1"
-        return RedirectResponse(f"/admin/missions/{mission_id}{suffix}", status_code=303)
+        return go(f"/admin/missions/{mission_id}{suffix}", request)
 
-    @app.post("/admin/missions/{mission_id}/publish")
+    @app.post("/admin/missions/{mission_id}/publish", dependencies=[Depends(csrf_guard)])
     def admin_mission_publish(
         mission_id: str,
+        request: Request,
         user: CurrentUser = Depends(require_admin),
         conn: sqlite3.Connection = Depends(conn_dep),
     ) -> RedirectResponse:
@@ -591,11 +753,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             repo.publish_mission(conn, mission, user)
         except DomainError as exc:
             raise HTTPException(status_code=409, detail=exc.message) from exc
-        return RedirectResponse(f"/admin/missions/{mission_id}?published=1", status_code=303)
+        return go(f"/admin/missions/{mission_id}?published=1", request)
 
-    @app.post("/admin/missions/{mission_id}/archive")
+    @app.post("/admin/missions/{mission_id}/archive", dependencies=[Depends(csrf_guard)])
     def admin_mission_archive(
         mission_id: str,
+        request: Request,
         user: CurrentUser = Depends(require_admin),
         conn: sqlite3.Connection = Depends(conn_dep),
     ) -> RedirectResponse:
@@ -603,6 +766,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if mission is None:
             raise HTTPException(status_code=404, detail="مأموریت یافت نشد.")
         repo.archive_mission(conn, mission, user)
-        return RedirectResponse(f"/admin/missions/{mission_id}?archived=1", status_code=303)
+        return go(f"/admin/missions/{mission_id}?archived=1", request)
 
     return app
