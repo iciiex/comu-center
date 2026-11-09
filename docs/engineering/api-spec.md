@@ -113,6 +113,10 @@ in an iframe. Narrow both before real users.
 | POST | `/admin/missions/{id}` | Update; points change publishes a new rule version |
 | POST | `/admin/missions/{id}/publish` | `draft → active` (409 otherwise) |
 | POST | `/admin/missions/{id}/archive` | `→ archived` |
+| GET | `/admin/sales` | Sales import list (status, counts, points) |
+| GET/POST | `/admin/sales/new` · `/admin/sales` | Upload XLSX (multipart `file`) → validates, never scores |
+| GET | `/admin/sales/{id}` | Rows, row-level errors, reconciliation |
+| POST | `/admin/sales/{id}/process` | Score valid rows; idempotent (`?processed=<new events>`) |
 
 Mission form fields: `title`, `description`, `points` (0–10000), `max_per_user` (1–50),
 `starts_on` / `ends_on` (`YYYY-MM-DD`, interpreted as UTC day bounds).
@@ -134,13 +138,16 @@ Mission form fields: `title`, `description`, `points` (0–10000), `max_per_user
 | `REASON_REQUIRED` | 409 | اصلاح امتیاز بدون دلیل |
 | `ALREADY_REVERSED` | 409 | اصلاح دوم روی همان رویداد |
 | `CANNOT_REVERSE_CORRECTION` | 409 | اصلاح یک رویداد اصلاحی |
+| `IMPORT_REJECTED` | 409 | پردازش import ردشده |
+| `IMPORT_BUSY` / `IMPORT_FAILED` | 409 | پردازش هم‌زمان یا خطای پردازش import |
 
 ## Authorization rules
 
 - All queries filter by the caller's `organization_id` (server-side).
 - Visitor: own submissions/evidence only.
 - Operator: org queue + evidence; **no** mission editing.
-- Admin: mission CRUD + publish/archive **and score corrections**; org-scoped.
+- Admin: mission CRUD + publish/archive, score corrections, **and the sales import**; org-scoped.
+  Sales import (EP-07) is admin-only by decision (D-005); operators cannot upload or process.
 - Correction of an event outside the admin's organization → `403`; unknown event → `404`; no CSRF → `403`.
 
 ## Known gaps
@@ -149,5 +156,6 @@ Mission form fields: `title`, `description`, `points` (0–10000), `max_per_user
 - `?s=` session transport leaks the token into URLs; demo-only until OD-01 (see D-002).
 - Rate limiting and the session store are in-process memory (single worker only).
 - Evidence retention exists as a manual command (`python -m app.maintenance purge-evidence`), no scheduler.
-- Mission/leaderboard lists are unpaginated (queue is paginated).
+- Mission/leaderboard lists are unpaginated (queue is paginated); sales rows are capped at 200 per view.
+- Sales import accepts one XLSX contract (SAMPLE) — no column mapping UI, no CSV, no scheduled import.
 - No CSP report collector; policy is applied but unmonitored.

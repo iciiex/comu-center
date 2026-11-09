@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}آپلود فایل فروش · کیلوس کلاب{% endblock %}
+{% block content %}
+  <p class="small" style="margin:4px 2px"><a href="{{ url('/admin/sales') }}">→ بازگشت به فهرست importها</a></p>
+
+  <form class="card" method="post" action="{{ url('/admin/sales') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h1 class="card__title">آپلود فایل فروش</h1>
+    <p class="small muted" style="margin:4px 0 12px">
+      فایل xlsx با حداکثر ۵ مگابایت و ۵٬۰۰۰ ردیف. آپلود فقط اعتبارسنجی می‌کند؛ امتیاز در مرحله‌ی
+      «پردازش» ساخته می‌شود.
+    </p>
+    <div class="field">
+      <label for="file">فایل اکسل (xlsx)</label>
+      <input id="file" name="file" type="file" accept=".xlsx" required>
+    </div>
+    <button class="btn" type="submit">آپلود و اعتبارسنجی</button>
+  </form>
+
+  <div class="card card--flat">
+    <div class="card__title">ستون‌های قرارداد (نمونه تا دریافت فایل واقعی)</div>
+    <table class="table">
+      <thead><tr><th>ستون</th><th>الزامی</th><th>توضیح</th></tr></thead>
+      <tbody>
+        <tr><td style="direction:ltr">external_id</td><td>بله</td><td>شناسه یکتای رکورد در سیستم مبدأ</td></tr>
+        <tr><td style="direction:ltr">user_external_id</td><td>بله</td><td>شناسه ویزیتور؛ فقط از طریق نگاشت صریح</td></tr>
+        <tr><td style="direction:ltr">sale_date</td><td>بله</td><td>تاریخ فروش (YYYY-MM-DD)</td></tr>
+        <tr><td style="direction:ltr">sku_code</td><td>بله</td><td>کد محصول</td></tr>
+        <tr><td style="direction:ltr">quantity</td><td>بله</td><td>مقدار، بزرگ‌تر از صفر</td></tr>
+        <tr><td style="direction:ltr">amount</td><td>بله</td><td>مبلغ، نامنفی</td></tr>
+        <tr><td style="direction:ltr">customer_external_id</td><td>خیر</td><td>شناسه مشتری</td></tr>
+        <tr><td style="direction:ltr">branch_code</td><td>خیر</td><td>شعبه</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card card--flat">
+    <div class="card__title">نگاشت شناسه ویزیتور (نمونه)</div>
+    <p class="tiny muted" style="margin:4px 0 8px">
+      شناسه‌ها حدس زده نمی‌شوند؛ هر شناسه باید در جدول نگاشت سازمان باشد.
+    </p>
+    {% if mapping %}
+      <ul class="small" style="margin:0; padding-inline-start:18px">
+        {% for item in mapping %}
+          <li><span style="direction:ltr">{{ item['user_external_id'] }}</span> → {{ item['full_name'] }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="small muted">هیچ نگاشتی ثبت نشده است؛ همه‌ی ردیف‌ها «کاربر ناموجود» می‌شوند.</p>
+    {% endif %}
+  </div>
+
+  {% if rule %}
+    <div class="card card--flat tiny muted">
+      قاعده امتیاز فعال: <span style="direction:ltr">{{ rule['rule_code'] }}</span> ·
+      نسخه {{ rule['version']|fa }} · هر {{ rule['unit_size']|fa }} مبلغ = {{ rule['points']|fa }} امتیاز
+      {% if rule['is_sample'] %}<span class="pill pill--amber">نمونه</span>{% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

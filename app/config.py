@@ -34,6 +34,8 @@ class Settings:
     login_rate_window: int = 60
     evidence_retention_days: int = 90
     queue_page_size: int = 20
+    sales_max_bytes: int = 5 * 1024 * 1024
+    sales_max_rows: int = 5000
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -47,6 +49,8 @@ class Settings:
             login_rate_window=_int_env("KILOOS_LOGIN_RATE_WINDOW", 60),
             evidence_retention_days=_int_env("KILOOS_EVIDENCE_RETENTION_DAYS", 90),
             queue_page_size=_int_env("KILOOS_QUEUE_PAGE_SIZE", 20),
+            sales_max_bytes=_int_env("KILOOS_SALES_MAX_BYTES", 5 * 1024 * 1024),
+            sales_max_rows=_int_env("KILOOS_SALES_MAX_ROWS", 5000),
         )
 
     def validate(self) -> None:

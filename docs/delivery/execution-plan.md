@@ -19,7 +19,12 @@ Mission → submission → review → score → wallet → leaderboard → admin
 - Day 8 sales import UI (documented, not built).
 - Notifications and reports.
 
+## Delivered after the prototype window
+- Score corrections (D-004) — negative reversal events, admin-only.
+- Sales import (EP-07, D-005) — XLSX upload, two-level validation, explicit visitor mapping,
+  fingerprint dedupe, idempotent processing, reconciliation.
+
 ## Next sprint candidate
-1. Sales import slice (EP-07)
-2. Reports (EP-10) + CSV
+1. Reports (EP-10) + CSV
+2. Sales import follow-ups: column mapping for the real export (OD-03), SKU multipliers (OD-05)
 3. Auth hardening behind OD-01

@@ -66,12 +66,28 @@ UNIQUE (rule_code, version)   -- scoring_rule_versions
 - Timestamps are ISO-8601 UTC (`+00:00`); display converts to Jalali (`app/jalali.py`).
 - Soft delete is not implemented yet; historical rows are never removed by the app.
 
+## Sales import tables (0003)
+
+```
+sales_imports 1──n sales_records
+sales_user_map (organization_id, user_external_id) → users.id   -- explicit mapping only
+```
+
+- `sales_imports` keeps the file fingerprint (`UNIQUE (organization_id, file_sha256)`), lifecycle
+  status, per-status counts, `points_sum` and `finished_at`.
+- `sales_records` keeps one row per spreadsheet line with `row_number`, raw cells (`raw_json`),
+  normalized values, status and error message. `ux_sales_records_external` is partial
+  (`WHERE status IN ('valid','scored')`) so duplicates/invalid rows remain reportable.
+- `scoring_rule_versions.unit_size` (added in 0003) is the divisor of the SAMPLE per-amount rule; it is
+  data, not code.
+
 ## Migrations
 
-- `db/migrations/*.sql` run in filename order at startup (`app.db.apply_migrations`): `0001_init.sql`,
-  `0002_score_corrections.sql`. Every statement uses `IF NOT EXISTS`, so re-running on an existing
-  database is safe and adds new indexes only.
-- The runner has no version table, checksums, or downgrades — it is a prototype stopgap.
+- `db/migrations/*.sql` run at startup (`app.db.apply_migrations`), once each, in filename order:
+  `0001_init.sql`, `0002_score_corrections.sql`, `0003_sales_import.sql`.
+- `schema_migrations (name, applied_at)` records what ran, because 0003 needs a real `ALTER TABLE`
+  that is not idempotent. Existing databases pick up the record automatically (0001/0002 are idempotent).
+- The runner has no checksums or downgrades — it is a prototype stopgap; never edit an applied file.
 - Before production: explicit versioned runner (Alembic/Knex), PostgreSQL, tested rollback path.
   Destructive migrations require backup + restore plan (AGENTS.md §6).
 

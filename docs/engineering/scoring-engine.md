@@ -65,6 +65,18 @@ Past events keep their `rule_version_id`; their points never change.
 
 The UI renders this under «چرا این امتیاز؟» on the submission page.
 
+## Sales records — SAMPLE per-amount rule
+
+`award_sales_record` scores one validated row of a sales import:
+
+```
+points = floor(amount / unit_size) * points_of_active_SALES_AMOUNT_SAMPLE_rule
+```
+
+`unit_size` (default 1,000,000) and `points` (default 1) live in `scoring_rule_versions`, so the
+formula is configuration, not code. Idempotency key: `sales.record:<record_id>`. Rows below one unit
+award nothing and write no event. Rule selection happens at **processing time** (D-005).
+
 ## Corrections (reversal events) — D-004
 
 Nothing is ever updated or deleted. A correction is a **new event** with negative points:
@@ -99,6 +111,7 @@ Invariants:
 - explain payload contains rule + version + `is_sample`
 - active-version selection after retirement
 - HTTP flow: approve → +10 for the visitor, second decision → 409, one event, one audit row, outbox written
+- sales: 2.5M + 1M rows → 3 points, wallet +3, second process run creates nothing; sub-unit amount → no event
 - reversal: negative event + ledger + wallet + outbox + audit; double reversal 409; reason required;
   admin-only (operator/visitor 403); correction of a correction rejected; org scope enforced;
   `/score` history marks the correction; leaderboard total drops back to 0

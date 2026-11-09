@@ -29,6 +29,7 @@ This is destructive and only for dev/demo. Never run against real data.
 | `KILOOS_LOGIN_RATE_LIMIT` / `KILOOS_LOGIN_RATE_WINDOW` | `10` / `60` | demo-login attempts per IP per window |
 | `KILOOS_EVIDENCE_RETENTION_DAYS` | `90` (SAMPLE, D-003) | purging window for evidence |
 | `KILOOS_QUEUE_PAGE_SIZE` | `20` | review queue page size |
+| `KILOOS_SALES_MAX_BYTES` / `KILOOS_SALES_MAX_ROWS` | `5242880` / `5000` | sales XLSX upload limits |
 
 Changing `KILOOS_SECRET` invalidates every session (including `?s=` links already open).
 
@@ -41,6 +42,19 @@ Changing `KILOOS_SECRET` invalidates every session (including `?s=` links alread
 Deletes the file and the `submission_evidences` row, and writes an `audit_logs` row
 (`action='evidence.purged'`) with `submission_id`, `sha256`, `storage_path`. There is **no scheduler**;
 the 90-day default is a sample value until the employer approves a policy.
+
+## Sales import (admin)
+```bash
+python -m app.sample_sales        # var/sales-sample.xlsx (SAMPLE: 4 valid, 1 duplicate, 1 unmapped)
+```
+Upload at `/admin/sales/new`, check the row report, then press «پردازش».
+
+| Symptom | Cause | Action |
+|---|---|---|
+| «این فایل قبلاً آپلود شده است» (409) | same bytes already imported (`file_sha256`) | open the existing import; no need to re-upload |
+| all rows `E_USER_MAPPING` | `sales_user_map` has no entry for that org | add the mapping (explicit) before processing |
+| `?processed=0` | nothing valid left (already scored or no valid rows) | expected on re-run; check the row report |
+| red reconciliation banner | counts or points disagree | do not trust the import; inspect `sales_records` before using the points |
 
 ## Backup (prototype)
 ```bash
