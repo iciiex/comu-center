@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ mission['title'] }} · کیلوس کلاب{% endblock %}
+{% block content %}
+  <p class="small" style="margin:4px 2px"><a href="/missions">→ بازگشت به مأموریت‌ها</a></p>
+
+  <div class="card">
+    <div class="card__row" style="align-items:flex-start">
+      <div>
+        <h1 class="card__title" style="font-size:17px">{{ mission['title'] }}</h1>
+        <div class="card__meta">فعال تا {{ mission['ends_at']|jdate }}</div>
+      </div>
+      <span class="pill pill--points">{{ mission['points']|fa }} امتیاز</span>
+    </div>
+    <p class="small" style="margin:12px 0 0">{{ mission['description'] }}</p>
+    <div class="row mt-2">
+      <span class="pill pill--gray">ثبت تصویر شاهد الزامی</span>
+      {% if mission['requires_review'] %}<span class="pill pill--amber">نیازمند تأیید اپراتور</span>{% endif %}
+      <span class="pill pill--gray">سقف {{ mission['max_per_user']|fa }} بار</span>
+    </div>
+  </div>
+
+  {% if remaining > 0 %}
+    <form class="card" method="post" action="/missions/{{ mission['id'] }}/submissions" enctype="multipart/form-data">
+      <h2 class="card__title">ثبت انجام مأموریت</h2>
+      <input type="hidden" name="request_id" value="{{ request_id }}">
+
+      <div class="field mt-2">
+        <label for="evidence">تصویر شاهد</label>
+        <input id="evidence" type="file" name="evidence" accept="image/jpeg,image/png,image/webp" required>
+        <p class="field__hint">JPG / PNG / WEBP — حداکثر ۴ مگابایت. تصویر فقط برای شما و اپراتور قابل مشاهده است.</p>
+      </div>
+
+      <div class="field">
+        <label for="note">توضیح (اختیاری)</label>
+        <textarea id="note" name="note" maxlength="500" placeholder="مثلاً: یخچال مرتب شد و تاریخ انقضا بررسی شد."></textarea>
+      </div>
+
+      <button class="btn btn--block" type="submit">ارسال برای بررسی</button>
+      <p class="field__hint center">با ارسال، وضعیت «در انتظار بررسی» می‌شود. امتیاز پس از تأیید ثبت خواهد شد.</p>
+    </form>
+  {% else %}
+    <div class="alert alert--info">سقف انجام این مأموریت تکمیل شده است.</div>
+  {% endif %}
+
+  {% if submissions %}
+    <div class="section-head"><h2>ارسال‌های شما برای این مأموریت</h2></div>
+    <div class="card card--flat">
+      <ul class="timeline">
+        {% for item in submissions %}
+          <li>
+            <span class="dot {{ 'dot--on' if item['status'] == 'approved' else ('dot--off' if item['status'] == 'rejected' else '') }}"></span>
+            <span style="flex:1">
+              <a href="/submissions/{{ item['id'] }}">مشاهده جزئیات</a>
+              <span class="tiny muted">· {{ item['created_at']|jdatetime }}</span>
+            </span>
+            {% if item['status'] == 'approved' %}<span class="pill pill--green">تأیید شده</span>
+            {% elif item['status'] == 'rejected' %}<span class="pill pill--red">رد شده</span>
+            {% else %}<span class="pill pill--amber">در انتظار</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+{% endblock %}

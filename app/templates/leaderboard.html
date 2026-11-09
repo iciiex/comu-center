@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}رقابت · کیلوس کلاب{% endblock %}
+{% block content %}
+  <div class="card">
+    <div class="card__row">
+      <div>
+        <h1 class="card__title">{{ competition['title'] if competition else 'رتبه‌بندی' }}</h1>
+        <div class="card__meta">
+          {% if competition %}
+            {{ competition['starts_at']|jdate }} تا {{ competition['ends_at']|jdate }}
+          {% else %}
+            مجموع امتیاز ثبت‌شده
+          {% endif %}
+        </div>
+      </div>
+      {% if competition and competition['is_sample'] %}<span class="pill pill--amber">دوره نمونه</span>{% endif %}
+    </div>
+    {% if rank %}
+      <div class="alert alert--info" style="margin:12px 0 0">
+        رتبه فعلی شما: <b>{{ rank|fa }}</b>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card card--flat">
+    <table class="table">
+      <thead>
+        <tr><th>رتبه</th><th>نام</th><th>امتیاز دوره</th></tr>
+      </thead>
+      <tbody>
+        {% for row in board %}
+          <tr class="{{ 'is-me' if row.is_me }}">
+            <td class="rank {{ 'rank--1' if row.rank == 1 else ('rank--2' if row.rank == 2 else ('rank--3' if row.rank == 3 else '')) }}">
+              {{ row.rank|fa }}
+            </td>
+            <td>{{ row.full_name }}{% if row.is_me %} <span class="pill">شما</span>{% endif %}</td>
+            <td>{{ row.total|fa }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="tiny muted">
+    رتبه‌بندی بر مجموع امتیازهای معتبر دوره محاسبه می‌شود. قانون تساوی امتیاز (tie-breaker) هنوز
+    تأیید نشده است (BR-009) و فعلاً ترتیب پیشنهادی «امتیاز بیشتر، سپس زمان زودتر» اعمال می‌شود.
+  </p>
+{% endblock %}

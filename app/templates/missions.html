@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}مأموریت‌ها · کیلوس کلاب{% endblock %}
+{% block content %}
+  <div class="section-head"><h2>مأموریت‌های فعال</h2><span class="tiny muted">{{ missions|length|fa }} مورد</span></div>
+  <p class="tiny muted" style="margin:0 2px 12px">
+    فقط مأموریت‌های فعال، داخل بازه زمانی و مجاز برای شما نمایش داده می‌شوند.
+  </p>
+
+  {% for mission in missions %}
+    {% set done = mission['my_count'] >= mission['max_per_user'] %}
+    <a class="mission" href="/missions/{{ mission['id'] }}" style="text-decoration:none; color:inherit">
+      <span class="mission__icon">📸</span>
+      <span class="mission__body">
+        <span class="mission__title">{{ mission['title'] }}</span>
+        <span class="mission__desc">{{ mission['description'] }}</span>
+        <span class="mission__foot">
+          <span class="pill pill--points">{{ mission['points']|fa }} امتیاز</span>
+          <span class="pill pill--gray">سقف {{ mission['max_per_user']|fa }} بار</span>
+          {% if done %}<span class="pill pill--green">انجام شد</span>{% endif %}
+        </span>
+      </span>
+    </a>
+  {% else %}
+    <div class="card center muted small">مأموریت فعالی وجود ندارد. بعداً سر بزنید.</div>
+  {% endfor %}
+{% endblock %}

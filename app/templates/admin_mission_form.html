@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ 'ویرایش مأموریت' if mission else 'مأموریت جدید' }} · کیلوس کلاب{% endblock %}
+{% block content %}
+  <p class="small" style="margin:4px 2px"><a href="/admin/missions">→ بازگشت به مأموریت‌ها</a></p>
+
+  {% if mission %}
+    <div class="card">
+      <div class="card__row">
+        <div>
+          <div class="card__title">{{ mission['title'] }}</div>
+          <div class="card__meta">
+            {% if mission['status'] == 'active' %}فعال{% elif mission['status'] == 'draft' %}پیش‌نویس{% else %}آرشیو{% endif %}
+            · کد قانون {{ mission['rule_code'] }}
+          </div>
+        </div>
+        <div class="row">
+          {% if mission['status'] == 'draft' %}
+            <form method="post" action="/admin/missions/{{ mission['id'] }}/publish" class="mb-0">
+              <button class="btn btn--sm" type="submit">انتشار</button>
+            </form>
+          {% elif mission['status'] == 'active' %}
+            <form method="post" action="/admin/missions/{{ mission['id'] }}/archive" class="mb-0">
+              <button class="btn btn--ghost btn--sm" type="submit">آرشیو</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <form class="card" method="post"
+        action="{{ ('/admin/missions/' ~ mission['id']) if mission else '/admin/missions/new' }}">
+    <h1 class="card__title">{{ 'ویرایش مأموریت' if mission else 'ساخت مأموریت جدید' }}</h1>
+
+    <div class="field mt-2">
+      <label for="title">عنوان</label>
+      <input id="title" name="title" required maxlength="120" value="{{ form.get('title', '') }}">
+    </div>
+
+    <div class="field">
+      <label for="description">توضیحات و شرایط انجام</label>
+      <textarea id="description" name="description" required maxlength="800">{{ form.get('description', '') }}</textarea>
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label for="points">امتیاز</label>
+        <input id="points" name="points" type="number" min="0" max="10000" required value="{{ form.get('points', 10) }}">
+        <p class="field__hint">تغییر امتیاز = انتشار نسخه جدید قانون</p>
+      </div>
+      <div class="field">
+        <label for="max_per_user">سقف انجام هر کاربر</label>
+        <input id="max_per_user" name="max_per_user" type="number" min="1" max="50" required value="{{ form.get('max_per_user', 1) }}">
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label for="starts_on">شروع (میلادی)</label>
+        <input id="starts_on" name="starts_on" type="date" required value="{{ form.get('starts_on', '') }}">
+      </div>
+      <div class="field">
+        <label for="ends_on">پایان (میلادی)</label>
+        <input id="ends_on" name="ends_on" type="date" required value="{{ form.get('ends_on', '') }}">
+      </div>
+    </div>
+    <p class="field__hint" style="margin-top:-6px">
+      ورودی تاریخ در این نسخه میلادی است؛ نمایش به کاربر شمسی است. یکسان‌سازی کامل تقویم در فاز Harden انجام می‌شود.
+    </p>
+
+    <button class="btn btn--block mt-2" type="submit">ذخیره</button>
+  </form>
+{% endblock %}

@@ -1,33 +1,28 @@
-# Secrets & local config — NEVER commit real credentials
+# Secrets & local config
 .env
 .env.*
 !.env.example
-*.pem
-*.key
-secrets/
+
+# Runtime data (demo database, uploaded evidence)
+var/
+*.db
+*.sqlite3
 
 # Python
 __pycache__/
 *.py[cod]
+.venv/
+venv/
 *.egg-info/
 build/
 dist/
-.venv/
-venv/
 .pytest_cache/
-.mypy_cache/
 .ruff_cache/
+.mypy_cache/
 .coverage
 htmlcov/
-
-# Local data / backups
-data/
-backups/
-*.sqlite3
-*.dump
 
 # Editor / OS
 .idea/
 .vscode/
 .DS_Store
-*~

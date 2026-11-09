@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}بررسی درخواست · کیلوس کلاب{% endblock %}
+{% block content %}
+  <p class="small" style="margin:4px 2px"><a href="/admin/submissions">→ بازگشت به صف</a></p>
+
+  <div class="card">
+    <div class="card__row" style="align-items:flex-start">
+      <div>
+        <h1 class="card__title">{{ submission['mission_title'] }}</h1>
+        <div class="card__meta">
+          {{ submission['user_name'] }} · {{ submission['created_at']|jdatetime }}
+        </div>
+      </div>
+      <span class="pill pill--points">{{ submission['mission_points']|fa }} امتیاز</span>
+    </div>
+    {% if submission['note'] %}
+      <p class="small" style="margin:12px 0 0">{{ submission['note'] }}</p>
+    {% endif %}
+    <div class="row mt-2">
+      {% if submission['status'] == 'submitted' %}<span class="pill pill--amber">در انتظار بررسی</span>
+      {% elif submission['status'] == 'approved' %}<span class="pill pill--green">تأییدشده</span>
+      {% else %}<span class="pill pill--red">ردشده</span>{% endif %}
+      <span class="pill pill--gray">{{ evidences|length|fa }} تصویر شاهد</span>
+    </div>
+  </div>
+
+  {% for evidence in evidences %}
+    <div class="card card--flat">
+      <img class="evidence" src="/evidence/{{ evidence['id'] }}" alt="تصویر شاهد">
+      <p class="tiny muted" style="margin:8px 0 0; direction:ltr; text-align:left">
+        {{ evidence['file_name'] }} · {{ evidence['content_type'] }} · sha256: {{ evidence['sha256'][:20] }}…
+      </p>
+    </div>
+  {% endfor %}
+
+  {% if event %}
+    <div class="card card--flat">
+      <div class="card__title">رخداد امتیاز ثبت‌شده</div>
+      <p class="small muted" style="margin:4px 0 0">
+        +{{ event['points']|fa }} امتیاز · {{ event['rule_code'] }} · {{ event['occurred_at']|jdatetime }}
+      </p>
+    </div>
+  {% endif %}
+
+  {% if submission['status'] == 'submitted' %}
+    <div class="card">
+      <h2 class="card__title">تصمیم</h2>
+      <form method="post" action="/admin/submissions/{{ submission['id'] }}/review" class="stack mt-2">
+        <input type="hidden" name="decision" value="approve">
+        <button class="btn btn--block" type="submit">تأیید و ثبت امتیاز</button>
+      </form>
+
+      <form method="post" action="/admin/submissions/{{ submission['id'] }}/review" style="margin-top:14px">
+        <input type="hidden" name="decision" value="reject">
+        <div class="field">
+          <label for="reason">دلیل رد (الزامی)</label>
+          <textarea id="reason" name="reason" required maxlength="300"
+                    placeholder="مثلاً: تصویر شاهد واضح نیست."></textarea>
+        </div>
+        <button class="btn btn--danger btn--block" type="submit">رد درخواست</button>
+      </form>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}مدیریت مأموریت‌ها · کیلوس کلاب{% endblock %}
+{% block content %}
+  <div class="section-head">
+    <h2>مأموریت‌ها</h2>
+    {% if user.is_admin %}<a class="btn btn--sm" href="/admin/missions/new">مأموریت جدید</a>{% endif %}
+  </div>
+
+  {% if not user.is_admin %}
+    <div class="alert alert--info">مشاهده مجاز است؛ ویرایش مأموریت فقط برای مدیر سیستم فعال است.</div>
+  {% endif %}
+
+  <div class="card card--flat">
+    <table class="table">
+      <thead>
+        <tr><th>عنوان</th><th>وضعیت</th><th>امتیاز</th><th>بازه</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for mission in missions %}
+          <tr>
+            <td>{{ mission['title'] }}</td>
+            <td>
+              {% if mission['status'] == 'active' %}<span class="pill pill--green">فعال</span>
+              {% elif mission['status'] == 'draft' %}<span class="pill pill--amber">پیش‌نویس</span>
+              {% else %}<span class="pill pill--gray">آرشیو</span>{% endif %}
+            </td>
+            <td>{{ mission['points']|fa }}</td>
+            <td class="tiny muted">{{ mission['starts_at']|jdate }} — {{ mission['ends_at']|jdate }}</td>
+            <td>
+              {% if user.is_admin %}
+                <a class="btn btn--ghost btn--sm" href="/admin/missions/{{ mission['id'] }}">ویرایش</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="tiny muted">
+    امتیاز هر مأموریت در قالب «نسخه قانون» ذخیره می‌شود؛ تغییر امتیاز، نسخه جدید منتشر می‌کند و
+    امتیازهای گذشته را بازنویسی نمی‌کند.
+  </p>
+{% endblock %}
