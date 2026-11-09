@@ -96,6 +96,7 @@ in an iframe. Narrow both before real users.
 | GET | `/admin/submissions?status=submitted\|approved\|rejected&page=N` | Review queue, 20 per page (`KILOOS_QUEUE_PAGE_SIZE`) |
 | GET | `/admin/submissions/{id}` | Review screen |
 | POST | `/admin/submissions/{id}/review` | Form `decision=approve\|reject`, `reason` |
+| POST | `/admin/score-events/{event_id}/reverse` | **admin only**; form `reason` → negative correction event |
 
 - `reject` without `reason` → `409` + error message, nothing changes.
 - `approve` is idempotent at the score layer, but the **state machine** rejects a second decision (`409 ALREADY_REVIEWED`).
@@ -130,13 +131,17 @@ Mission form fields: `title`, `description`, `points` (0–10000), `max_per_user
 | `INVALID_POINTS` / `INVALID_MAX` | 422 | محدوده عددی |
 | `NOT_DRAFT` | 409 | انتشار مأموریت غیرپیش‌نویس |
 | `NO_ACTIVE_RULE_VERSION` | 500 | قانون فعال برای رویداد وجود ندارد (خطای پیکربندی) |
+| `REASON_REQUIRED` | 409 | اصلاح امتیاز بدون دلیل |
+| `ALREADY_REVERSED` | 409 | اصلاح دوم روی همان رویداد |
+| `CANNOT_REVERSE_CORRECTION` | 409 | اصلاح یک رویداد اصلاحی |
 
 ## Authorization rules
 
 - All queries filter by the caller's `organization_id` (server-side).
 - Visitor: own submissions/evidence only.
 - Operator: org queue + evidence; **no** mission editing.
-- Admin: mission CRUD + publish/archive; org-scoped.
+- Admin: mission CRUD + publish/archive **and score corrections**; org-scoped.
+- Correction of an event outside the admin's organization → `403`; unknown event → `404`; no CSRF → `403`.
 
 ## Known gaps
 

@@ -95,3 +95,38 @@ SameSite=None، ذخیره‌سازی محلی) در iframe قابل اتکا ن
 زمان‌بندی‌شده‌ای وجود ندارد (دستور دستی + `--dry-run`).
 
 **Affected docs:** `docs/operations/runbook.md`، `app/maintenance.py`
+
+---
+
+## D-004 — اصلاح امتیاز با رخداد منفی (بدون ویرایش تاریخچه)
+
+- Status: PROPOSED
+- Date: 2026-11-09
+- Approved by: —
+- Owners: Product / Engineering / Finance (کیف امتیاز)
+- Related: OD-08 / OD-06 / BR-009 / MS-03
+
+**Decision (موقت):** اصلاح یک امتیاز با **رخداد جدید منفی** انجام می‌شود:
+
+- `points = -original.points`، `corrects_event_id` به رخداد اصلی، `idempotency_key = score.reversed:<id>`
+- `rule_code` و `rule_version_id` از رخداد اصلی کپی می‌شوند (منشأ امتیاز تغییر نمی‌کند)
+- دلیل متنی الزامی است و در `reason` و `explain_json` می‌نشیند
+- در یک تراکنش: رخداد + لجر منفی + کیف + `outbox_events('score.reversed')` + `audit_logs`
+- فقط نقش `admin`؛ محدود به سازمان خودش
+- ایندکس یکتای جزئی `ux_score_events_corrects` اصلاح دوم را در سطح دیتابیس غیرممکن می‌کند
+- وضعیت `submission` تغییر نمی‌کند (همچنان `approved`) و رویداد اصلاحی خودش قابل اصلاح نیست
+
+**Rationale:** تاریخچه‌ی امتیاز باید قابل حسابرسی بماند؛ حذف یا ویرایش رخداد، هم اعتماد کاربر و هم
+قابلیت تطبیق با گزارش فروش را از بین می‌برد. جمع جبری رخدادها باعث می‌شود کیف و لیدربورد بدون
+کد اضافی درست شوند.
+
+**Consequences / موارد باز:**
+- کیف می‌تواند منفی شود (امتیاز غیرقابل‌مصرف است، OD-08)؛ UI هشدار می‌دهد ولی مسدود نمی‌کند.
+- «اصلاح جزئی» (بخشی از یک امتیاز) پشتیبانی نمی‌شود؛ در صورت نیاز، رخداد معکوس جزئی + سیاست جدید لازم است.
+- سیاست «چه کسی درخواست اصلاح می‌دهد و چه کسی تأیید می‌کند» در MVP یک‌مرحله‌ای است (ادمین)؛ گردش‌کار
+  دو‌مرحله‌ای برای بعد از MVP باز است.
+- دوره‌ی رقابت بسته‌شده: اصلاح، مجموع دوره را عوض می‌کند (بر اساس `occurred_at` رخداد اصلاحی)؛ اگر
+  سیاست «قفل دوره» تأیید شود، باید در همین نقطه اعمال شود.
+
+**Affected docs:** `docs/engineering/scoring-engine.md`، `docs/engineering/api-spec.md`،
+`docs/architecture/database-erd.md`، `docs/quality/qa-test-strategy.md`، `docs/handoffs/current-state.md`

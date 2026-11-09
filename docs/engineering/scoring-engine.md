@@ -65,6 +65,31 @@ Past events keep their `rule_version_id`; their points never change.
 
 The UI renders this under «چرا این امتیاز؟» on the submission page.
 
+## Corrections (reversal events) — D-004
+
+Nothing is ever updated or deleted. A correction is a **new event** with negative points:
+
+| Field | Value |
+|---|---|
+| `points` | `-original.points` |
+| `corrects_event_id` | id of the corrected event |
+| `idempotency_key` | `score.reversed:<original_event_id>` |
+| `rule_code` / `rule_version_id` | copied from the original (same provenance) |
+| `reason` | required free text, written by the admin |
+| `explain_json` | `calculation_type='correction'`, `reversal_of`, `reason` |
+
+One transaction writes: the event, a negative `point_transactions` row, the wallet projection,
+`outbox_events('score.reversed')`, and `audit_logs('score.reversed', actor=admin)`.
+
+Invariants:
+
+- `ux_score_events_corrects` (partial unique on `corrects_event_id`) makes a second reversal impossible
+  at the database level, not just in the UI.
+- A correction cannot itself be corrected (`CANNOT_REVERSE_CORRECTION`).
+- The wallet may go negative; it is a projection of events (`OD-08`: non-redeemable points).
+- The submission keeps `status='approved'`; the correction is a score fact, not a review decision.
+- Leaderboard and balance need no special casing: both are sums over `score_events`.
+
 ## Test coverage (executed)
 
 `tests/test_scoring.py` + `tests/test_flow.py`:
@@ -74,12 +99,15 @@ The UI renders this under «چرا این امتیاز؟» on the submission pag
 - explain payload contains rule + version + `is_sample`
 - active-version selection after retirement
 - HTTP flow: approve → +10 for the visitor, second decision → 409, one event, one audit row, outbox written
+- reversal: negative event + ledger + wallet + outbox + audit; double reversal 409; reason required;
+  admin-only (operator/visitor 403); correction of a correction rejected; org scope enforced;
+  `/score` history marks the correction; leaderboard total drops back to 0
 
-Run: `.venv/bin/pytest` → 18 passed.
+Run: `.venv/bin/pytest` → 43 passed.
 
 ## Not implemented (explicit)
 
-- correction/reversal events (`corrects_event_id` column exists, flow does not)
+- partial corrections (part of an award), expiry-based reversals, and a correction approval workflow
 - tiered/percentage/target/multiplier calculations
 - sales-record scoring
 - recalculation jobs and leaderboard snapshots

@@ -45,6 +45,11 @@ CREATE UNIQUE INDEX ux_score_events_source
     ON score_events (source_type, source_id, rule_code, rule_version_id)
     WHERE corrects_event_id IS NULL;
 
+-- One correction per event (migration 0002).
+CREATE UNIQUE INDEX ux_score_events_corrects
+    ON score_events (corrects_event_id)
+    WHERE corrects_event_id IS NOT NULL;
+
 -- Submit retry safety (double click / flaky network).
 UNIQUE (user_id, request_id)  -- submissions
 
@@ -54,7 +59,8 @@ UNIQUE (rule_code, version)   -- scoring_rule_versions
 
 ## Data rules
 
-- `score_events` is **append-only**: no UPDATE/DELETE in application code.
+- `score_events` is **append-only**: no UPDATE/DELETE in application code. A correction is another row
+  with negative points and `corrects_event_id` set (see `scoring-engine.md`).
 - Wallet is a projection, not the source of truth; recompute = `SUM(point_transactions.amount)`.
 - `points`/`amount` declared `NUMERIC` (SQLite stores integers exactly; no float).
 - Timestamps are ISO-8601 UTC (`+00:00`); display converts to Jalali (`app/jalali.py`).
@@ -62,8 +68,11 @@ UNIQUE (rule_code, version)   -- scoring_rule_versions
 
 ## Migrations
 
-- `0001_init.sql` is idempotent (`CREATE TABLE IF NOT EXISTS`) and runs at startup for the prototype.
-- Before production: switch to an explicit migration runner, PostgreSQL, and a tested rollback path.
+- `db/migrations/*.sql` run in filename order at startup (`app.db.apply_migrations`): `0001_init.sql`,
+  `0002_score_corrections.sql`. Every statement uses `IF NOT EXISTS`, so re-running on an existing
+  database is safe and adds new indexes only.
+- The runner has no version table, checksums, or downgrades — it is a prototype stopgap.
+- Before production: explicit versioned runner (Alembic/Knex), PostgreSQL, tested rollback path.
   Destructive migrations require backup + restore plan (AGENTS.md §6).
 
 ## Known gaps

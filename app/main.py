@@ -445,6 +445,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if submission["user_id"] != user.id and not user.is_staff:
             raise HTTPException(status_code=403, detail="دسترسی به این درخواست مجاز نیست.")
         event = repo.score_event_for_source(conn, submission_id)
+        reversal = repo.reversal_for(conn, event["id"]) if event else None
         return page(
             request,
             "submission.html",
@@ -453,6 +454,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "submission": submission,
                 "evidences": repo.submission_evidences(conn, submission_id),
                 "event": event,
+                "reversal": reversal,
+                "can_correct": bool(
+                    user.is_admin and event and not event["corrects_event_id"] and not reversal
+                ),
                 "explain": json.loads(event["explain_json"]) if event else None,
             },
             user=user,
@@ -608,6 +613,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         suffix = "&ok=1" if created else ""
         return go(f"/admin/submissions?status=submitted{suffix}", request)
+
+    @app.post(
+        "/admin/score-events/{event_id}/reverse",
+        response_class=HTMLResponse,
+        dependencies=[Depends(csrf_guard)],
+    )
+    def admin_reverse_score(
+        event_id: str,
+        request: Request,
+        reason: str = Form(""),
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ):
+        """Correct a score event with a negative event — history is never edited."""
+        event = repo.score_event_detail(conn, event_id)
+        if event is None:
+            raise HTTPException(status_code=404, detail="رخداد امتیاز یافت نشد.")
+        if event["organization_id"] != user.organization_id:
+            raise HTTPException(status_code=403, detail="خارج از محدوده سازمانی شما.")
+        try:
+            repo.reverse_score_event(conn, event, user, reason)
+        except DomainError as exc:
+            return page(
+                request,
+                "error.html",
+                {"code": 409, "message": exc.message},
+                status_code=409,
+                user=user,
+            )
+        return go(f"/submissions/{event['source_id']}?reversed=1", request)
 
     @app.get("/admin/missions", response_class=HTMLResponse)
     def admin_missions(

@@ -12,7 +12,7 @@ from pathlib import Path
 
 from app.config import REPO_ROOT
 
-SCHEMA_PATH = REPO_ROOT / "db" / "migrations" / "0001_init.sql"
+MIGRATIONS_DIR = REPO_ROOT / "db" / "migrations"
 
 
 def now_iso() -> str:
@@ -26,14 +26,28 @@ def connect(db_path: Path) -> sqlite3.Connection:
     return conn
 
 
+def apply_migrations(conn: sqlite3.Connection) -> list[str]:
+    """Run every ``db/migrations/NNNN_*.sql`` in order.
+
+    All statements are written with ``IF NOT EXISTS`` so re-running is safe on an
+    existing database. This is a prototype runner, not Alembic: no downgrades,
+    no checksums (documented in docs/architecture/database-erd.md).
+    """
+    applied: list[str] = []
+    for path in sorted(MIGRATIONS_DIR.glob("*.sql")):
+        conn.executescript(path.read_text(encoding="utf-8"))
+        applied.append(path.name)
+    conn.commit()
+    return applied
+
+
 def init_db(db_path: Path, evidence_dir: Path) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     evidence_dir.mkdir(parents=True, exist_ok=True)
 
     conn = connect(db_path)
     try:
-        conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
-        conn.commit()
+        apply_migrations(conn)
         empty = conn.execute("SELECT COUNT(*) AS n FROM users").fetchone()["n"] == 0
         if empty:
             from app.seed import seed_demo
