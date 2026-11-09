@@ -1,0 +1,143 @@
+{
+  "$schema_note": "Seed for docs/decisions/open-decisions.md. The live registry lives in the product repo; this is only a starting point.",
+  "project": "Kiloos Club",
+  "source": "Kiloos Club — Product Strategy & Scope v0.1 (docs 01–12)",
+  "generated_at": "2026-11-09",
+  "decision_states": ["APPROVED", "PROPOSED", "ASSUMPTION", "OPEN", "IMPLEMENTED", "DEPRECATED"],
+  "open_decisions": [
+    {
+      "id": "OD-01",
+      "topic": "روش ورود",
+      "question": "ورود با موبایل + OTP، شناسه پرسنلی، یا ترکیبی؟",
+      "owner": "کارفرما",
+      "impact": ["Access", "UX", "Deadline"],
+      "needed_by": "MS-03",
+      "status": "OPEN",
+      "assumption": "OTP شبیه‌سازی‌شده در محیط Demo؛ لایه احراز هویت جدا تا سوئیچ به provider واقعی"
+    },
+    {
+      "id": "OD-02",
+      "topic": "ساختار سازمانی",
+      "question": "شرکت، شعبه، شهر و تیم چگونه تعریف می‌شوند؟",
+      "owner": "کارفرما",
+      "impact": ["Access", "Reporting", "Leaderboard"],
+      "needed_by": "MS-03",
+      "status": "OPEN",
+      "assumption": "یک tenant با فیلد organization_id و سلسله‌مراتب ساده در مدل داده"
+    },
+    {
+      "id": "OD-03",
+      "topic": "نمونه فایل فروش",
+      "question": "فایل نمونه و فرهنگ داده فروش چیست؟",
+      "owner": "کارفرما",
+      "impact": ["Sales data", "Points"],
+      "needed_by": "Phase 3",
+      "status": "OPEN",
+      "assumption": "قرارداد اولیه در playbooks/sales-import.md با فایل نمونه برچسب‌دار"
+    },
+    {
+      "id": "OD-04",
+      "topic": "فرمول امتیاز فروش",
+      "question": "امتیاز بر اساس حجم، تعداد مشتری، یا ترکیب شاخص‌ها؟",
+      "owner": "کارفرما",
+      "impact": ["Points", "Money", "Fairness"],
+      "needed_by": "Phase 3",
+      "status": "OPEN",
+      "assumption": "قانون Per-Unit نمونه با مقدار SAMPLE؛ موتور configurable"
+    },
+    {
+      "id": "OD-05",
+      "topic": "SKUهای هدف",
+      "question": "کدام محصولات و با چه ضرایبی امتیاز ویژه دارند؟",
+      "owner": "کارفرما",
+      "impact": ["Points", "Business"],
+      "needed_by": "Phase 3",
+      "status": "OPEN",
+      "assumption": "بدون ضریب ویژه در MVP؛ فیلد sku_code ذخیره می‌شود"
+    },
+    {
+      "id": "OD-06",
+      "topic": "اعتبارسنجی مأموریت",
+      "question": "کدام مأموریت‌ها خودکار و کدام دستی تأیید شوند؟",
+      "owner": "مشترک (کارفرما + محصول)",
+      "impact": ["Points", "Operations"],
+      "needed_by": "Phase 2",
+      "status": "OPEN",
+      "assumption": "تأیید دستی اپراتور؛ auto-approve خاموش و configurable"
+    },
+    {
+      "id": "OD-07",
+      "topic": "معیار رقابت",
+      "question": "معیار رتبه‌بندی فردی و گروهی چیست؟",
+      "owner": "مشترک",
+      "impact": ["Points", "Fairness"],
+      "needed_by": "Phase 4",
+      "status": "OPEN",
+      "assumption": "مجموع امتیاز دوره؛ tie-breaker موقت: امتیاز سپس زمان"
+    },
+    {
+      "id": "OD-08",
+      "topic": "کیف امتیاز",
+      "question": "امتیاز صرفاً نمایشی است یا قابلیت مصرف دارد؟",
+      "owner": "کارفرما",
+      "impact": ["Money", "Points", "Legal"],
+      "needed_by": "Phase 2",
+      "status": "OPEN",
+      "assumption": "غیرقابل مصرف و غیرمالی؛ هیچ تعهد برداشت ایجاد نمی‌شود"
+    },
+    {
+      "id": "OD-09",
+      "topic": "مشارکت خانواده",
+      "question": "خانواده در چه فعالیت‌هایی مشارکت می‌کند؟",
+      "owner": "مشترک",
+      "impact": ["Scope", "UX", "Privacy"],
+      "needed_by": "post-MVP",
+      "status": "OPEN",
+      "assumption": "خارج از MVP؛ هیچ داده خانوادگی جمع‌آوری نمی‌شود"
+    },
+    {
+      "id": "OD-10",
+      "topic": "سرپرست فروش",
+      "question": "آیا سرپرست فروش در MVP دسترسی مستقل دارد؟",
+      "owner": "کارفرما",
+      "impact": ["Access", "Scope"],
+      "needed_by": "Phase 2",
+      "status": "OPEN",
+      "assumption": "نقش تعریف می‌شود اما داشبورد تیمی به بعد از MVP موکول است"
+    },
+    {
+      "id": "OD-11",
+      "topic": "یکپارچگی",
+      "question": "کدام ERP یا سامانه فروش در اولویت است؟",
+      "owner": "کارفرما",
+      "impact": ["Scope", "Sales data", "Deadline"],
+      "needed_by": "Phase 3",
+      "status": "OPEN",
+      "assumption": "فقط ورود فایل در MVP؛ بدون اتصال زنده"
+    },
+    {
+      "id": "OD-12",
+      "topic": "ظرفیت",
+      "question": "تعداد کاربران هم‌زمان و الگوی مصرف مورد انتظار چیست؟",
+      "owner": "مشترک",
+      "impact": ["Architecture", "Cost", "Performance"],
+      "needed_by": "before Scale",
+      "status": "OPEN",
+      "assumption": "طراحی برای ۱٬۵۰۰ کاربر؛ بدون ادعای ظرفیت بالاتر تا آزمون بار"
+    }
+  ],
+  "open_architecture_decisions": [
+    "Backend framework",
+    "Mobile technology",
+    "Database engine",
+    "Sales data contract and record unique key",
+    "Authentication method",
+    "Hosting location",
+    "Evidence retention policy",
+    "Queue / async processing tool",
+    "SLA, RPO, RTO",
+    "Company/org access levels",
+    "Scoring rule versioning and correction policy",
+    "Reporting and analytics requirements"
+  ]
+}
