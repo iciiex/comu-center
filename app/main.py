@@ -740,14 +740,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             repo.sales_user_map(conn, user.organization_id),
             existing_ids=repo.sales_external_ids(conn, user.organization_id),
         )
-        import_row = repo.create_sales_import(
-            conn,
-            user.organization_id,
-            user.id,
-            file.filename[:160],
-            sha,
-            validated,
-        )
+        try:
+            import_row = repo.create_sales_import(
+                conn, user.organization_id, user.id, file.filename[:160], sha, validated
+            )
+        except sqlite3.IntegrityError:
+            # A concurrent upload may have claimed the file or an external id
+            # after validation; the transaction was rolled back, so retry safely.
+            return render_error("فایل یا یکی از ردیف‌ها هم‌زمان ثبت شده است؛ دوباره بررسی کنید.", 409)
         return go(f"/admin/sales/{import_row['id']}", request)
 
     @app.get("/admin/sales/{import_id}", response_class=HTMLResponse)

@@ -571,7 +571,8 @@ def sales_user_map(conn: sqlite3.Connection, org_id: str) -> dict[str, str]:
 
 def sales_external_ids(conn: sqlite3.Connection, org_id: str) -> set[str]:
     rows = conn.execute(
-        "SELECT external_id FROM sales_records WHERE organization_id = ?", (org_id,)
+        "SELECT external_id FROM sales_records WHERE organization_id = ? "
+        "AND status IN ('valid', 'scored')", (org_id,)
     ).fetchall()
     return {row["external_id"] for row in rows}
 
@@ -701,56 +702,51 @@ def process_sales_import(
     conn: sqlite3.Connection, import_row: sqlite3.Row, actor
 ) -> dict[str, int]:
     """Turn valid rows into score events. Safe to re-run: nothing is scored twice."""
-    if import_row["status"] == "rejected":
-        raise DomainError("IMPORT_REJECTED", "این فایل رد شده است و قابل پردازش نیست.")
-    if import_row["status"] == "processing":
-        raise DomainError("IMPORT_BUSY", "این import در حال پردازش است.")
-
-    pending = conn.execute(
-        "SELECT * FROM sales_records WHERE import_id = ? AND status = 'valid' ORDER BY row_number",
-        (import_row["id"],),
-    ).fetchall()
-
     created = 0
     points = 0
     try:
+        # Serialize concurrent processors and commit the events, row states and
+        # reconciliation totals together. Re-read state after acquiring the lock.
+        conn.execute("BEGIN IMMEDIATE")
+        current = conn.execute(
+            "SELECT status FROM sales_imports WHERE id = ? AND organization_id = ?",
+            (import_row["id"], import_row["organization_id"]),
+        ).fetchone()
+        if current is None or current["status"] == "rejected":
+            raise DomainError("IMPORT_REJECTED", "این فایل رد شده است و قابل پردازش نیست.")
+        if current["status"] == "processing":
+            raise DomainError("IMPORT_BUSY", "این import در حال پردازش است.")
+        pending = conn.execute(
+            "SELECT * FROM sales_records WHERE import_id = ? "
+            "AND status = 'valid' ORDER BY row_number",
+            (import_row["id"],),
+        ).fetchall()
         for record in pending:
             event, was_created = award_sales_record(conn, record, actor.id)
             if was_created and event is not None:
                 created += 1
                 points += int(event["points"])
-            with conn:
-                conn.execute(
-                    "UPDATE sales_records SET status = 'scored' WHERE id = ?", (record["id"],)
-                )
-        with conn:
-            conn.execute(
-                """UPDATE sales_imports
-                   SET status = 'completed',
-                       created_count = created_count + ?,
-                       points_sum = points_sum + ?,
-                       finished_at = ?
-                   WHERE id = ?""",
-                (created, points, now_iso(), import_row["id"]),
-            )
-            conn.execute(
-                """INSERT INTO audit_logs
-                   (id, actor_id, action, entity_type, entity_id, detail_json, created_at)
-                   VALUES (?, ?, 'sales.import.processed', 'sales_import', ?, ?, ?)""",
-                (
-                    str(uuid.uuid4()),
-                    actor.id,
-                    import_row["id"],
-                    json.dumps(
-                        {"created_events": created, "points": points, "rows": len(pending)},
-                        ensure_ascii=False,
-                    ),
-                    now_iso(),
-                ),
-            )
+            conn.execute("UPDATE sales_records SET status = 'scored' WHERE id = ?", (record["id"],))
+        conn.execute(
+            """UPDATE sales_imports SET status = 'completed', error_message = NULL,
+                   created_count = created_count + ?, points_sum = points_sum + ?, finished_at = ?
+               WHERE id = ?""",
+            (created, points, now_iso(), import_row["id"]),
+        )
+        conn.execute(
+            """INSERT INTO audit_logs
+               (id, actor_id, action, entity_type, entity_id, detail_json, created_at)
+               VALUES (?, ?, 'sales.import.processed', 'sales_import', ?, ?, ?)""",
+            (str(uuid.uuid4()), actor.id, import_row["id"],
+             json.dumps({"created_events": created, "points": points, "rows": len(pending)},
+                        ensure_ascii=False), now_iso()),
+        )
+        conn.commit()
     except DomainError:
+        conn.rollback()
         raise
-    except Exception as exc:  # keep the import inspectable instead of a half-state
+    except Exception as exc:
+        conn.rollback()
         with conn:
             conn.execute(
                 "UPDATE sales_imports SET status = 'failed', error_message = ? WHERE id = ?",

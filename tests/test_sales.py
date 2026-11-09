@@ -285,3 +285,34 @@ def test_detail_page_shows_reconciliation(
     assert "تعداد ردیف‌ها می‌خواند" in detail.text
     import_id = re.search(r"/admin/sales/([0-9a-f-]{36})/process", detail.text)
     assert import_id is not None
+
+
+def test_processing_failure_rolls_back_all_events(client, settings, db, monkeypatch):
+    from app import repo
+
+    login(client, settings, ADMIN)
+    content = workbook_bytes([
+        ["atomic-1", MAPPED_USER, "2026-11-01", "SKU-1", 1, 1_000_000],
+        ["atomic-2", MAPPED_USER, "2026-11-01", "SKU-1", 1, 1_000_000],
+    ])
+    upload(client, settings, content)
+    import_id = db.execute("SELECT id FROM sales_imports").fetchone()["id"]
+    original = repo.award_sales_record
+    calls = 0
+
+    def fail_second(*args):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("simulated failure")
+        return original(*args)
+
+    monkeypatch.setattr(repo, "award_sales_record", fail_second)
+    response = post(client, settings, f"/admin/sales/{import_id}/process")
+    assert response.status_code == 409
+    count = db.execute("SELECT COUNT(*) FROM score_events WHERE source_type='sales_record'")
+    assert count.fetchone()[0] == 0
+    assert db.execute("SELECT COUNT(*) FROM sales_records WHERE status='valid'").fetchone()[0] == 2
+    monkeypatch.setattr(repo, "award_sales_record", original)
+    assert post(client, settings, f"/admin/sales/{import_id}/process").status_code == 200
+    assert db.execute("SELECT points_sum FROM sales_imports").fetchone()[0] == 2

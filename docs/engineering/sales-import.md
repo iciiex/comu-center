@@ -11,15 +11,16 @@
 ## Lifecycle
 
 ```
-upload ──► validated ──► processing ──► completed
-   │                          └──────► failed
-   └──► rejected (file-level problem: bad xlsx, missing headers, too many rows, duplicate file)
+upload ──► validated ──► completed
+   │                         └──────► failed
+   └──► rejected before storage (bad xlsx, missing headers, too many rows, duplicate file)
 ```
 
 - **Upload never scores.** It validates file and rows and stores both.
 - **Process is explicit** (`POST /admin/sales/{id}/process`) and idempotent: it only touches rows
   still in `valid`; a second run reports `processed=0` and writes nothing.
-- A rejected file is not processable; a failed import keeps the error message for inspection.
+- A file-level rejection is not stored; a failed processing attempt keeps an error for inspection.
+  Processing is atomic: an error rolls back all row states and awards, and retry is safe.
 
 ## Contract (SAMPLE)
 
@@ -60,7 +61,7 @@ A bad row never rejects the file: the others are still processed and the report 
 | same file uploaded twice | `ux_sales_imports_fingerprint` → 409 with the existing import id |
 | same `external_id` in the same file | row `duplicate` (`E_DUPLICATE_IN_FILE`) |
 | same `external_id` in another import | row `duplicate` (`E_DUPLICATE_EXISTING`) |
-| re-running process | rows already `scored` are skipped; `score.record:<id>` keeps scoring idempotent |
+| re-running process | rows already `scored` are skipped; `sales.record:<id>` keeps scoring idempotent |
 
 `ux_sales_records_external` is **partial** (`WHERE status IN ('valid','scored')`) so invalid and
 duplicate rows can still be stored for the report.

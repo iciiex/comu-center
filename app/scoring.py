@@ -199,7 +199,9 @@ def award_sales_record(
     if rule is None:
         raise ScoringError("NO_ACTIVE_RULE_VERSION")
 
-    unit = Decimal(str(rule["unit_size"] or 1))
+    unit = Decimal(str(rule["unit_size"]))
+    if not unit.is_finite() or unit <= 0:
+        raise ScoringError("INVALID_UNIT_SIZE")
     amount = Decimal(str(record["amount"] or 0))
     units = int((amount / unit).to_integral_value(rounding=ROUND_FLOOR))
     points = units * int(rule["points"])
@@ -222,26 +224,19 @@ def award_sales_record(
         "is_sample": bool(rule["is_sample"]),
     }
     event_id = str(uuid.uuid4())
-    try:
-        with conn:
-            _persist_award(
-                conn,
-                event_id=event_id,
-                user_id=record["user_id"],
-                source_type="sales_record",
-                source_id=record["id"],
-                rule_code=SALES_RULE_CODE,
-                rule_version_id=rule["id"],
-                points=points,
-                occurred_at=occurred_at,
-                key=key,
-                explain=explain,
-            )
-    except sqlite3.IntegrityError:
-        existing = _existing(conn, key)
-        if existing is not None:
-            return existing, False
-        raise
+    _persist_award(
+        conn,
+        event_id=event_id,
+        user_id=record["user_id"],
+        source_type="sales_record",
+        source_id=record["id"],
+        rule_code=SALES_RULE_CODE,
+        rule_version_id=rule["id"],
+        points=points,
+        occurred_at=occurred_at,
+        key=key,
+        explain=explain,
+    )
 
     event = conn.execute("SELECT * FROM score_events WHERE id = ?", (event_id,)).fetchone()
     return event, True

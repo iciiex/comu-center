@@ -3,7 +3,7 @@
 - Status: **PARTIAL** — automated tests exist for the demo path; full strategy is doc 10.
 - Mode: P
 
-## Implemented automated coverage (55 tests)
+## Implemented automated coverage (56 tests)
 - Health/mode banner; login page and demo users.
 - Mission eligibility: date window, status, org (BR-001).
 - Submit → review → score end-to-end; second approval blocked; no duplicate events.

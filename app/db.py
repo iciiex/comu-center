@@ -45,12 +45,20 @@ def apply_migrations(conn: sqlite3.Connection) -> list[str]:
     for path in sorted(MIGRATIONS_DIR.glob("*.sql")):
         if path.name in done:
             continue
-        conn.executescript(path.read_text(encoding="utf-8"))
-        conn.execute(
-            "INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)",
-            (path.name, now_iso()),
-        )
-        conn.commit()
+        # executescript otherwise commits each statement separately, leaving an
+        # ALTER applied but unrecorded if a later statement fails.
+        name = path.name.replace("'", "''")
+        timestamp = now_iso().replace("'", "''")
+        try:
+            conn.executescript(
+                "BEGIN IMMEDIATE;\n" + path.read_text(encoding="utf-8")
+                + "\nINSERT INTO schema_migrations (name, applied_at) "
+                + f"VALUES ('{name}', '{timestamp}');"
+                + "\nCOMMIT;"
+            )
+        except Exception:
+            conn.rollback()
+            raise
         applied.append(path.name)
     return applied
 

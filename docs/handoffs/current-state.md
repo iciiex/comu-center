@@ -70,7 +70,7 @@
 
 ## Tests and verification
 - `.venv/bin/ruff check app tests` → **All checks passed**
-- `.venv/bin/pytest` → **55 passed**
+- `.venv/bin/pytest` → **56 passed**
 - Manual HTTP smoke test (uvicorn): health → login → mission → submit → operator approve → score ۱۰ →
   leaderboard; second approval returns 409; ledger/wallet/outbox verified in SQLite.
 - `curl /health` → `{"status":"ok","mode":"P",...}`

@@ -165,3 +165,5 @@ SameSite=None، ذخیره‌سازی محلی) در iframe قابل اتکا ن
 **Affected docs:** `docs/engineering/sales-import.md`، `docs/engineering/api-spec.md`،
 `docs/architecture/database-erd.md`، `docs/engineering/scoring-engine.md`،
 `docs/quality/qa-test-strategy.md`، `docs/handoffs/current-state.md`
+
+**Exit condition:** Replace the SAMPLE contract and scoring parameters when OD-03 and OD-04 are approved; revisit access, mapping and rule timing with the production import design.

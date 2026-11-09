@@ -47,12 +47,14 @@ def _decimal(value: Any) -> Decimal | None:
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float, Decimal)):
-        return Decimal(str(value))
+        number = Decimal(str(value))
+        return number if number.is_finite() else None
     cleaned = str(value).strip().replace(",", "").replace("٬", "").replace(" ", "")
     if not cleaned:
         return None
     try:
-        return Decimal(cleaned)
+        number = Decimal(cleaned)
+        return number if number.is_finite() else None
     except InvalidOperation:
         return None
 
