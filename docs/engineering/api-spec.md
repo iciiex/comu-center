@@ -2,13 +2,57 @@
 
 - Status: **IMPLEMENTED (prototype)** — subset of the target contract in the source spec (doc 07).
 - Mode: P · Last updated: 2026-11-09
-- Auth: signed session cookie (`kiloos_session`, HttpOnly, SameSite=Lax). Demo login only (OD-01).
+- Auth: signed session token (`HMAC-SHA256`, 12h TTL) delivered as an HttpOnly cookie **or** as `?s=`
+  in the URL. Demo login only (OD-01). See «Session transport» below.
 - Response type: HTML pages for the app; `GET /health` returns JSON. Machine-readable schema: `GET /api/docs` (OpenAPI).
 
 > Planned REST surface `POST /api/v1/...` is **not** implemented yet; this document describes what exists so
 > the next agent does not invent endpoints or break the contract.
 
 ---
+## Session transport (D-002)
+
+The shared preview runs inside an iframe where browsers block third-party cookies, so a cookie-only
+session silently logs the user out. The prototype therefore accepts the **same signed token** in two places:
+
+| Transport | Format | Used when |
+|---|---|---|
+| Cookie `kiloos_session` | `base64url("<user_id>.<issued_at>.<hmac>")` | normal top-level browsing |
+| Query parameter `?s=` | identical token | cookie was rejected (embedded preview) |
+
+- Token TTL: `KILOOS_SESSION_TTL` (default 12h); expired/forged tokens are ignored.
+- `?s=` wins over the cookie when both are present.
+- Pages and redirects keep the token in internal links and form actions **only** when the request itself
+  arrived with `?s=`. Cookie-based sessions keep clean URLs.
+- `POST /demo-login` is exempt from CSRF (no session exists yet) and answers `303 → <target>?s=<token>`.
+
+> ⚠️ Token-in-URL is a **demo-only fallback** (see decision log D-002): URLs leak into history, logs and
+> referrers. `Referrer-Policy: no-referrer` mitigates but does not remove the risk. Production requires
+> first-party hosting (no third-party cookie problem) or real OTP (OD-01) with a server-side session.
+
+## CSRF
+
+Every state-changing request (all `POST`s except `/demo-login`) must carry a hidden `csrf` field whose
+value is `HMAC-SHA256(secret, "csrf:" + session_token)`. The token is derived from the session so it works
+in the cookie-less fallback too. Missing or mismatched → `403` with a Persian message; anonymous `POST` →
+`303 /login`. Implemented as a route dependency (`csrf_guard`), so multipart uploads stay intact.
+
+## Rate limiting
+
+`POST /demo-login` allows `KILOOS_LOGIN_RATE_LIMIT` attempts per IP per `KILOOS_LOGIN_RATE_WINDOW`
+seconds (defaults 10 / 60). Exceeding it → `429` page. The counter is in-process memory: it is a demo
+guard, not a multi-worker limiter.
+
+## Security headers
+
+`X-Content-Type-Options: nosniff` · `Referrer-Policy: no-referrer` · `X-Permitted-Cross-Domain-Policies: none` ·
+`Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; form-action 'self'; base-uri 'self'; frame-ancestors *`.
+
+`X-Frame-Options` / `frame-ancestors` are deliberately permissive because the shared preview embeds the app
+in an iframe. Narrow both before real users.
+
+---
+
 
 ## Public
 
@@ -16,8 +60,8 @@
 |---|---|---|
 | GET | `/health` | Liveness + mode banner |
 | GET | `/login` | Demo user picker |
-| POST | `/demo-login` | Form `user_id` → sets session, 303 to `/home` or `/admin/submissions` |
-| POST | `/logout` | Clears session |
+| POST | `/demo-login` | Form `user_id` → sets cookie, `303 → /home?s=<token>` or `/admin/submissions?s=<token>` |
+| POST | `/logout` | CSRF-checked; clears cookie, `303 → /login` |
 
 `GET /health`:
 
@@ -49,7 +93,7 @@
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/admin/submissions?status=submitted\|approved\|rejected` | Review queue |
+| GET | `/admin/submissions?status=submitted\|approved\|rejected&page=N` | Review queue, 20 per page (`KILOOS_QUEUE_PAGE_SIZE`) |
 | GET | `/admin/submissions/{id}` | Review screen |
 | POST | `/admin/submissions/{id}/review` | Form `decision=approve\|reject`, `reason` |
 
@@ -97,5 +141,8 @@ Mission form fields: `title`, `description`, `points` (0–10000), `max_per_user
 ## Known gaps
 
 - No REST/JSON API for mobile clients yet (planned `/api/v1`, `Idempotency-Key` header).
-- No CSRF token beyond `SameSite=Lax` cookies; required before real users.
-- No pagination; queues are org-sized (prototype scale only).
+- `?s=` session transport leaks the token into URLs; demo-only until OD-01 (see D-002).
+- Rate limiting and the session store are in-process memory (single worker only).
+- Evidence retention exists as a manual command (`python -m app.maintenance purge-evidence`), no scheduler.
+- Mission/leaderboard lists are unpaginated (queue is paginated).
+- No CSP report collector; policy is applied but unmonitored.

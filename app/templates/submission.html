@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}وضعیت مأموریت · کیلوس کلاب{% endblock %}
 {% block content %}
-  <p class="small" style="margin:4px 2px"><a href="/missions/{{ submission['mission_id'] }}">→ بازگشت به مأموریت</a></p>
+  <p class="small" style="margin:4px 2px"><a href="{{ url('/missions/' ~ submission['mission_id']) }}">→ بازگشت به مأموریت</a></p>
 
   {% if submission['status'] == 'submitted' %}
     <div class="card" style="border-color:#f0d7a8; background:#fffaf0">
@@ -63,7 +63,7 @@
   {% for evidence in evidences %}
     <div class="card card--flat">
       <div class="card__meta">تصویر شاهد</div>
-      <img class="evidence" src="/evidence/{{ evidence['id'] }}" alt="تصویر شاهد مأموریت">
+      <img class="evidence" src="{{ url('/evidence/' ~ evidence['id']) }}" alt="تصویر شاهد مأموریت">
       <p class="tiny muted" style="margin:8px 0 0; direction:ltr; text-align:left">
         sha256: {{ evidence['sha256'][:24] }}… · {{ evidence['content_type'] }}
       </p>

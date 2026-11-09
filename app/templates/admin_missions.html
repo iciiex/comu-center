@@ -3,7 +3,7 @@
 {% block content %}
   <div class="section-head">
     <h2>مأموریت‌ها</h2>
-    {% if user.is_admin %}<a class="btn btn--sm" href="/admin/missions/new">مأموریت جدید</a>{% endif %}
+    {% if user.is_admin %}<a class="btn btn--sm" href="{{ url('/admin/missions/new') }}">مأموریت جدید</a>{% endif %}
   </div>
 
   {% if not user.is_admin %}
@@ -28,7 +28,7 @@
             <td class="tiny muted">{{ mission['starts_at']|jdate }} — {{ mission['ends_at']|jdate }}</td>
             <td>
               {% if user.is_admin %}
-                <a class="btn btn--ghost btn--sm" href="/admin/missions/{{ mission['id'] }}">ویرایش</a>
+                <a class="btn btn--ghost btn--sm" href="{{ url('/admin/missions/' ~ mission['id']) }}">ویرایش</a>
               {% endif %}
             </td>
           </tr>

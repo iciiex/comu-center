@@ -203,22 +203,40 @@ def list_user_submissions(
     ).fetchall()
 
 
+_QUEUE_WHERE = """
+    FROM submissions s
+    JOIN missions m ON m.id = s.mission_id
+    JOIN users u ON u.id = s.user_id
+    WHERE m.organization_id = ? AND s.status = ?
+"""
+
+
 def list_queue(
-    conn: sqlite3.Connection, org_id: str, status: str = "submitted"
+    conn: sqlite3.Connection,
+    org_id: str,
+    status: str = "submitted",
+    *,
+    limit: int | None = None,
+    offset: int = 0,
 ) -> list[sqlite3.Row]:
-    return conn.execute(
-        """
+    """Review queue, oldest first (stable order for pagination)."""
+    select = """
         SELECT s.*, m.title AS mission_title, u.full_name AS user_name,
                (SELECT COUNT(*) FROM submission_evidences e
                  WHERE e.submission_id = s.id) AS evidence_count
-        FROM submissions s
-        JOIN missions m ON m.id = s.mission_id
-        JOIN users u ON u.id = s.user_id
-        WHERE m.organization_id = ? AND s.status = ?
-        ORDER BY s.created_at ASC
-        """,
-        (org_id, status),
+    """
+    order = " ORDER BY s.created_at ASC, s.id ASC"
+    if limit is None:
+        return conn.execute(select + _QUEUE_WHERE + order, (org_id, status)).fetchall()
+    return conn.execute(
+        select + _QUEUE_WHERE + order + " LIMIT ? OFFSET ?",
+        (org_id, status, limit, offset),
     ).fetchall()
+
+
+def count_queue(conn: sqlite3.Connection, org_id: str, status: str = "submitted") -> int:
+    row = conn.execute("SELECT COUNT(*) AS n" + _QUEUE_WHERE, (org_id, status)).fetchone()
+    return int(row["n"])
 
 
 def review_submission(

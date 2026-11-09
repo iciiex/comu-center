@@ -13,19 +13,19 @@
   {% if user.is_staff %}
     <div class="alert alert--info">
       شما با نقش اپراتور/مدیر وارد شده‌اید.
-      <a href="/admin/submissions">رفتن به صف بررسی</a>
+      <a href="{{ url('/admin/submissions') }}">رفتن به صف بررسی</a>
     </div>
   {% endif %}
 
   <div class="section-head">
     <h2>مأموریت‌های امروز</h2>
-    <a href="/missions">همه مأموریت‌ها</a>
+    <a href="{{ url('/missions') }}">همه مأموریت‌ها</a>
   </div>
 
   {% if missions %}
     {% for mission in missions %}
       {% set done = mission['my_count'] >= mission['max_per_user'] %}
-      <a class="mission" href="/missions/{{ mission['id'] }}" style="text-decoration:none; color:inherit">
+      <a class="mission" href="{{ url('/missions/' ~ mission['id']) }}" style="text-decoration:none; color:inherit">
         <span class="mission__icon">📸</span>
         <span class="mission__body">
           <span class="mission__title">{{ mission['title'] }}</span>
@@ -48,7 +48,7 @@
     </div>
   {% endif %}
 
-  <div class="section-head"><h2>آخرین فعالیت‌ها</h2><a href="/score">تاریخچه امتیاز</a></div>
+  <div class="section-head"><h2>آخرین فعالیت‌ها</h2><a href="{{ url('/score') }}">تاریخچه امتیاز</a></div>
   {% if recent %}
     <div class="card card--flat">
       <ul class="timeline">

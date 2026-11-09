@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ 'ویرایش مأموریت' if mission else 'مأموریت جدید' }} · کیلوس کلاب{% endblock %}
 {% block content %}
-  <p class="small" style="margin:4px 2px"><a href="/admin/missions">→ بازگشت به مأموریت‌ها</a></p>
+  <p class="small" style="margin:4px 2px"><a href="{{ url('/admin/missions') }}">→ بازگشت به مأموریت‌ها</a></p>
 
   {% if mission %}
     <div class="card">
@@ -15,11 +15,13 @@
         </div>
         <div class="row">
           {% if mission['status'] == 'draft' %}
-            <form method="post" action="/admin/missions/{{ mission['id'] }}/publish" class="mb-0">
+            <form method="post" action="{{ url('/admin/missions/' ~ mission['id'] ~ '/publish') }}" class="mb-0">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
               <button class="btn btn--sm" type="submit">انتشار</button>
             </form>
           {% elif mission['status'] == 'active' %}
-            <form method="post" action="/admin/missions/{{ mission['id'] }}/archive" class="mb-0">
+            <form method="post" action="{{ url('/admin/missions/' ~ mission['id'] ~ '/archive') }}" class="mb-0">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
               <button class="btn btn--ghost btn--sm" type="submit">آرشیو</button>
             </form>
           {% endif %}
@@ -29,7 +31,8 @@
   {% endif %}
 
   <form class="card" method="post"
-        action="{{ ('/admin/missions/' ~ mission['id']) if mission else '/admin/missions/new' }}">
+        action="{{ url(('/admin/missions/' ~ mission['id']) if mission else '/admin/missions/new') }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
     <h1 class="card__title">{{ 'ویرایش مأموریت' if mission else 'ساخت مأموریت جدید' }}</h1>
 
     <div class="field mt-2">

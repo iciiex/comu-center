@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}بررسی درخواست · کیلوس کلاب{% endblock %}
 {% block content %}
-  <p class="small" style="margin:4px 2px"><a href="/admin/submissions">→ بازگشت به صف</a></p>
+  <p class="small" style="margin:4px 2px"><a href="{{ url('/admin/submissions') }}">→ بازگشت به صف</a></p>
 
   <div class="card">
     <div class="card__row" style="align-items:flex-start">
@@ -26,7 +26,7 @@
 
   {% for evidence in evidences %}
     <div class="card card--flat">
-      <img class="evidence" src="/evidence/{{ evidence['id'] }}" alt="تصویر شاهد">
+      <img class="evidence" src="{{ url('/evidence/' ~ evidence['id']) }}" alt="تصویر شاهد">
       <p class="tiny muted" style="margin:8px 0 0; direction:ltr; text-align:left">
         {{ evidence['file_name'] }} · {{ evidence['content_type'] }} · sha256: {{ evidence['sha256'][:20] }}…
       </p>
@@ -45,12 +45,14 @@
   {% if submission['status'] == 'submitted' %}
     <div class="card">
       <h2 class="card__title">تصمیم</h2>
-      <form method="post" action="/admin/submissions/{{ submission['id'] }}/review" class="stack mt-2">
+      <form method="post" action="{{ url('/admin/submissions/' ~ submission['id'] ~ '/review') }}" class="stack mt-2">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
         <input type="hidden" name="decision" value="approve">
         <button class="btn btn--block" type="submit">تأیید و ثبت امتیاز</button>
       </form>
 
-      <form method="post" action="/admin/submissions/{{ submission['id'] }}/review" style="margin-top:14px">
+      <form method="post" action="{{ url('/admin/submissions/' ~ submission['id'] ~ '/review') }}" style="margin-top:14px">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
         <input type="hidden" name="decision" value="reject">
         <div class="field">
           <label for="reason">دلیل رد (الزامی)</label>

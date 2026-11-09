@@ -9,6 +9,10 @@
 
 ## Working features
 - Demo login with 5 seeded users (visitor ×3, operator, admin) and role-aware redirect.
+- Cookie-less session fallback: signed token in `?s=` propagated through links/forms/redirects, so the
+  demo works inside the embedded preview where third-party cookies are blocked (D-002).
+- CSRF guard on every state-changing route (value derived from the session token), rate-limited demo login,
+  security headers, Persian 404/403/422 pages, paginated review queue.
 - Mission list/detail filtered by `status=active`, date window, and organization (BR-001); expired and draft missions are hidden.
 - Photo submission with type/size validation, private storage, sha256, and `request_id` idempotency (`UNIQUE(user_id, request_id)`).
 - Operator review queue with approve/reject; rejection reason required; state machine blocks double review (409).
@@ -32,11 +36,11 @@
 - **Leaderboard:** computed on read with proposed tie-break (BR-009). Exit: approved competition criteria + snapshot strategy.
 
 ## Known issues
-- No CSRF token (relies on `SameSite=Lax`); required before real users.
-- No rate limiting / lockout on demo login.
-- Evidence retention policy not implemented (files accumulate in `var/evidence`).
+- `?s=` puts the session token in the URL (history/logs/referrer); demo-only, exit condition in D-002.
+- Rate limiting and session state live in process memory (single-worker only).
+- Evidence retention is a manual command; no scheduler, and the 90-day window is a sample default (D-003).
 - SQLite single-writer; no connection pooling or WAL tuning yet.
-- No pagination in admin queue.
+- Mission and leaderboard lists are still unpaginated (queue is paginated).
 - `alembic`-style migration runner absent; schema executes at startup (prototype only).
 - `tests/` uses FastAPI TestClient; Starlette emits a deprecation warning about `httpx` (harmless for now).
 
@@ -56,15 +60,16 @@
 
 ## Tests and verification
 - `.venv/bin/ruff check app tests` → **All checks passed**
-- `.venv/bin/pytest` → **18 passed**
+- `.venv/bin/pytest` → **34 passed**
 - Manual HTTP smoke test (uvicorn): health → login → mission → submit → operator approve → score ۱۰ →
   leaderboard; second approval returns 409; ledger/wallet/outbox verified in SQLite.
 - `curl /health` → `{"status":"ok","mode":"P",...}`
 
 ## Next recommended tasks
 1. **Sales import slice (EP-07):** tables + validate/process + error report + dedupe + golden test, using the documented contract.
-2. **Harden auth:** OTP adapter behind the existing session layer + CSRF token + rate limiting (needs OD-01).
-3. **Reports (EP-10):** mission/score report per org and per user, CSV export, with org-scope tests.
+2. **Reports (EP-10):** mission/score report per org and per user, CSV export, with org-scope tests.
+3. **Correction/reversal flow** for score events (`corrects_event_id` exists, no flow yet).
+4. **Auth hardening beyond the prototype:** server-side sessions or OTP behind `app/security.py` (needs OD-01).
 
 ## Important files and entry points
 - `app/main.py` — routes and access dependencies

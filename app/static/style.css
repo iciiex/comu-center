@@ -229,3 +229,12 @@ a:hover { text-decoration: underline; }
          border-radius: 16px; background: var(--surface); }
   body:has(.shell--wide) .nav { display: none; }
 }
+
+/* pagination (admin queue) */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 14px 0 4px;
+}

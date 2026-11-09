@@ -8,7 +8,7 @@
 
   {% for mission in missions %}
     {% set done = mission['my_count'] >= mission['max_per_user'] %}
-    <a class="mission" href="/missions/{{ mission['id'] }}" style="text-decoration:none; color:inherit">
+    <a class="mission" href="{{ url('/missions/' ~ mission['id']) }}" style="text-decoration:none; color:inherit">
       <span class="mission__icon">📸</span>
       <span class="mission__body">
         <span class="mission__title">{{ mission['title'] }}</span>
