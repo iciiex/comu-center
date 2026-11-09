@@ -17,6 +17,14 @@ make check     # ruff + pytest
 make seed      # بازسازی دیتابیس دمو
 ```
 
+ورود داده فروش (نمونه، فقط ادمین):
+
+```bash
+.venv/bin/python -m app.sample_sales   # ساخت var/sales-sample.xlsx
+```
+سپس در `/admin/sales/new` آپلود و بعد «پردازش» کنید. قرارداد ستون‌ها و قواعد در
+`docs/engineering/sales-import.md` آمده است.
+
 نگهداری (پاک‌سازی شاهدهای قدیمی — سیاست نمونه، D-003):
 
 ```bash

@@ -130,3 +130,38 @@ SameSite=None، ذخیره‌سازی محلی) در iframe قابل اتکا ن
 
 **Affected docs:** `docs/engineering/scoring-engine.md`، `docs/engineering/api-spec.md`،
 `docs/architecture/database-erd.md`، `docs/quality/qa-test-strategy.md`، `docs/handoffs/current-state.md`
+
+---
+
+## D-005 — ورود داده فروش با XLSX، نگاشت صریح و قاعده‌ی مبلغی SAMPLE
+
+- Status: PROPOSED
+- Date: 2026-11-09
+- Approved by: کارفرما (قالب XLSX در گفتگو انتخاب شد)
+- Owners: Product / Data / Engineering
+- Related: OD-03 / OD-04 / OD-05 / OD-11 / EP-07
+
+**Decision (موقت):**
+
+1. **قالب ورودی XLSX** است (نه CSV)؛ خواندن با `openpyxl`، حداکثر ۵ مگابایت و ۵٬۰۰۰ ردیف.
+2. **فقط `admin`** آپلود و پردازش می‌کند؛ اپراتور و ویزیتور ۴۰۳.
+3. **نگاشت ویزیتور صریح** است: `sales_user_map(organization_id, user_external_id) → user_id`.
+   حدس زدن از روی شماره موبایل یا نام ممنوع است.
+4. **فرمول امتیاز SAMPLE**: `floor(amount / unit_size) * points` با `unit_size=1,000,000` و
+   `points=1`. هر دو عدد در `scoring_rule_versions` ذخیره می‌شوند، نه در کد.
+5. **آپلود هرگز امتیاز نمی‌سازد**؛ پردازش یک مرحله‌ی صریح و idempotent است.
+6. **قاعده بر اساس زمان پردازش** انتخاب می‌شود، نه تاریخ فروش.
+
+**Rationale:** بدون نسخه‌ی اجرایی، موتور امتیاز فقط مأموریت‌محور می‌ماند و ارزش اصلی محصول (عملکرد
+فروش) دیده نمی‌شود. جدا کردن validate از score و نگاشت صریح، جلوی امتیاز غلط را می‌گیرد.
+
+**Consequences / موارد باز:**
+- ۱٬۰۰۰٬۰۰۰ و «۱ امتیاز» اعداد تجاری نیستند و باید با OD-04 جایگزین شوند؛ تا آن زمان همه‌ی
+  رخدادها `is_sample=true` دارند.
+- اگر وارد کردن فایل‌های گذشته‌نگر معمول شود، انتخاب قاعده بر اساس `sale_date` باید بازبینی شود.
+- ضریب SKU، سقف دوره‌ای و اتصال زنده به ERP (OD-05/OD-11) پیاده نشده است.
+- سیاست حذف/نگهداری فایل خام import هنوز تصمیم‌گیری نشده (فقط fingerprint و داده‌ی نرمال‌شده ذخیره می‌شود).
+
+**Affected docs:** `docs/engineering/sales-import.md`، `docs/engineering/api-spec.md`،
+`docs/architecture/database-erd.md`، `docs/engineering/scoring-engine.md`،
+`docs/quality/qa-test-strategy.md`، `docs/handoffs/current-state.md`

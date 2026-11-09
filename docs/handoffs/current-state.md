@@ -20,13 +20,16 @@
 - "Why this score" explanation surfaced to the user (rule code, version, conditions, sample flag).
 - Wallet + score history; period leaderboard with rank and temporary tie-break.
 - Admin mission CRUD: create draft → publish → archive; changing points publishes a new rule version and retires the old one.
+- Sales import (EP-07, D-005): admin uploads XLSX → file/row validation (never scores) → explicit,
+  idempotent processing that awards `floor(amount / unit_size) * points`; explicit
+  `sales_user_map`, fingerprint-level file dedupe, row-level duplicate/error report and reconciliation.
 - Score corrections (D-004): admin reverses an event with a negative event (`corrects_event_id`, reason required);
   ledger, wallet, outbox and audit are written in one transaction; double correction is impossible
   (`ux_score_events_corrects`); `/score` marks corrections and the leaderboard sums them automatically.
 - Server-side authorization: visitor / operator / admin + same-organization scope (negative tests exist).
 
 ## In progress
-- Sales-import vertical slice (EP-07): contract documented in `.agent/playbooks/sales-import.md`; no code/table yet.
+- Sales import is XLSX-only with the SAMPLE contract; a real export (OD-03) may add columns or a mapping UI.
 - Reports (EP-10) and notifications (EP-11): not started.
 - Partial corrections (correcting part of an award) are not implemented.
 
@@ -60,20 +63,22 @@
   submissions, submission_evidences, score_events, point_transactions, point_wallets, competitions,
   audit_logs, outbox_events).
 - `db/migrations/0002_score_corrections.sql`: `ux_score_events_corrects` — one correction per event.
-- `app.db.apply_migrations` now runs all `db/migrations/*.sql` in filename order (idempotent, no version table).
+- `db/migrations/0003_sales_import.sql`: `sales_imports`, `sales_records`, `sales_user_map` and
+  `scoring_rule_versions.unit_size`; `ux_sales_records_external` is partial (valid/scored only).
+- `app.db.apply_migrations` runs each file once, tracked in `schema_migrations (name, applied_at)`.
 - Implemented endpoints listed in `docs/engineering/api-spec.md`.
 
 ## Tests and verification
 - `.venv/bin/ruff check app tests` → **All checks passed**
-- `.venv/bin/pytest` → **43 passed**
+- `.venv/bin/pytest` → **55 passed**
 - Manual HTTP smoke test (uvicorn): health → login → mission → submit → operator approve → score ۱۰ →
   leaderboard; second approval returns 409; ledger/wallet/outbox verified in SQLite.
 - `curl /health` → `{"status":"ok","mode":"P",...}`
 
 ## Next recommended tasks
-1. **Sales import slice (EP-07):** tables + validate/process + error report + dedupe + golden test.
-   Employer chose **XLSX** as the input format (CSV not required); add `openpyxl` and keep the documented contract.
-2. **Reports (EP-10):** mission/score report per org and per user, CSV export, with org-scope tests.
+1. **Reports (EP-10):** mission/score report per org and per user, CSV export, with org-scope tests.
+2. **Sales import follow-ups:** column-mapping UI for the real export (OD-03), SKU multipliers (OD-05),
+   import deletion/retention policy, scheduled import (OD-11).
 3. **Correction workflow hardening:** two-step approval (request → approve), partial corrections, period locking.
 4. **Auth hardening beyond the prototype:** server-side sessions or OTP behind `app/security.py` (needs OD-01).
 

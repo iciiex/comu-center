@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}جزئیات import فروش · کیلوس کلاب{% endblock %}
+{% block content %}
+  <p class="small" style="margin:4px 2px">
+    <a href="{{ url('/admin/sales') }}">→ بازگشت به فهرست importها</a>
+  </p>
+
+  <div class="card">
+    <div class="card__row" style="align-items:flex-start">
+      <div>
+        <h1 class="card__title">{{ import['file_name'] }}</h1>
+        <div class="card__meta">
+          {{ import['uploaded_by_name'] }} · {{ import['created_at']|jdatetime }}
+          · <span style="direction:ltr">{{ import['id'][:8] }}…</span>
+        </div>
+      </div>
+      <div>
+        {% if import['status'] == 'validated' %}
+          <span class="pill pill--amber">اعتبارسنجی‌شده — آماده پردازش</span>
+        {% elif import['status'] == 'completed' %}
+          <span class="pill pill--green">پردازش‌شده</span>
+        {% elif import['status'] == 'failed' %}
+          <span class="pill pill--red">خطا در پردازش</span>
+        {% else %}
+          <span class="pill">{{ import['status'] }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="grid grid--3 mt-2">
+      <div class="stat"><div class="stat__label">کل ردیف‌ها</div><div class="stat__value">{{ import['row_count']|fa }}</div></div>
+      <div class="stat"><div class="stat__label">معتبر (قابل پردازش)</div><div class="stat__value">{{ counts['valid']|fa }}</div></div>
+      <div class="stat"><div class="stat__label">امتیاز ثبت‌شده</div><div class="stat__value">{{ import['points_sum']|fa }}</div></div>
+    </div>
+
+    <p class="small muted" style="margin:10px 0 0">
+      {{ counts['invalid']|fa }} ردیف خراب · {{ counts['duplicate']|fa }} ردیف تکراری ·
+      {{ counts['scored']|fa }} ردیف پردازش‌شده
+    </p>
+
+    {% if import['error_message'] %}
+      <div class="alert alert--error" style="margin-top:12px">{{ import['error_message'] }}</div>
+    {% endif %}
+
+    <form method="post" action="{{ url('/admin/sales/' ~ import['id'] ~ '/process') }}" style="margin-top:14px">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn" type="submit">
+        {{ 'پردازش دوباره (بدون امتیاز تکراری)' if import['status'] == 'completed' else 'پردازش ردیف‌های معتبر' }}
+      </button>
+    </form>
+    <p class="tiny muted" style="margin:8px 0 0">
+      پردازش، برای هر ردیف معتبر یک رخداد امتیاز با کلید idempotency می‌سازد؛ اجرای دوباره امتیاز جدید نمی‌سازد.
+    </p>
+  </div>
+
+  <div class="card card--flat">
+    <div class="card__title">تطبیق (Reconciliation)</div>
+    {% if rows_ok %}
+      <div class="alert alert--ok" style="margin-top:8px">تعداد ردیف‌ها می‌خواند: کل = معتبر + خراب + تکراری + پردازش‌شده.</div>
+    {% else %}
+      <div class="alert alert--error" style="margin-top:8px">اختلاف در شمارش ردیف‌ها — این import باید بررسی شود.</div>
+    {% endif %}
+    {% if points_ok %}
+      <p class="small muted" style="margin:8px 0 0">مجموع امتیاز رخدادها با مجموع ثبت‌شده برابر است ({{ scored_points|fa }}).</p>
+    {% else %}
+      <p class="small" style="margin:8px 0 0; color:#b42318">
+        مجموع امتیاز رخدادها ({{ scored_points|fa }}) با مجموع ثبت‌شده ({{ import['points_sum']|fa }}) برابر نیست.
+      </p>
+    {% endif %}
+  </div>
+
+  <div class="section-head"><h2>ردیف‌ها</h2><span class="tiny muted">{{ records|length|fa }} نمایش</span></div>
+  <div class="card card--flat">
+    <table class="table">
+      <thead>
+        <tr><th>#</th><th>شناسه</th><th>ویزیتور</th><th>تاریخ</th><th>مبلغ</th><th>وضعیت</th><th>پیام</th></tr>
+      </thead>
+      <tbody>
+        {% for row in records %}
+          <tr>
+            <td class="tiny muted">{{ row['row_number']|fa }}</td>
+            <td class="tiny" style="direction:ltr">{{ row['external_id'] or '—' }}</td>
+            <td class="tiny">{{ row['user_external_id'] or '—' }}</td>
+            <td class="tiny muted">{{ row['sale_date'] or '—' }}</td>
+            <td class="tiny">{{ row['amount'] or '—' }}</td>
+            <td>
+              {% if row['status'] == 'valid' %}<span class="pill pill--amber">معتبر</span>
+              {% elif row['status'] == 'scored' %}<span class="pill pill--green">پردازش‌شده</span>
+              {% elif row['status'] == 'duplicate' %}<span class="pill">تکراری</span>
+              {% else %}<span class="pill pill--red">خراب</span>{% endif %}
+            </td>
+            <td class="tiny muted">{{ row['error_message'] or '—' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

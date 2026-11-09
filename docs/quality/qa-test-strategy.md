@@ -3,7 +3,7 @@
 - Status: **PARTIAL** — automated tests exist for the demo path; full strategy is doc 10.
 - Mode: P
 
-## Implemented automated coverage (43 tests)
+## Implemented automated coverage (55 tests)
 - Health/mode banner; login page and demo users.
 - Mission eligibility: date window, status, org (BR-001).
 - Submit → review → score end-to-end; second approval blocked; no duplicate events.
@@ -21,12 +21,17 @@
 - Persian 404 page for unknown routes.
 - Review queue pagination and page clamping.
 - Evidence retention purge: only old rows/files removed, audit row written, `--dry-run` deletes nothing.
+- Sales import: validation without scoring, counts by status, row-level messages with row numbers,
+  fingerprint duplicate 409, cross-import duplicate skipped, missing headers rejected, non-xlsx rejected,
+  idempotent processing (second run `processed=0`), sub-unit amount awards nothing, admin-only, CSRF,
+  org scope, reconciliation panel.
 - Score corrections: negative event + ledger + wallet + outbox + audit; double correction 409; blank reason 409;
   correction-of-correction rejected; admin-only (operator/visitor 403); cross-org 403; unknown event 404;
   CSRF required; `/score` marks the correction; totals return to zero.
 
 ## Not covered yet
-- Sales import, reports, notifications (features not built).
+- Reports and notifications (features not built).
+- Multi-sheet / column-mapped imports and very large files (limits tested only at the boundary).
 - Load/performance, security scanning, UAT scripts.
 - Multi-worker behaviour of the in-memory rate limiter and session store.
 - Browser E2E (only HTTP-level tests).

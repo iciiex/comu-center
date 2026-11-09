@@ -12,7 +12,12 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from app.scoring import ScoringError, award_mission_approval, reverse_event
+from app.scoring import (
+    ScoringError,
+    award_mission_approval,
+    award_sales_record,
+    reverse_event,
+)
 
 
 class DomainError(Exception):
@@ -550,3 +555,212 @@ def evidence(conn: sqlite3.Connection, evidence_id: str) -> sqlite3.Row | None:
            WHERE e.id = ?""",
         (evidence_id,),
     ).fetchone()
+
+
+# ------------------------------------------------------------------------ sales
+
+
+def sales_user_map(conn: sqlite3.Connection, org_id: str) -> dict[str, str]:
+    """Explicit ``user_external_id -> user_id`` mapping (never guessed from mobile)."""
+    rows = conn.execute(
+        "SELECT user_external_id, user_id FROM sales_user_map WHERE organization_id = ?",
+        (org_id,),
+    ).fetchall()
+    return {row["user_external_id"]: row["user_id"] for row in rows}
+
+
+def sales_external_ids(conn: sqlite3.Connection, org_id: str) -> set[str]:
+    rows = conn.execute(
+        "SELECT external_id FROM sales_records WHERE organization_id = ?", (org_id,)
+    ).fetchall()
+    return {row["external_id"] for row in rows}
+
+
+def sales_import_by_fingerprint(
+    conn: sqlite3.Connection, org_id: str, sha256: str
+) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM sales_imports WHERE organization_id = ? AND file_sha256 = ?",
+        (org_id, sha256),
+    ).fetchone()
+
+
+def create_sales_import(
+    conn: sqlite3.Connection,
+    org_id: str,
+    uploaded_by: str,
+    file_name: str,
+    sha256: str,
+    rows: list[dict[str, Any]],
+) -> sqlite3.Row:
+    """Store the upload and its rows; never scores anything."""
+    import_id = str(uuid.uuid4())
+    created_at = now_iso()
+    counts = {"valid": 0, "invalid": 0, "duplicate": 0}
+    for row in rows:
+        counts[row["status"]] = counts.get(row["status"], 0) + 1
+
+    with conn:
+        conn.execute(
+            """INSERT INTO sales_imports
+               (id, organization_id, uploaded_by, file_name, file_sha256, status,
+                row_count, valid_count, invalid_count, duplicate_count, created_count,
+                points_sum, created_at, finished_at)
+               VALUES (?, ?, ?, ?, ?, 'validated', ?, ?, ?, ?, 0, 0, ?, NULL)""",
+            (
+                import_id,
+                org_id,
+                uploaded_by,
+                file_name,
+                sha256,
+                len(rows),
+                counts["valid"],
+                counts["invalid"],
+                counts["duplicate"],
+                created_at,
+            ),
+        )
+        for row in rows:
+            conn.execute(
+                """INSERT INTO sales_records
+                   (id, import_id, organization_id, row_number, external_id,
+                    user_external_id, user_id, sale_date, sku_code, quantity, amount,
+                    customer_external_id, branch_code, raw_json, status,
+                    error_code, error_message, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    str(uuid.uuid4()),
+                    import_id,
+                    org_id,
+                    row["row_number"],
+                    row["external_id"],
+                    row["user_external_id"],
+                    row["user_id"],
+                    row["sale_date"],
+                    row["sku_code"],
+                    row["quantity"],
+                    row["amount"],
+                    row["customer_external_id"],
+                    row["branch_code"],
+                    json.dumps(row.get("raw", {}), ensure_ascii=False),
+                    row["status"],
+                    row["error_code"],
+                    row["error_message"],
+                    created_at,
+                ),
+            )
+    result = conn.execute("SELECT * FROM sales_imports WHERE id = ?", (import_id,)).fetchone()
+    return result
+
+
+def list_sales_imports(conn: sqlite3.Connection, org_id: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        """SELECT i.*, u.full_name AS uploaded_by_name
+           FROM sales_imports i
+           JOIN users u ON u.id = i.uploaded_by
+           WHERE i.organization_id = ?
+           ORDER BY i.created_at DESC""",
+        (org_id,),
+    ).fetchall()
+
+
+def sales_import(
+    conn: sqlite3.Connection, import_id: str, org_id: str
+) -> sqlite3.Row | None:
+    return conn.execute(
+        """SELECT i.*, u.full_name AS uploaded_by_name
+           FROM sales_imports i
+           JOIN users u ON u.id = i.uploaded_by
+           WHERE i.id = ? AND i.organization_id = ?""",
+        (import_id, org_id),
+    ).fetchone()
+
+
+def sales_records(
+    conn: sqlite3.Connection, import_id: str, limit: int = 200
+) -> list[sqlite3.Row]:
+    return conn.execute(
+        """SELECT * FROM sales_records WHERE import_id = ?
+           ORDER BY row_number LIMIT ?""",
+        (import_id, limit),
+    ).fetchall()
+
+
+def sales_record_counts(conn: sqlite3.Connection, import_id: str) -> dict[str, int]:
+    rows = conn.execute(
+        "SELECT status, COUNT(*) AS n FROM sales_records WHERE import_id = ? GROUP BY status",
+        (import_id,),
+    ).fetchall()
+    counts = {"valid": 0, "invalid": 0, "duplicate": 0, "scored": 0}
+    for row in rows:
+        counts[row["status"]] = int(row["n"])
+    return counts
+
+
+def process_sales_import(
+    conn: sqlite3.Connection, import_row: sqlite3.Row, actor
+) -> dict[str, int]:
+    """Turn valid rows into score events. Safe to re-run: nothing is scored twice."""
+    if import_row["status"] == "rejected":
+        raise DomainError("IMPORT_REJECTED", "این فایل رد شده است و قابل پردازش نیست.")
+    if import_row["status"] == "processing":
+        raise DomainError("IMPORT_BUSY", "این import در حال پردازش است.")
+
+    pending = conn.execute(
+        "SELECT * FROM sales_records WHERE import_id = ? AND status = 'valid' ORDER BY row_number",
+        (import_row["id"],),
+    ).fetchall()
+
+    created = 0
+    points = 0
+    try:
+        for record in pending:
+            event, was_created = award_sales_record(conn, record, actor.id)
+            if was_created and event is not None:
+                created += 1
+                points += int(event["points"])
+            with conn:
+                conn.execute(
+                    "UPDATE sales_records SET status = 'scored' WHERE id = ?", (record["id"],)
+                )
+        with conn:
+            conn.execute(
+                """UPDATE sales_imports
+                   SET status = 'completed',
+                       created_count = created_count + ?,
+                       points_sum = points_sum + ?,
+                       finished_at = ?
+                   WHERE id = ?""",
+                (created, points, now_iso(), import_row["id"]),
+            )
+            conn.execute(
+                """INSERT INTO audit_logs
+                   (id, actor_id, action, entity_type, entity_id, detail_json, created_at)
+                   VALUES (?, ?, 'sales.import.processed', 'sales_import', ?, ?, ?)""",
+                (
+                    str(uuid.uuid4()),
+                    actor.id,
+                    import_row["id"],
+                    json.dumps(
+                        {"created_events": created, "points": points, "rows": len(pending)},
+                        ensure_ascii=False,
+                    ),
+                    now_iso(),
+                ),
+            )
+    except DomainError:
+        raise
+    except Exception as exc:  # keep the import inspectable instead of a half-state
+        with conn:
+            conn.execute(
+                "UPDATE sales_imports SET status = 'failed', error_message = ? WHERE id = ?",
+                (str(exc)[:200], import_row["id"]),
+            )
+        raise DomainError("IMPORT_FAILED", "پردازش import با خطا متوقف شد.") from exc
+
+    return {
+        "scanned": len(pending),
+        "created": created,
+        "points": points,
+        "skipped": len(pending) - created,
+    }

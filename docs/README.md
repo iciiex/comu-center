@@ -12,9 +12,10 @@
 | 06 | Scoring Engine | `engineering/scoring-engine.md` | پیاده‌سازی‌شده |
 | 06-A | Scoring Rule Matrix | `engineering/scoring-rule-matrix.md` | نمونه (SAMPLE) |
 | 07 | API Specification | `engineering/api-spec.md` | پیاده‌سازی‌شده (زیرمجموعه) |
+| 07-A | Sales Import (EP-07) | `engineering/sales-import.md` | پیاده‌سازی‌شده (XLSX، SAMPLE) |
 | 08 | UX/UI Specification | `product/ux-ui-spec.md` | جزئی |
 | 09 | Admin Panel Specification | `product/admin-panel-spec.md` | جزئی |
-| 10 | QA & Test Strategy | `quality/qa-test-strategy.md` | جزئی (۱۸ تست) |
+| 10 | QA & Test Strategy | `quality/qa-test-strategy.md` | جزئی (۵۵ تست) |
 | 11 | DevOps & Deployment | `architecture/deployment-architecture.md` | فقط prototype |
 | 12 | Execution Plan | `delivery/execution-plan.md` | جزئی |
 | 13 | Open Decisions | `decisions/open-decisions.md` | seed شده (OD-01..12) |

@@ -27,17 +27,31 @@ def connect(db_path: Path) -> sqlite3.Connection:
 
 
 def apply_migrations(conn: sqlite3.Connection) -> list[str]:
-    """Run every ``db/migrations/NNNN_*.sql`` in order.
+    """Run each ``db/migrations/NNNN_*.sql`` exactly once, in filename order.
 
-    All statements are written with ``IF NOT EXISTS`` so re-running is safe on an
-    existing database. This is a prototype runner, not Alembic: no downgrades,
-    no checksums (documented in docs/architecture/database-erd.md).
+    ``schema_migrations`` records what has run. The first version of the
+    prototype ran every file on every boot; migration 0003 needs a real
+    ``ALTER TABLE``, so this tiny runner replaced that. Still not Alembic:
+    no downgrades, no checksums (see docs/architecture/database-erd.md).
     """
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS schema_migrations (
+               name       TEXT PRIMARY KEY,
+               applied_at TEXT NOT NULL
+           )"""
+    )
+    done = {row["name"] for row in conn.execute("SELECT name FROM schema_migrations")}
     applied: list[str] = []
     for path in sorted(MIGRATIONS_DIR.glob("*.sql")):
+        if path.name in done:
+            continue
         conn.executescript(path.read_text(encoding="utf-8"))
+        conn.execute(
+            "INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)",
+            (path.name, now_iso()),
+        )
+        conn.commit()
         applied.append(path.name)
-    conn.commit()
     return applied
 
 

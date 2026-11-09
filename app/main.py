@@ -23,7 +23,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app import db, repo
+from app import db, repo, sales
 from app.config import Settings
 from app.jalali import format_jalali, to_persian_digits
 from app.repo import DomainError
@@ -643,6 +643,171 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 user=user,
             )
         return go(f"/submissions/{event['source_id']}?reversed=1", request)
+
+    # ------------------------------------------------------------------ sales
+    def sales_page_context(conn: sqlite3.Connection, org_id: str) -> dict:
+        mapping = conn.execute(
+            """SELECT m.user_external_id, u.full_name
+               FROM sales_user_map m JOIN users u ON u.id = m.user_id
+               WHERE m.organization_id = ? ORDER BY m.user_external_id""",
+            (org_id,),
+        ).fetchall()
+        rule = conn.execute(
+            """SELECT * FROM scoring_rule_versions
+               WHERE rule_code = 'SALES_AMOUNT_SAMPLE' AND status = 'published'
+               ORDER BY version DESC LIMIT 1"""
+        ).fetchone()
+        return {"mapping": mapping, "rule": rule}
+
+    @app.get("/admin/sales", response_class=HTMLResponse)
+    def admin_sales(
+        request: Request,
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ):
+        return page(
+            request,
+            "admin_sales.html",
+            {"active": "sales", "imports": repo.list_sales_imports(conn, user.organization_id)},
+            user=user,
+        )
+
+    @app.get("/admin/sales/new", response_class=HTMLResponse)
+    def admin_sales_new(
+        request: Request,
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ):
+        return page(
+            request,
+            "admin_sales_new.html",
+            {"active": "sales", **sales_page_context(conn, user.organization_id)},
+            user=user,
+        )
+
+    @app.post(
+        "/admin/sales",
+        response_class=HTMLResponse,
+        dependencies=[Depends(csrf_guard)],
+    )
+    async def admin_sales_upload(
+        request: Request,
+        file: UploadFile | None = File(None),
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ):
+        def render_error(message: str, status_code: int):
+            return page(
+                request,
+                "admin_sales_new.html",
+                {
+                    "active": "sales",
+                    "error": message,
+                    **sales_page_context(conn, user.organization_id),
+                },
+                status_code=status_code,
+                user=user,
+            )
+
+        if file is None or not file.filename:
+            return render_error("فایلی انتخاب نشده است.", 422)
+        if not file.filename.lower().endswith(".xlsx"):
+            return render_error("فقط فایل اکسل با پسوند xlsx پذیرفته می‌شود.", 422)
+
+        raw = await file.read(settings.sales_max_bytes + 1)
+        if not raw:
+            return render_error("فایل خالی است.", 422)
+        if len(raw) > settings.sales_max_bytes:
+            limit_mb = settings.sales_max_bytes // (1024 * 1024)
+            return render_error(f"حجم فایل باید کمتر از {limit_mb} مگابایت باشد.", 422)
+
+        sha = hashlib.sha256(raw).hexdigest()
+        duplicate = repo.sales_import_by_fingerprint(conn, user.organization_id, sha)
+        if duplicate is not None:
+            return render_error(
+                "این فایل قبلاً آپلود شده است "
+                f"(import {duplicate['id'][:8]}…، {duplicate['status']}).",
+                409,
+            )
+
+        try:
+            parsed = sales.parse_workbook(raw, settings.sales_max_rows)
+        except sales.SalesFileError as exc:
+            return render_error(str(exc), 422)
+
+        validated = sales.validate_rows(
+            parsed,
+            repo.sales_user_map(conn, user.organization_id),
+            existing_ids=repo.sales_external_ids(conn, user.organization_id),
+        )
+        import_row = repo.create_sales_import(
+            conn,
+            user.organization_id,
+            user.id,
+            file.filename[:160],
+            sha,
+            validated,
+        )
+        return go(f"/admin/sales/{import_row['id']}", request)
+
+    @app.get("/admin/sales/{import_id}", response_class=HTMLResponse)
+    def admin_sale_detail(
+        import_id: str,
+        request: Request,
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ):
+        import_row = repo.sales_import(conn, import_id, user.organization_id)
+        if import_row is None:
+            raise HTTPException(status_code=404, detail="import یافت نشد.")
+        counts = repo.sales_record_counts(conn, import_id)
+        scored_points = conn.execute(
+            """SELECT COALESCE(SUM(points), 0) AS total FROM score_events
+               WHERE source_type = 'sales_record'
+                 AND source_id IN (SELECT id FROM sales_records WHERE import_id = ?)""",
+            (import_id,),
+        ).fetchone()["total"]
+        accounted = counts["valid"] + counts["invalid"] + counts["duplicate"] + counts["scored"]
+        return page(
+            request,
+            "admin_sale_detail.html",
+            {
+                "active": "sales",
+                "import": import_row,
+                "counts": counts,
+                "records": repo.sales_records(conn, import_id, limit=200),
+                "scored_points": scored_points,
+                "rows_ok": accounted == import_row["row_count"],
+                "points_ok": int(scored_points) == int(import_row["points_sum"]),
+            },
+            user=user,
+        )
+
+    @app.post(
+        "/admin/sales/{import_id}/process",
+        response_class=HTMLResponse,
+        dependencies=[Depends(csrf_guard)],
+    )
+    def admin_sales_process(
+        import_id: str,
+        request: Request,
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ):
+        import_row = repo.sales_import(conn, import_id, user.organization_id)
+        if import_row is None:
+            raise HTTPException(status_code=404, detail="import یافت نشد.")
+        try:
+            result = repo.process_sales_import(conn, import_row, user)
+        except DomainError as exc:
+            return page(
+                request,
+                "error.html",
+                {"code": 409, "message": exc.message},
+                status_code=409,
+                user=user,
+            )
+        return go(f"/admin/sales/{import_id}?processed={result['created']}", request)
 
     @app.get("/admin/missions", response_class=HTMLResponse)
     def admin_missions(

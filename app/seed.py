@@ -139,6 +139,29 @@ def seed_demo(conn: sqlite3.Connection, evidence_dir=None) -> None:
         ),
     )
 
+    # Sales-import SAMPLE contract: explicit visitor mapping + per-amount rule.
+    # Both are placeholders until the employer approves OD-03 / OD-04.
+    for external_id, mobile in (
+        ("VIS-001", "09120000001"),
+        ("VIS-002", "09120000002"),
+        ("VIS-003", "09120000003"),
+    ):
+        conn.execute(
+            """INSERT INTO sales_user_map
+               (organization_id, user_external_id, user_id, created_at)
+               VALUES (?, ?, ?, ?)""",
+            (org_id, external_id, user_ids[mobile], _iso(timedelta())),
+        )
+
+    conn.execute(
+        """INSERT INTO scoring_rule_versions
+           (id, rule_code, version, calculation_type, points, unit_size,
+            effective_from, effective_to, status, is_sample)
+           VALUES (?, 'SALES_AMOUNT_SAMPLE', 1, 'per_unit_amount', 1, 1000000,
+                   ?, NULL, 'published', 1)""",
+        (_id(), _iso(timedelta(days=-30))),
+    )
+
     # One approved submission so the leaderboard and wallet are demonstrable.
     if evidence_dir is not None:
         evidence_dir = Path(evidence_dir)
