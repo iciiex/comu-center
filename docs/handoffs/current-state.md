@@ -5,7 +5,7 @@
 - Mode: P
 - Current phase: Prototype
 - Current milestone: MS-01 — Prototype Delivery (2026-11-18)
-- Main branch / working branch: `main` / `arena/26ce8c46-comu-center`
+- Main branch / working branch: `main` / `arena/26ce8c46-comu-center` (documentation work of 2026-11-11: PR #8)
 - Prioritised backlog: `docs/delivery/backlog.md` (PROPOSED)
 - Project handover (dated snapshot, Persian): `docs/handoffs/handover.md`
 - Agent guide (start, continue, deliver, code map, traceability, knowledge graph): `docs/agent-guide/README.md`

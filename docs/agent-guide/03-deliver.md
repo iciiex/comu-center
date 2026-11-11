@@ -77,6 +77,8 @@ on its own authority.
   `Refs: D-005, EP-07`.
 - Pull request body: `.agent/templates/pr.md` (what changed, why, contract, test output,
   documents, risk and rollback).
+- When the pull request exists, move your lines in `CHANGELOG.md` from `[Unreleased]` to a
+  dated heading that links its number, then run `make docs` and `make graph` once more.
 - Review checklist: `.agent/playbooks/review-and-handoff.md` §۱.
 - Never commit `var/`, `.env`, a virtualenv, real personal data or a secret.
 

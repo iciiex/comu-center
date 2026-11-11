@@ -1,11 +1,11 @@
 {
   "built_on": "2026-11-11",
   "graphify_version": "0.9.106",
-  "fingerprint": "02a0503520d33787ebc218670d2660fe9afcae8e11186d5f05f66036e62e2b19",
+  "fingerprint": "d8b6a457a71d49aaeb0a31480e835caab14d6f8f0e2bdd9149cf2685e5774408",
   "input_files": 89,
   "nodes": 972,
   "edges": 2635,
-  "communities": 59,
+  "communities": 52,
   "ast_nodes": 854,
   "ast_edges": 1807,
   "semantic_nodes": 90,

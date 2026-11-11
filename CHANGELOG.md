@@ -11,13 +11,18 @@ true now.
   on 2026-11-11 none was `APPROVED`.
 - Times are UTC. Mode of the whole history: `P` (Prototype).
 
-How to add an entry: [`docs/agent-guide/03-deliver.md`](docs/agent-guide/03-deliver.md) §3.
+How to add an entry: write your lines under `[Unreleased]` while you work; when the pull request
+exists, move them under a dated heading with its number
+([`docs/agent-guide/03-deliver.md`](docs/agent-guide/03-deliver.md) §3 and §4).
 
 ## [Unreleased]
 
-### 2026-11-11 — Documentation, agent guide and knowledge graph
+Nothing yet.
 
-No application code, schema or behaviour changed. Test count 56 → 58 (two documentation tests).
+## 2026-11-11 — Documentation, agent guide and knowledge graph — [PR #8](https://github.com/iciiex/comu-center/pull/8)
+
+Tests: 58 (two documentation tests added). No decision, no migration. No application code,
+schema or behaviour changed.
 
 Added
 
