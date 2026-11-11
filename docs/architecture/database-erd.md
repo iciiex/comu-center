@@ -1,6 +1,8 @@
 # Database ERD & Schema (prototype)
 
-- Status: **IMPLEMENTED** for SQLite — `db/migrations/0001_init.sql`
+- Status: **IMPLEMENTED** for SQLite — `db/migrations/0001_init.sql`, `0002_score_corrections.sql`,
+  `0003_sales_import.sql`
+- Generated table-by-table view (columns, readers, writers): `docs/agent-guide/code-map.md` §5
 - Target production engine: `OPEN` (ADR-0001). This schema is intentionally portable to PostgreSQL.
 - Mode: P
 
@@ -97,4 +99,5 @@ sales_user_map (organization_id, user_external_id) → users.id   -- explicit ma
 - No `mission_audiences` table yet (missions are org-wide) — required for OD-02 targeting.
 - No `submission_reviews` history table: one review per submission in the prototype; the audit log
   records the decision. A separate review-history table is a Harden-phase task.
-- No `sales_*` tables yet (EP-07 not implemented).
+- No table for teams or organization levels (MVP-10, OD-02) and none for notifications (EP-11).
+- `sales_user_map` is filled by the seed only; there is no screen to manage it (backlog C1).

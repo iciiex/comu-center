@@ -8,9 +8,9 @@
 Browser (RTL, mobile-first)
    │  HTML forms / multipart
 FastAPI app (app/main.py)
-   ├─ access layer (cookie session, role + org scope)
-   ├─ domain services (repo.py, scoring.py)
-   ├─ SQLite (db/migrations/0001_init.sql)
+   ├─ access layer (signed session token as cookie or `?s=`, CSRF, role + org scope)
+   ├─ domain services (repo.py, scoring.py, sales.py)
+   ├─ SQLite (db/migrations/*.sql, applied at startup)
    └─ local evidence storage (var/evidence, private)
 ```
 

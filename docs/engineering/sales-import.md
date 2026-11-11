@@ -1,6 +1,6 @@
 # Sales Import (EP-07) — implemented slice
 
-- Status: **IMPLEMENTED (prototype)** · Mode: P · Last updated: 2026-11-09
+- Status: **IMPLEMENTED (prototype)** · Mode: P · Last updated: 2026-11-11
 - Access: **admin only** (operator/visitor → 403)
 - Format: **XLSX** (employer decision, D-005) via `openpyxl` read-only
 - Data: contract and formula are **SAMPLE** until OD-03 / OD-04 are approved
@@ -99,7 +99,9 @@ user; processing awards 15 points (4 + 2 + 8 + 1) across the three mapped visito
 ## Not implemented (explicit)
 
 - XLSX → CSV conversion, multi-sheet imports, column mapping UI
-- partial corrections of sales events (use the score correction flow per event)
+- any correction of sales points: the score correction route returns 403 for a sales event
+  (backlog A2), and partial corrections do not exist
+- a Jalali date in `sale_date` is not rejected; it is read as a Gregorian year (backlog C4)
 - SKU multipliers, targets, caps (OD-05)
 - scheduled/automated imports and ERP integration (OD-11)
 - deleting an import (evidence-style retention decision is still open)

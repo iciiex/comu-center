@@ -1,6 +1,25 @@
 # مستندات پروژه Kiloos Club
 
 > ترتیب مطالعه: `../AGENTS.md` → `../.agent/CONTEXT.md` → `handoffs/current-state.md` → این فایل.
+> تحویل‌گیرنده پروژه: `handoffs/handover.md` · ایجنت یا توسعه‌دهنده: `agent-guide/README.md`.
+
+## شروع، ادامه و تحویل (راهنمای ایجنت)
+
+| موضوع | مسیر | وضعیت |
+|---|---|---|
+| سند تحویل پروژه | `handoffs/handover.md` | عکس تاریخ‌دار (۲۰ آبان ۱۴۰۵) |
+| وضعیت زنده | `handoffs/current-state.md` | به‌روز |
+| فهرست راهنمای ایجنت و جدول «کجا پیدا کنم» | `agent-guide/README.md` | به‌روز |
+| شروع: نصب، ساختار، جریان درخواست، قواعد ثابت | `agent-guide/01-start.md` | به‌روز |
+| ادامه: الگوهای کد و دستور پخت تغییرها | `agent-guide/02-continue.md` | به‌روز |
+| تحویل: دروازه‌ها، اسناد، commit و PR | `agent-guide/03-deliver.md` | به‌روز |
+| نقشه کد: مسیرها، تابع‌ها، جدول‌ها، تست‌ها | `agent-guide/code-map.md` | تولیدشده (`make docs`) |
+| ماتریس ردیابی نیازمندی ↔ کد ↔ تست | `agent-guide/traceability.md` | تولیدشده (`make docs`) |
+| گراف دانش و روش پرس‌وجو | `agent-guide/knowledge-graph.md` و `../graphify-out/GRAPH_REPORT.md` | تولیدشده (`make graph`) |
+| عیب‌یابی | `agent-guide/troubleshooting.md` | به‌روز |
+| تاریخچه تغییرات | `../CHANGELOG.md` | به‌روز |
+
+## اسناد محصول و مهندسی
 
 | # | موضوع | مسیر | وضعیت |
 |---|---|---|---|
@@ -15,12 +34,13 @@
 | 07-A | Sales Import (EP-07) | `engineering/sales-import.md` | پیاده‌سازی‌شده (XLSX، SAMPLE) |
 | 08 | UX/UI Specification | `product/ux-ui-spec.md` | جزئی |
 | 09 | Admin Panel Specification | `product/admin-panel-spec.md` | جزئی |
-| 10 | QA & Test Strategy | `quality/qa-test-strategy.md` | جزئی (۵۶ تست) |
+| 10 | QA & Test Strategy | `quality/qa-test-strategy.md` | جزئی (۵۸ تست) |
 | 11 | DevOps & Deployment | `architecture/deployment-architecture.md` | فقط prototype |
 | 12 | Execution Plan | `delivery/execution-plan.md` | جزئی |
+| 12-A | Backlog و نقشه ادامه توسعه | `delivery/backlog.md` | PROPOSED (۲۰ آبان ۱۴۰۵) |
+| 12-B | سناریوی دمو MS-01 | `delivery/demo-script.md` | PROPOSED (تمرین با مرورگر انجام نشده) |
 | 13 | Open Decisions | `decisions/open-decisions.md` | seed شده (OD-01..12) |
-| — | Decision Log | `decisions/decision-log.md` | D-001 (PROPOSED) |
-| — | Current State | `handoffs/current-state.md` | به‌روز |
+| — | Decision Log | `decisions/decision-log.md` | D-001 تا D-005 (همه PROPOSED) |
 | — | Runbook | `operations/runbook.md` | prototype |
 | — | ADRها | `architecture/decisions/` | ADR-0001 |
 
@@ -30,6 +50,8 @@
 - تنها راه «مصوب» کردن یک تصمیم، ثبت `APPROVED` در `decisions/decision-log.md` است.
 - هر تغییر کد، سند متأثر خود را در همان تغییر به‌روز می‌کند (جدول در `AGENTS.md` §12).
 - اعداد و سیاست‌های تأییدنشده با `PROPOSED` / `SAMPLE` علامت می‌خورند.
+- `agent-guide/code-map.md` و `agent-guide/traceability.md` دستی ویرایش نمی‌شوند؛ پس از هر تغییر کد، تست یا سند
+  `make docs` اجرا می‌شود (تست `tests/test_docs.py` کهنگی را می‌گیرد).
 
 ## منبع اصلی
 
