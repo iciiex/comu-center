@@ -16,15 +16,15 @@
 Mission → submission → review → score → wallet → leaderboard → admin mission/points editing.
 
 ## Cut from the 9-day plan
-- Day 8 sales import UI (documented, not built).
 - Notifications and reports.
+- Day 8 sales import UI was cut at first and delivered later (see below).
 
 ## Delivered after the prototype window
 - Score corrections (D-004) — negative reversal events, admin-only.
 - Sales import (EP-07, D-005) — XLSX upload, two-level validation, explicit visitor mapping,
   fingerprint dedupe, idempotent processing, reconciliation.
 
-## Next sprint candidate
-1. Reports (EP-10) + CSV
-2. Sales import follow-ups: column mapping for the real export (OD-03), SKU multipliers (OD-05)
-3. Auth hardening behind OD-01
+## Next
+The ordered, evidence-based list is `docs/delivery/backlog.md` (`PROPOSED`): rows A before MS-01,
+B client decisions, C MVP completion, D Harden. The MS-01 demo walk is
+`docs/delivery/demo-script.md`.

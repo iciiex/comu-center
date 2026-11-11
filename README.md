@@ -6,6 +6,10 @@
 > هدف نزدیک: نمایش چرخه **مأموریت → ثبت شاهد → تأیید → امتیاز → کیف امتیاز → رتبه‌بندی → تنظیم مأموریت**
 > بدون دخالت توسعه‌دهنده. هر عدد و سیاستی که تأیید نشده، `PROPOSED`/`SAMPLE` است.
 
+**از کجا شروع کنم؟** تحویل‌گیرنده پروژه: `docs/handoffs/handover.md` · ایجنت یا توسعه‌دهنده:
+`docs/agent-guide/README.md` · وضعیت زنده: `docs/handoffs/current-state.md` · کارهای بعدی:
+`docs/delivery/backlog.md` · تاریخچه تغییرات: `CHANGELOG.md`.
+
 ---
 
 ## اجرا
@@ -15,6 +19,9 @@ make setup     # venv + dependencies
 make run       # http://0.0.0.0:8000
 make check     # ruff + pytest
 make seed      # بازسازی دیتابیس دمو
+make doctor    # سلامت مخزن (ساختار، اسناد، تصمیم‌ها، الگوی secret)
+make docs      # بازتولید code-map و traceability پس از تغییر کد، تست یا سند
+make graph     # بازسازی گراف دانش در graphify-out/ (فقط اگر منبع‌ها تغییر کرده باشند)
 ```
 
 ورود داده فروش (نمونه، فقط ادمین):
@@ -55,7 +62,7 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 | امیر رضایی | ویزیتور | دارای یک امتیاز نمونه (۱۵) |
 | مریم کاظمی | ویزیتور | — |
 | حسین کریمی | اپراتور | صف بررسی، تأیید/رد |
-| نگار تهرانی | مدیر سیستم | مأموریت‌ها، نسخه قانون امتیاز |
+| نگار تهرانی | مدیر سیستم | مأموریت‌ها، نسخه قانون امتیاز، ورود داده فروش، اصلاح امتیاز |
 
 ---
 
@@ -70,17 +77,23 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 - **نسخه‌بندی قانون:** تغییر امتیاز مأموریت، نسخه جدید منتشر می‌کند و نسخه قبلی را retire؛ امتیاز گذشته دست‌نخورده می‌ماند.
 - **دسترسی:** `permission × organization scope` سمت سرور؛ تست منفی دارد (403).
 - **کیف و رتبه‌بندی:** موجودی از ledger، رتبه از مجموع امتیاز دوره با tie-break موقت (BR-009 تأییدنشده).
+- **اصلاح امتیاز:** رخداد منفی جدید با دلیل الزامی، فقط مدیر سیستم، هر رخداد یک‌بار (D-004). برای امتیاز فروش هنوز
+  کار نمی‌کند (backlog A2).
+- **ورود داده فروش (EP-07):** آپلود XLSX فقط برای مدیر، اعتبارسنجی فایل و ردیف، پردازش صریح و تکرارپذیر، تطبیق
+  شمارش و امتیاز (D-005). قرارداد ستون‌ها و فرمول `SAMPLE` هستند (OD-03، OD-04).
+- **سخت‌سازی دمو:** فیلد CSRF روی همه فرم‌ها، محدودیت نرخ ورود نمایشی، هدرهای امنیتی، پاک‌سازی دستی شاهدهای قدیمی
+  (D-002، D-003).
 
 ## چه چیزی هنوز نیست (عمداً)
 
 - OTP/پیامک واقعی، ارسال اعلان (EP-11)
-- ورود داده فروش (EP-07) — پلی‌بوک آماده است، پیاده‌سازی نشده
+- پروفایل کاربر (MVP-02)، رقابت گروهی (MVP-10)، مدیریت کاربران و دوره‌های رقابت در پنل
 - گزارش‌های مدیریتی و خروجی فایل (EP-10)
 - PostgreSQL، صف/worker واقعی، object storage ابری
-- سیاست نگهداری شواهد، rate limiting، CSRF token اختصاصی
-- تقویم کامل شمسی در فرم‌های مدیریت (ورودی میلادی، نمایش شمسی)
+- سیاست **مصوب** نگهداری شواهد (مقدار فعلی نمونه است) و اجرای زمان‌بندی‌شده پاک‌سازی
+- تقویم کامل شمسی در فرم‌های مدیریت (ورودی میلادی، نمایش شمسی) و نمایش ساعت به وقت تهران
 
-این‌ها در `docs/handoffs/current-state.md` و backlog ثبت شده‌اند.
+فهرست کامل با شاهد: `docs/delivery/backlog.md`؛ وضعیت هر نیازمندی: `docs/agent-guide/traceability.md`.
 
 ---
 
@@ -88,15 +101,19 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 
 ```text
 AGENTS.md              قرارداد اجرایی ایجنت‌ها (حالت‌ها، قواعد، DoD)
+CHANGELOG.md           تاریخچه تغییرات به تفکیک PR
 .agent/                نقش‌ها، پلی‌بوک‌ها، قالب‌ها، ابزارها، context محصول
-app/                   FastAPI app (routes, scoring, repo, seed, templates, static)
-db/migrations/         اسکیمای SQLite (نسخه‌دار)
-tests/                 تست‌های دامنه/جریان/دسترسی/تقویم
+app/                   FastAPI app (routes, scoring, repo, sales, seed, templates, static)
+db/migrations/         اسکیمای SQLite (نسخه‌دار، سه فایل)
+tests/                 تست‌های دامنه/جریان/دسترسی/فروش/اصلاح/تقویم/اسناد
 docs/                  مستندات محصول، معماری، API، تصمیم‌ها، handoff
+docs/agent-guide/      راهنمای ایجنت: شروع، ادامه، تحویل، نقشه کد، ماتریس ردیابی
+graphify-out/          گراف دانش کد و اسناد (تولیدشده با make graph)
 ```
 
 نقاط ورود مهم: `app/main.py` (مسیرها)، `app/scoring.py` (موتور امتیاز)، `app/repo.py` (داده و دسترسی)،
-`db/migrations/0001_init.sql` (اسکیما).
+`app/sales.py` (خواندن و اعتبارسنجی فایل فروش)، `db/migrations/*.sql` (اسکیما).
+فهرست دقیق مسیرها، تابع‌ها و جدول‌ها: `docs/agent-guide/code-map.md`.
 
 ---
 
@@ -110,6 +127,10 @@ docs/                  مستندات محصول، معماری، API، تصمی
 | امتیاز مأموریت ثابت، مقادیر نمونه | `SAMPLE` (OD-04/05) |
 | کیف امتیاز غیرقابل مصرف | `ASSUMPTION` (OD-08) |
 | tie-break: امتیاز سپس زمان | `PROPOSED` (BR-009) |
+| حمل سشن با `?s=` (فقط دمو) | `PROPOSED` — D-002 |
+| نگهداری شاهد تصویری ۹۰ روز | `SAMPLE` — D-003 |
+| اصلاح امتیاز با رخداد منفی | `PROPOSED` — D-004 |
+| ورود فروش با XLSX و قاعده مبلغی | `PROPOSED` / `SAMPLE` — D-005 |
 
 جزئیات: `docs/decisions/decision-log.md` و `docs/decisions/open-decisions.md`.
 
@@ -118,9 +139,10 @@ docs/                  مستندات محصول، معماری، API، تصمی
 - تمام داده‌های seed با برچسب **نمونه/Demo** در UI.
 - هیچ secret واقعی در repo؛ `.env` در git نیست. `KILOOS_SECRET` در محیط‌های غیر dev الزامی است.
 - شواهد تصویری در مسیر خصوصی و فقط برای مالک/اپراتور همان سازمان قابل دریافت است.
-- تاریخچه امتیاز حذف/ویرایش نمی‌شود؛ اصلاح = رخداد جدید (پیاده‌سازی اصلاح در فاز Harden).
+- تاریخچه امتیاز حذف/ویرایش نمی‌شود؛ اصلاح = رخداد منفی جدید (D-004).
 
 ## مستندات
 
-`docs/README.md` نقشه کامل است. شروع سریع: `docs/handoffs/current-state.md`،
-`docs/engineering/api-spec.md`، `docs/engineering/scoring-engine.md`، `docs/architecture/database-erd.md`.
+`docs/README.md` نقشه کامل است. شروع سریع: `docs/handoffs/handover.md`، `docs/agent-guide/README.md`،
+`docs/handoffs/current-state.md`، `docs/engineering/api-spec.md`، `docs/engineering/scoring-engine.md`،
+`docs/architecture/database-erd.md`.

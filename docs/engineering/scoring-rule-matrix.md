@@ -9,9 +9,11 @@
 | `MISSION_SAMPLE_02` | mission.approved (photo) | fixed | 15 | SAMPLE |
 | `MISSION_SAMPLE_03` | mission.approved (photo, expired demo) | fixed | 5 | SAMPLE |
 | `MISSION_SAMPLE_04` | mission.approved (draft demo) | fixed | 20 | SAMPLE |
+| `SALES_AMOUNT_SAMPLE` | processed sales row | per_unit_amount: `floor(amount / 1,000,000) × 1` | 1 per 1,000,000 | SAMPLE |
 
-Implemented: `fixed`. Proposed but not implemented: `per_unit`, `percentage`, `target_achievement`,
-`tiered`, `multiplier`.
+Implemented: `fixed` and `per_unit_amount` (points and unit size are rows in
+`scoring_rule_versions`, not code). Proposed but not implemented: `percentage`,
+`target_achievement`, `tiered`, `multiplier`.
 
 Weighting proposal from doc 06-A (missions 20% / sales 50% / target 20% / special 10%) is **PROPOSED**
 and not applied anywhere in code.

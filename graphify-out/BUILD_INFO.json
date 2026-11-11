@@ -1,0 +1,28 @@
+{
+  "built_on": "2026-11-11",
+  "graphify_version": "0.9.106",
+  "fingerprint": "02a0503520d33787ebc218670d2660fe9afcae8e11186d5f05f66036e62e2b19",
+  "input_files": 89,
+  "nodes": 972,
+  "edges": 2635,
+  "communities": 59,
+  "ast_nodes": 854,
+  "ast_edges": 1807,
+  "semantic_nodes": 90,
+  "semantic_edges_by_context": {
+    "curated": 107,
+    "definition": 45,
+    "form_action": 11,
+    "http_test": 62,
+    "link": 29,
+    "mention": 406,
+    "renders": 25,
+    "route_handler": 29,
+    "sql_read": 140,
+    "sql_write": 41,
+    "template": 15,
+    "verifies": 61
+  },
+  "llm_used": false,
+  "how": "graphify AST extraction (tree-sitter, local) + .agent/tools/knowledge_map.py"
+}

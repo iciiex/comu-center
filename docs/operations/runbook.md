@@ -78,6 +78,16 @@ one mission, and one score record.
 | `database is locked` | concurrent writers on SQLite | prototype limitation; serialize or move to PostgreSQL |
 | evidence 404 | file removed from `var/evidence` | restore from backup; audit the deletion |
 
+## Repository health and generated documents
+```bash
+make doctor      # structure, current-state freshness, decision statuses, secret patterns
+make docs        # regenerate docs/agent-guide/code-map.md and traceability.md
+make docs-check  # fail if they are stale
+make graph       # rebuild graphify-out/ when sources changed (first run installs graphify from PyPI)
+```
+Developer problems (setup, failing checks, test helpers): `docs/agent-guide/troubleshooting.md`.
+Demo day procedure: `docs/delivery/demo-script.md`.
+
 ## Escalation
 Prototype has no on-call. Record incidents in `docs/handoffs/current-state.md`; production
 incident process is `OPEN` (doc 11).

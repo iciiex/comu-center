@@ -1,7 +1,9 @@
 # API Specification (implemented surface)
 
 - Status: **IMPLEMENTED (prototype)** — subset of the target contract in the source spec (doc 07).
-- Mode: P · Last updated: 2026-11-09
+- Mode: P · Last updated: 2026-11-11
+- Generated route table (guard, CSRF, handler, template, tests): `docs/agent-guide/code-map.md` §2;
+  call chain of each route: §3; every error code and where it is raised: §8
 - Auth: signed session token (`HMAC-SHA256`, 12h TTL) delivered as an HttpOnly cookie **or** as `?s=`
   in the URL. Demo login only (OD-01). See «Session transport» below.
 - Response type: HTML pages for the app; `GET /health` returns JSON. Machine-readable schema: `GET /api/docs` (OpenAPI).
@@ -128,7 +130,7 @@ Mission form fields: `title`, `description`, `points` (0–10000), `max_per_user
 | `MAX_ATTEMPTS_REACHED` | 409 | سقف انجام مأموریت |
 | `EVIDENCE_REQUIRED` | 422 | شاهد تصویری الزامی |
 | `ALREADY_REVIEWED` | 409 | تصمیم دوم روی یک submission |
-| `INVALID_DECISION` | 422 | مقدار decision نامعتبر |
+| `INVALID_DECISION` | 409 | مقدار decision نامعتبر |
 | `REASON_REQUIRED` | 409 | رد بدون دلیل |
 | `INVALID_DATE` / `INVALID_WINDOW` | 422 | بازه نامعتبر |
 | `TITLE_REQUIRED` / `DESCRIPTION_REQUIRED` | 422 | فیلد اجباری |

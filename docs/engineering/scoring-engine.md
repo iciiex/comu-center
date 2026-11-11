@@ -1,7 +1,7 @@
 # Scoring Engine (prototype)
 
 - Status: **IMPLEMENTED** — `app/scoring.py`
-- Mode: P · Last updated: 2026-11-09
+- Mode: P · Last updated: 2026-11-11
 - Contract source: spec doc 06/06-A + `.agent/playbooks/scoring-and-rules.md`
 
 ---
@@ -13,9 +13,16 @@ Event (what happened) → Rule Version (under which rule) → Score Event (appen
         → Point Transaction (ledger) → Wallet Projection (display only) → Leaderboard
 ```
 
-Implemented event type: `mission.approved` (from an approved submission).
-Other proposed event types (`sales.record.imported`, `target.achieved`, `team.performance`) are **not**
-implemented; they require OD-04/OD-05 and are backlog items.
+Implemented sources of points:
+
+| Source | `source_type` | Idempotency key | Calculation | Function |
+|---|---|---|---|---|
+| Approved mission submission | `mission_submission` | `mission.approved:{submission_id}` | `fixed` | `award_mission_approval` |
+| Processed sales row (`SAMPLE`, D-005) | `sales_record` | `sales.record:{record_id}` | `per_unit_amount` | `award_sales_record` |
+| Correction of one event (D-004) | same as the original | `score.reversed:{event_id}` | negative of the original | `reverse_event` |
+
+Other proposed event types (`target.achieved`, `team.performance`) are **not** implemented; they
+require OD-04/OD-05 and are backlog items.
 
 ## Data written on approval (one transaction)
 
@@ -116,13 +123,15 @@ Invariants:
   admin-only (operator/visitor 403); correction of a correction rejected; org scope enforced;
   `/score` history marks the correction; leaderboard total drops back to 0
 
-Run: `.venv/bin/pytest` → 43 passed.
+Run: `.venv/bin/pytest`. The last recorded result is in `docs/handoffs/current-state.md`; the
+tests that cover each function are listed in `docs/agent-guide/code-map.md` §4.
 
 ## Not implemented (explicit)
 
 - partial corrections (part of an award), expiry-based reversals, and a correction approval workflow
 - tiered/percentage/target/multiplier calculations
-- sales-record scoring
+- correction of a sales event: the route returns 403 (backlog A2)
+- an atomic approve-and-award: the status change and the award are separate transactions (backlog A1)
 - recalculation jobs and leaderboard snapshots
 - cap/limit rules per period
 
