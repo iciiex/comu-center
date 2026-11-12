@@ -1,7 +1,6 @@
 # Database ERD & Schema (prototype)
 
-- Status: **IMPLEMENTED** for SQLite — `db/migrations/0001_init.sql`, `0002_score_corrections.sql`,
-  `0003_sales_import.sql`
+- Status: **IMPLEMENTED (prototype)** for SQLite — `db/migrations/0001_init.sql` through `0005_tribal_org_foundation.sql`
 - Generated table-by-table view (columns, readers, writers): `docs/agent-guide/code-map.md` §5
 - Target production engine: `OPEN` (ADR-0001). This schema is intentionally portable to PostgreSQL.
 - Mode: P
@@ -19,6 +18,11 @@ submissions   1—0..1 score_events (source_type='mission_submission', source_id
 score_events  1—1 point_transactions
 users         1—1 point_wallets (projection)
 organizations 1—* competitions
+users         1—1 game_progress (personal game projection)
+users         1—* game_completions (idempotent, append-only run records)
+organizations 1—* org_unit_types 1—* org_units (parent_id is a same-tenant adjacency tree)
+org_unit_types *—* org_unit_types (configured allowed parent types)
+users         1—* org_memberships *—1 org_units (effective-dated, tenant-scoped)
 *             → audit_logs / outbox_events
 ```
 
@@ -36,6 +40,12 @@ organizations 1—* competitions
 | `point_transactions` | Point ledger | 1 row per score event in the prototype |
 | `point_wallets` | Balance projection | `balance = Σ point_transactions.amount` |
 | `competitions` | Competition period | org-scoped, `is_sample` |
+| `game_progress` | Sales Quest personal progression projection | one JSON state per user; separate from organizational points |
+| `game_completions` | Server-validated game run history/idempotency | unique `(user_id, idempotency_key)`; no FK to organizational score ledger |
+| `org_unit_types` | Configurable, tenant-specific unit labels/codes | unique `(organization_id, code)`; no fixed Tribal taxonomy |
+| `org_unit_type_parent_types` | Allowed type-to-parent-type configuration | both types must belong to the same tenant |
+| `org_units` | Generic organization tree nodes | same-tenant parent/type FKs; external key unique per tenant |
+| `org_memberships` | Effective-dated user-to-unit relation | composite same-tenant user/unit FKs; source key idempotency |
 | `audit_logs` | Admin/domain actions | append-only |
 | `outbox_events` | Transactional outbox | written in the same tx as the score event |
 
@@ -86,7 +96,7 @@ sales_user_map (organization_id, user_external_id) → users.id   -- explicit ma
 ## Migrations
 
 - `db/migrations/*.sql` run at startup (`app.db.apply_migrations`), once each, in filename order:
-  `0001_init.sql`, `0002_score_corrections.sql`, `0003_sales_import.sql`.
+  `0001_init.sql`, `0002_score_corrections.sql`, `0003_sales_import.sql`, `0004_game_progress.sql`, `0005_tribal_org_foundation.sql`.
 - `schema_migrations (name, applied_at)` records what ran, because 0003 needs a real `ALTER TABLE`
   that is not idempotent. Existing databases pick up the record automatically (0001/0002 are idempotent).
 - The runner has no checksums or downgrades — it is a prototype stopgap; never edit an applied file.
@@ -101,3 +111,5 @@ sales_user_map (organization_id, user_external_id) → users.id   -- explicit ma
   records the decision. A separate review-history table is a Harden-phase task.
 - No table for teams or organization levels (MVP-10, OD-02) and none for notifications (EP-11).
 - `sales_user_map` is filled by the seed only; there is no screen to manage it (backlog C1).
+- Migration 0005 adds only generic org-unit types, same-tenant hierarchy, and effective-dated memberships as a Tribal foundation.
+  It does not implement import, access grants, overlap validation, reports, scoring, leagues, or badges; those remain proposed.

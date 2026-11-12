@@ -17,6 +17,8 @@ exists, move them under a dated heading with its number
 
 ## [Unreleased]
 
+Tribal Gamification architecture/API proposal, fail-closed default-off bootstrap gate, tenant-scoped read-only org-unit APIs, and additive generic organization/membership schema foundation added; no scoring, RBAC, report workflow or product decision status changed.
+
 Sales Quest Arena BFF prototype plus demo stability slice (A1, A2, A4 technical prep, four A6 UI fixes).
 Tests: 81. Migration `0004_game_progress.sql` adds separate per-user game state/completions; no business
 score ledger changes or new approved decisions; B6 policies unchanged.

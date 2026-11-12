@@ -23,7 +23,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app import db, game, repo, sales
+from app import db, game, repo, sales, tribal
 from app.config import Settings
 from app.jalali import format_jalali, to_persian_digits
 from app.repo import DomainError
@@ -310,6 +310,73 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "message": "Prototype — sample data only",
             }
         )
+
+    @app.get("/api/v1/tribal/bootstrap")
+    def tribal_bootstrap(user: CurrentUser = Depends(require_user)) -> JSONResponse:
+        """Fail closed until the Tribal API contract and data are implemented."""
+        if not settings.tribal_gamification_enabled:
+            return JSONResponse(
+                {
+                    "error": {
+                        "code": "FEATURE_DISABLED",
+                        "message": "Tribal Gamification is disabled.",
+                    }
+                },
+                status_code=404,
+            )
+        # Never infer Tribal permissions from legacy roles or expose demo organization data.
+        return JSONResponse(
+            {
+                "error": {
+                    "code": "MODULE_NOT_CONFIGURED",
+                    "message": "Tribal data and access policy are not configured.",
+                }
+            },
+            status_code=503,
+        )
+
+    def tribal_disabled_response() -> JSONResponse | None:
+        if settings.tribal_gamification_enabled:
+            return None
+        return JSONResponse(
+            {"error": {"code": "FEATURE_DISABLED", "message": "Tribal Gamification is disabled."}},
+            status_code=404,
+        )
+
+    @app.get("/api/v1/tribal/org-units")
+    def tribal_org_units(
+        parent_id: str | None = None,
+        unit_type: str | None = Query(default=None, alias="type", max_length=80),
+        q: str | None = Query(default=None, max_length=120),
+        limit: int = Query(default=50, ge=1, le=100),
+        cursor: str | None = Query(default=None, max_length=512),
+        user: CurrentUser = Depends(require_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        disabled = tribal_disabled_response()
+        if disabled is not None:
+            return disabled
+        result = tribal.list_units(
+            conn,
+            user.organization_id,
+            parent_id=parent_id,
+            unit_type=unit_type,
+            query=q,
+            limit=limit,
+            cursor=cursor,
+        )
+        return JSONResponse(result)
+
+    @app.get("/api/v1/tribal/org-units/{unit_id}")
+    def tribal_org_unit(
+        unit_id: str,
+        user: CurrentUser = Depends(require_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        disabled = tribal_disabled_response()
+        if disabled is not None:
+            return disabled
+        return JSONResponse(tribal.get_unit(conn, user.organization_id, unit_id))
 
     @app.get("/api/v1/game/demo-users")
     def game_demo_users(conn: sqlite3.Connection = Depends(conn_dep)) -> JSONResponse:
