@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 
 from fastapi.testclient import TestClient
 
 from app.config import Settings
+from app.main import create_app
 from tests.conftest import OPERATOR, OTHER_VISITOR, VISITOR, login
 
 
@@ -28,6 +30,42 @@ def completion_payload() -> dict:
             "note": "Call Friday",
         }
     }
+
+
+def test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it(
+    client: TestClient,
+) -> None:
+    users = client.get("/api/v1/game/demo-users")
+    assert users.status_code == 200
+    assert users.json()["users"]
+    assert all("mobile" not in user for user in users.json()["users"])
+
+    visitor_id = users.json()["users"][0]["id"]
+    logged_in = client.post("/api/v1/game/demo-login", json={"user_id": visitor_id})
+    assert logged_in.status_code == 200
+    assert logged_in.headers["set-cookie"].lower().find("httponly") >= 0
+    assert logged_in.headers["x-csrf-token"]
+    assert client.get("/api/v1/game/bootstrap").status_code == 200
+
+    logout = client.post(
+        "/api/v1/game/logout",
+        headers={"X-CSRF-Token": client.get("/api/v1/game/bootstrap").json()["csrf_token"]},
+    )
+    assert logout.status_code == 200
+    assert logout.json() == {"logged_out": True}
+    assert client.get("/api/v1/game/bootstrap").status_code == 401
+
+
+def test_game_demo_login_is_disabled_outside_dev_and_test(settings: Settings) -> None:
+    production_settings = replace(settings, env="production")
+    with TestClient(create_app(production_settings)) as production_client:
+        assert production_client.get("/api/v1/game/demo-users").status_code == 404
+        assert (
+            production_client.post(
+                "/api/v1/game/demo-login", json={"user_id": "not-a-user"}
+            ).status_code
+            == 404
+        )
 
 
 def test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog(

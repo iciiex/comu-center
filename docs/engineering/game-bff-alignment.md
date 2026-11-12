@@ -26,10 +26,13 @@ The versioned content snapshot lives at `app/game_catalog.json`, pinned to front
 configuration and achievement metadata. Refresh it only as an intentional contract update, then update its
 source SHA and tests.
 
-All routes are under `/api/v1/game`. Implemented routes: The frontend should call relative URLs; deploy behind the same origin or a same-origin reverse proxy. Use the existing signed session cookie for identity. JSON requests must receive JSON `401` (not the HTML `/login` redirect), and state changes require CSRF validation. Do not put session tokens in URLs or localStorage.
+All routes are under `/api/v1/game`. Game-state routes require a visitor session (anonymous calls receive JSON `401`); demo-user selection/login is explicitly public but dev/test-only and rate-limited. Implemented routes: The frontend should call relative URLs; deploy behind the same origin or a same-origin reverse proxy. Use the existing signed session cookie for identity. JSON requests must receive JSON `401` (not the HTML `/login` redirect), and state changes require CSRF validation. Do not put session tokens in URLs or localStorage.
 
 | Method + route | Purpose | Contract notes |
 |---|---|---|
+| `GET /demo-users` | List active visitor accounts for the demo picker | Dev/test only; hides mobile numbers. |
+| `POST /demo-login` | JSON `{user_id}` login, sets HttpOnly session cookie and returns CSRF header | Dev/test only; rate-limited; does not accept roles or arbitrary identity fields. |
+| `POST /logout` | Clear the session cookie | Requires CSRF and a visitor session. |
 | `GET /bootstrap` | One-request startup payload: player profile, current progress, game config, mission content, server date key, CSRF token | Requires session; response has `api_version` and `content_version`. Missions/config are server-owned snapshots to prevent frontend/backend rule drift. |
 | `PATCH /profile` | Save onboarding/profile `{name, avatar}` | Allowlisted avatar IDs, name length ≤24; identity always comes from session. |
 | `PUT /missions/{mission_id}/draft` | Save resumable draft `{step_index, answers}` | Validate mission and step IDs/types; scoped to current user. |

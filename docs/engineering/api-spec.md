@@ -36,16 +36,18 @@ session silently logs the user out. The prototype therefore accepts the **same s
 
 ## CSRF
 
-Every state-changing request (all `POST`s except `/demo-login`) must carry a hidden `csrf` field whose
-value is `HMAC-SHA256(secret, "csrf:" + session_token)`. The token is derived from the session so it works
-in the cookie-less fallback too. Missing or mismatched → `403` with a Persian message; anonymous `POST` →
-`303 /login`. Implemented as a route dependency (`csrf_guard`), so multipart uploads stay intact.
+Every state-changing browser form request (all `POST`s except `/demo-login` and the dev/test-only
+`/api/v1/game/demo-login`) must carry a hidden `csrf` field whose value is
+`HMAC-SHA256(secret, "csrf:" + session_token)`. The game BFF instead accepts this value in
+`X-CSRF-Token`; URL session tokens are forbidden on BFF routes. Missing or mismatched → `403`; anonymous
+HTML `POST` → `303 /login`, anonymous BFF calls → JSON `401`. Implemented as a route dependency (`csrf_guard`),
+so multipart uploads stay intact.
 
 ## Rate limiting
 
-`POST /demo-login` allows `KILOOS_LOGIN_RATE_LIMIT` attempts per IP per `KILOOS_LOGIN_RATE_WINDOW`
-seconds (defaults 10 / 60). Exceeding it → `429` page. The counter is in-process memory: it is a demo
-guard, not a multi-worker limiter.
+`POST /demo-login` and dev/test-only `POST /api/v1/game/demo-login` share a per-IP limit controlled by
+`KILOOS_LOGIN_RATE_LIMIT` and `KILOOS_LOGIN_RATE_WINDOW` (defaults 10 / 60 seconds). HTML login returns a
+`429` page; game login returns JSON `429`. The counter is in-process memory: a demo guard, not a multi-worker limiter.
 
 ## Security headers
 
@@ -61,12 +63,16 @@ in an iframe. Narrow both before real users.
 ## Sales Quest Arena BFF (prototype, separate game economy)
 
 These JSON routes are implemented under `/api/v1/game`; details, content snapshot and frontend integration
-requirements are in [`game-bff-alignment.md`](game-bff-alignment.md). All require an authenticated visitor account
-except that anonymous access returns JSON `401`. URL session tokens (`?s=`) are rejected. Mutations require
-`X-CSRF-Token` from `/bootstrap`; completion additionally requires `Idempotency-Key`.
+requirements are in [`game-bff-alignment.md`](game-bff-alignment.md). Game-state routes require an authenticated
+visitor account; anonymous requests receive JSON `401`. `/demo-users` and `/demo-login` are public only in dev/test.
+URL session tokens (`?s=`) are rejected. Mutations require `X-CSRF-Token` from `/bootstrap`; completion additionally
+requires `Idempotency-Key`.
 
 | Method | Path | Purpose |
 |---|---|---|
+| GET | `/api/v1/game/demo-users` | Dev/test only: list active visitor demo accounts (no mobile numbers) |
+| POST | `/api/v1/game/demo-login` | Dev/test only: JSON login, sets HttpOnly cookie + returns CSRF header |
+| POST | `/api/v1/game/logout` | CSRF-checked JSON logout |
 | GET | `/api/v1/game/bootstrap` | Versioned catalog/config + user game projection + CSRF token |
 | GET | `/api/v1/game/progress` | Refresh canonical server-owned game state |
 | GET | `/api/v1/game/history?limit=&cursor=` | User-scoped completion history |

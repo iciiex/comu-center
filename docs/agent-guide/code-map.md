@@ -34,7 +34,7 @@ Contents: [1 Modules](#1-modules) · [2 Routes](#2-routes) · [3 Route details](
 | `app/db.py` | 4 | `config`, `seed` |
 | `app/game.py` | 27 | `db` |
 | `app/jalali.py` | 3 | — |
-| `app/main.py` | 57 | `config`, `db`, `game`, `jalali`, `repo`, `sales`, `sample_sales`, `security` |
+| `app/main.py` | 60 | `config`, `db`, `game`, `jalali`, `repo`, `sales`, `sample_sales`, `security` |
 | `app/maintenance.py` | 3 | `config`, `db` |
 | `app/repo.py` | 42 | `scoring` |
 | `app/sales.py` | 11 | — |
@@ -87,8 +87,11 @@ graph LR
 | GET | `/admin/submissions` | staff | — | `main.admin_queue` | `admin_queue.html` | 5 |
 | GET | `/admin/submissions/{submission_id}` | staff | — | `main.admin_review` | `admin_review.html` | 2 |
 | POST | `/admin/submissions/{submission_id}/review` | staff | yes | `main.admin_decide` | `admin_review.html` | 18 |
-| GET | `/api/v1/game/bootstrap` | public | — | `main.game_bootstrap` | — | 8 |
+| GET | `/api/v1/game/bootstrap` | public | — | `main.game_bootstrap` | — | 9 |
+| POST | `/api/v1/game/demo-login` | public | exempt | `main.game_demo_login` | — | 2 |
+| GET | `/api/v1/game/demo-users` | public | — | `main.game_demo_users` | — | 2 |
 | GET | `/api/v1/game/history` | public | — | `main.game_history` | — | 1 |
+| POST | `/api/v1/game/logout` | token | yes | `main.game_logout` | — | 1 |
 | POST | `/api/v1/game/missions/{mission_id}/completions` | token | yes | `main.game_complete_mission` | — | 4 |
 | DELETE | `/api/v1/game/missions/{mission_id}/draft` | token | yes | `main.game_discard_draft` | — | 0 |
 | PUT | `/api/v1/game/missions/{mission_id}/draft` | token | yes | `main.game_save_draft` | — | 0 |
@@ -107,7 +110,7 @@ graph LR
 | GET | `/score` | user | — | `main.score_page` | `score.html` | 3 |
 | GET | `/submissions/{submission_id}` | user | — | `main.submission_page` | `submission.html` | 4 |
 
-37 routes. FastAPI also serves `/api/docs`, `/openapi.json` and the
+40 routes. FastAPI also serves `/api/docs`, `/openapi.json` and the
 `/static` mount; they are framework-provided and not listed.
 
 ## 3. Route details
@@ -340,7 +343,31 @@ graph LR
 - Reads: `game_progress`, `users`
 - Writes: `game_progress`
 - Error codes reachable: —
-- Tests (8): `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`
+- Tests (9): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`
+
+### `POST /api/v1/game/demo-login`
+
+- Handler: `main.game_demo_login` — access **public** — CSRF exempt
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `400`, `404`, `422`
+- Calls: `game.GameError`, `security.csrf_for`, `security.set_session`
+- Closures used: `main.conn_dep`, `main.login_rate_limited`
+- Reads: `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (2): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`
+
+### `GET /api/v1/game/demo-users`
+
+- Handler: `main.game_demo_users` — access **public** — CSRF not needed (GET)
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `404`
+- Calls: —
+- Closures used: `main.conn_dep`
+- Reads: `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (2): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`
 
 ### `GET /api/v1/game/history`
 
@@ -353,6 +380,18 @@ graph LR
 - Writes: —
 - Error codes reachable: —
 - Tests (1): `test_game_api::test_game_profile_draft_history_and_user_scope`
+
+### `POST /api/v1/game/logout`
+
+- Handler: `main.game_logout` — access **token** — CSRF yes
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `400`, `403`
+- Calls: `security.clear_session`
+- Closures used: `main.csrf_guard`, `main.require_api_user`
+- Reads: `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (1): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`
 
 ### `POST /api/v1/game/missions/{mission_id}/completions`
 
@@ -569,15 +608,15 @@ graph LR
 | `_http_error` | exception-handler | — | — | — | `main.page` | — |
 | `_login_required` | exception-handler | — | — | — | — | — |
 | `_starlette_error` | exception-handler | — | — | — | `main.page` | — |
-| `conn_dep` | closure | — | — | — | `db.connect` | 37 callers |
-| `create_app` | function | — | — | — | `config.Settings`, `db.init_db`, `jalali.format_jalali` | `conftest::client`, `test_hardening::test_admin_queue_paginates` |
-| `csrf_guard` | closure | Reject form posts whose CSRF value does not match the session token. | — | — | `main.LoginRequired`, `security.csrf_for`, `security.session_token` | 14 callers |
+| `conn_dep` | closure | — | — | — | `db.connect` | 39 callers |
+| `create_app` | function | — | — | — | `config.Settings`, `db.init_db`, `jalali.format_jalali` | `conftest::client`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`, `test_hardening::test_admin_queue_paginates` |
+| `csrf_guard` | closure | Reject form posts whose CSRF value does not match the session token. | — | — | `main.LoginRequired`, `security.csrf_for`, `security.session_token` | 15 callers |
 | `go` | closure | — | — | — | `main.url_session`, `main.with_token` | 10 callers |
 | `hardening` | middleware | — | — | — | `main.login_rate_limited`, `main.page` | — |
-| `login_rate_limited` | closure | In-memory token bucket. Single-process only (documented limitation). | — | — | — | `main.hardening` |
+| `login_rate_limited` | closure | In-memory token bucket. Single-process only (documented limitation). | — | — | — | `main.game_demo_login`, `main.hardening` |
 | `page` | closure | — | — | — | `main.url_session`, `security.csrf_token` | 25 callers |
 | `require_admin` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | 13 callers |
-| `require_api_user` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | `main.game_bootstrap`, `main.game_complete_mission`, `main.game_discard_draft`, `main.game_history`, `main.game_profile`, `main.game_progress`, `main.game_save_draft` |
+| `require_api_user` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | `main.game_bootstrap`, `main.game_complete_mission`, `main.game_discard_draft`, `main.game_history`, `main.game_logout`, `main.game_profile`, `main.game_progress`, `main.game_save_draft` |
 | `require_staff` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | `main.admin_decide`, `main.admin_missions`, `main.admin_queue`, `main.admin_review` |
 | `require_user` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | `main.evidence_file`, `main.home`, `main.leaderboard_page`, `main.mission_page`, `main.missions_page`, `main.score_page`, `main.submission_page`, `main.submit_mission` |
 | `sales_page_context` | closure | — | `sales_user_map`, `scoring_rule_versions`, `users` | — | — | `main.admin_sales_new`, `main.admin_sales_upload` |
@@ -669,14 +708,14 @@ graph LR
 | `CurrentUser` | class | — | — | — | — | `security.current_user` |
 | `_sign` | function | — | — | — | — | `security.make_token` |
 | `_unsign` | function | — | — | — | — | `security.read_token` |
-| `clear_session` | function | — | — | — | — | `main.logout` |
-| `csrf_for` | function | Derive a CSRF token from the session token (works without cookies). | — | — | — | `conftest::csrf`, `main.csrf_guard`, `security.csrf_token`, `test_hardening::token_csrf` |
+| `clear_session` | function | — | — | — | — | `main.game_logout`, `main.logout` |
+| `csrf_for` | function | Derive a CSRF token from the session token (works without cookies). | — | — | — | `conftest::csrf`, `main.csrf_guard`, `main.game_demo_login`, `security.csrf_token`, `test_hardening::token_csrf` |
 | `csrf_token` | function | — | — | — | `security.csrf_for`, `security.session_token` | `main.game_bootstrap`, `main.page` |
 | `current_user` | function | — | `users` | — | `security.CurrentUser`, `security.read_token` | `main.require_admin`, `main.require_api_user`, `main.require_staff`, `main.require_user`, `main.root` |
 | `make_token` | function | Return a URL-safe token: base64url("<user_id>.<issued_at>.<hmac>"). | — | — | `security._sign` | `main.demo_login`, `security.set_session`, `test_hardening::test_expired_token_is_rejected` |
 | `read_token` | function | Verify signature and expiry; return the user id or ``None``. | — | — | `security._unsign` | `main.url_session`, `security.current_user`, `security.session_token` |
 | `session_token` | function | Effective session token: ``?s=`` first (iframe fallback), then cookie. | — | — | `security.read_token` | `main.csrf_guard`, `security.csrf_token` |
-| `set_session` | function | Set the cookie and return the token (reused for the ``?s=`` fallback). | — | — | `security.make_token` | `main.demo_login` |
+| `set_session` | function | Set the cookie and return the token (reused for the ``?s=`` fallback). | — | — | `security.make_token` | `main.demo_login`, `main.game_demo_login` |
 
 ### `app/config.py`
 
@@ -698,7 +737,7 @@ graph LR
 
 | Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
 |---|---|---|---|---|---|---|
-| `GameError` | class | — | — | — | — | `game._clean_answers`, `game.complete_mission`, `game.discard_draft`, `game.list_history`, `game.save_draft`, `game.update_profile` |
+| `GameError` | class | — | — | — | — | `game._clean_answers`, `game.complete_mission`, `game.discard_draft`, `game.list_history`, `game.save_draft`, `game.update_profile`, `main.game_demo_login` |
 | `_clean_answers` | function | — | — | — | `game.GameError` | `game.complete_mission`, `game.save_draft` |
 | `_collect_flags` | function | — | — | — | — | `game.complete_mission` |
 | `_daily_mission` | function | — | — | — | `game._lock_reason`, `game.catalog` | `game._ensure_daily` |
@@ -927,7 +966,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Columns: `id` TEXT PRIMARY KEY; `organization_id` TEXT NOT NULL REFERENCES organizations(id); `full_name` TEXT NOT NULL; `mobile` TEXT NOT NULL; `role` TEXT NOT NULL CHECK (role IN ('visitor', 'operator', 'admin')); `is_active` INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)); `created_at` TEXT NOT NULL
 - Table constraints: UNIQUE (organization_id, mobile)
 - References: `organizations`
-- Read by: `db.init_db`, `main.demo_login`, `main.login_page`, `main.sales_page_context`, `repo.count_queue`, `repo.leaderboard`, `repo.list_queue`, `repo.list_sales_imports`, `repo.sales_import`, `repo.score_event_detail`, `repo.submission_detail`, `security.current_user`
+- Read by: `db.init_db`, `main.demo_login`, `main.game_demo_login`, `main.game_demo_users`, `main.login_page`, `main.sales_page_context`, `repo.count_queue`, `repo.leaderboard`, `repo.list_queue`, `repo.list_sales_imports`, `repo.sales_import`, `repo.score_event_detail`, `repo.submission_detail`, `security.current_user`
 - INSERT by: `seed.seed_demo`
 
 ## 6. Templates
@@ -1011,10 +1050,12 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_duplicate_request_id_is_idempotent` | `POST /demo-login`, `POST /missions/{mission_id}/submissions` | `security.csrf_for` | — |
 | `test_approve_redirect_keeps_queue_filter` | `POST /admin/submissions/{submission_id}/review`, `POST /demo-login`, `POST /logout`, `POST /missions/{mission_id}/submissions` | `security.csrf_for` | — |
 
-### `tests/test_game_api.py` (8 tests)
+### `tests/test_game_api.py` (10 tests)
 
 | Test | Routes exercised | Direct domain calls | IDs |
 |---|---|---|---|
+| `test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it` | `GET /api/v1/game/bootstrap`, `GET /api/v1/game/demo-users`, `POST /api/v1/game/demo-login`, `POST /api/v1/game/logout` | — | — |
+| `test_game_demo_login_is_disabled_outside_dev_and_test` | `GET /api/v1/game/demo-users`, `POST /api/v1/game/demo-login` | — | — |
 | `test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog` | `GET /api/v1/game/bootstrap`, `POST /demo-login` | — | — |
 | `test_game_completion_is_server_scored_idempotent_and_separate_from_org_points` | `GET /api/v1/game/bootstrap`, `POST /api/v1/game/missions/{mission_id}/completions`, `POST /demo-login` | — | — |
 | `test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key` | `GET /api/v1/game/bootstrap`, `POST /demo-login` | — | — |
@@ -1080,7 +1121,7 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_wallet_matches_ledger` | — | — | — |
 | `test_active_rule_version_selection_after_retirement` | — | `scoring.find_rule_version` | — |
 
-79 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
+81 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
 Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::row_id`, `conftest::settings`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_hardening::token_csrf`, `test_sales::upload`, `test_sales::workbook_bytes`.
 
 ## 8. Error codes
