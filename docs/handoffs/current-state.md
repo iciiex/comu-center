@@ -5,7 +5,7 @@
 - Mode: P
 - Current phase: Prototype
 - Current milestone: MS-01 — Prototype Delivery (2026-11-18)
-- Main branch / working branch: `main` / `arena/8a27acad-comu-center`
+- Main branch / working branch: `main` / `arena/1757fdf5-comu-center`
 - Prioritised backlog: `docs/delivery/backlog.md` (PROPOSED)
 - Project handover (dated snapshot, Persian): `docs/handoffs/handover.md`
 - Agent guide: `docs/agent-guide/README.md`
@@ -49,8 +49,10 @@
 - Sales Quest Arena integration: public frontend reviewed; BFF prototype routes and migration `0004_game_progress.sql`
   are implemented. Contract/source snapshot: `docs/engineering/game-bff-alignment.md` + `app/game_catalog.json`.
   Agreed direction: server-authoritative game progress/rewards, with game XP/coins separate from organizational score events.
-  A dev/test-only visitor picker/login/logout API now sets an HttpOnly cookie and bootstrap CSRF header.
-  Remaining: the React frontend is not wired to the API; its localStorage seam is synchronous and completion logic remains client-side.
+  A dev/test-only visitor picker/login/logout API now sets an HttpOnly cookie and bootstrap CSRF header. Demo store APIs
+  now list two sample coin-priced special missions and atomically charge game coins with idempotency; special missions are
+  returned separately so the original six remain unchanged. UI integration remains open: the React frontend is not wired
+  to the API; its localStorage seam is synchronous and completion logic remains client-side.
 - A4: the demo script has an automated replay (`tests/test_demo_stability.py`) and a live local preview was smoke-tested
   on uvicorn. **Browser rehearsal on the final demo host is still not done.**
 - Sales import is XLSX-only with the SAMPLE contract; a real export (OD-03) may add columns or a mapping UI.

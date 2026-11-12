@@ -16,7 +16,7 @@ import uuid
 from collections.abc import Iterator
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -451,6 +451,38 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> JSONResponse:
         result = game.get_progress(conn, user)
         conn.commit()
+        return JSONResponse(result)
+
+    @app.get("/api/v1/game/store")
+    def game_store(
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        result = game.get_store(conn, user)
+        conn.commit()
+        return JSONResponse(result)
+
+    @app.post("/api/v1/game/store/purchases", dependencies=[Depends(csrf_guard)])
+    async def game_store_purchase(
+        request: Request,
+        idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        try:
+            payload = await request.json()
+        except (ValueError, UnicodeDecodeError):
+            raise HTTPException(status_code=400, detail="Expected a JSON request body.") from None
+        if not isinstance(payload, dict) or set(payload) != {"offer_id"}:
+            raise HTTPException(status_code=422, detail="Request must contain offer_id only.")
+        offer_id = payload["offer_id"]
+        if not isinstance(offer_id, str):
+            raise HTTPException(status_code=422, detail="offer_id must be a string.")
+        response, replayed = game.purchase_store_offer(
+            conn, user, offer_id, idempotency_key or ""
+        )
+        result = dict(response)
+        result["replayed"] = replayed
         return JSONResponse(result)
 
     @app.get("/api/v1/game/history")

@@ -1,0 +1,36 @@
+{
+  "version": "demo-store-v1",
+  "is_demo": true,
+  "offers": [
+    {
+      "id": "special-market-insight",
+      "title": "Market Insight Mission",
+      "description": "A special market research challenge, unlocked with game coins.",
+      "price_coins": 40,
+      "template_mission_id": "market-scout",
+      "mission": {
+        "id": "market-insight-special",
+        "order": 7,
+        "title": "Market Insight: Special Challenge",
+        "shortTitle": "Market Insight",
+        "description": "Go beyond the usual visit and capture a useful market signal.",
+        "storeOfferId": "special-market-insight"
+      }
+    },
+    {
+      "id": "special-sales-strategy",
+      "title": "Sales Strategy Mission",
+      "description": "A special sales achievement challenge, unlocked with game coins.",
+      "price_coins": 60,
+      "template_mission_id": "sales-summit",
+      "mission": {
+        "id": "sales-strategy-special",
+        "order": 8,
+        "title": "Sales Strategy: Special Challenge",
+        "shortTitle": "Sales Strategy",
+        "description": "Build a focused plan from your latest customer conversation.",
+        "storeOfferId": "special-sales-strategy"
+      }
+    }
+  ]
+}

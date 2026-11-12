@@ -17,6 +17,8 @@ exists, move them under a dated heading with its number
 
 ## [Unreleased]
 
+Sales Quest demo store: two sample coin-priced special missions with idempotent purchases; game coin economy remains separate from organizational/Tribal points.
+
 Tribal Gamification architecture/API proposal, fail-closed default-off bootstrap gate, tenant-scoped read-only org-unit APIs, and additive generic organization/membership schema foundation added; no scoring, RBAC, report workflow or product decision status changed.
 
 Sales Quest Arena BFF prototype plus demo stability slice (A1, A2, A4 technical prep, four A6 UI fixes).

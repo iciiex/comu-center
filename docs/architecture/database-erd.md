@@ -1,6 +1,6 @@
 # Database ERD & Schema (prototype)
 
-- Status: **IMPLEMENTED (prototype)** for SQLite — `db/migrations/0001_init.sql` through `0005_tribal_org_foundation.sql`
+- Status: **IMPLEMENTED (prototype)** for SQLite — `db/migrations/0001_init.sql` through `0006_game_demo_store.sql`
 - Generated table-by-table view (columns, readers, writers): `docs/agent-guide/code-map.md` §5
 - Target production engine: `OPEN` (ADR-0001). This schema is intentionally portable to PostgreSQL.
 - Mode: P
@@ -23,6 +23,7 @@ users         1—* game_completions (idempotent, append-only run records)
 organizations 1—* org_unit_types 1—* org_units (parent_id is a same-tenant adjacency tree)
 org_unit_types *—* org_unit_types (configured allowed parent types)
 users         1—* org_memberships *—1 org_units (effective-dated, tenant-scoped)
+users         1—* game_store_purchases 1—0..1 game_coin_transactions (demo game economy only)
 *             → audit_logs / outbox_events
 ```
 
@@ -46,6 +47,8 @@ users         1—* org_memberships *—1 org_units (effective-dated, tenant-sco
 | `org_unit_type_parent_types` | Allowed type-to-parent-type configuration | both types must belong to the same tenant |
 | `org_units` | Generic organization tree nodes | same-tenant parent/type FKs; external key unique per tenant |
 | `org_memberships` | Effective-dated user-to-unit relation | composite same-tenant user/unit FKs; source key idempotency |
+| `game_store_purchases` | Demo Sales Quest offer purchase | unique `(user_id, idempotency_key)` and `(user_id, offer_id)`; sample virtual coins only |
+| `game_coin_transactions` | Append-only demo-store spend record | signed integer amount, unique purchase source; separate from organizational points |
 | `audit_logs` | Admin/domain actions | append-only |
 | `outbox_events` | Transactional outbox | written in the same tx as the score event |
 
@@ -96,7 +99,7 @@ sales_user_map (organization_id, user_external_id) → users.id   -- explicit ma
 ## Migrations
 
 - `db/migrations/*.sql` run at startup (`app.db.apply_migrations`), once each, in filename order:
-  `0001_init.sql`, `0002_score_corrections.sql`, `0003_sales_import.sql`, `0004_game_progress.sql`, `0005_tribal_org_foundation.sql`.
+  `0001_init.sql`, `0002_score_corrections.sql`, `0003_sales_import.sql`, `0004_game_progress.sql`, `0005_tribal_org_foundation.sql`, `0006_game_demo_store.sql`.
 - `schema_migrations (name, applied_at)` records what ran, because 0003 needs a real `ALTER TABLE`
   that is not idempotent. Existing databases pick up the record automatically (0001/0002 are idempotent).
 - The runner has no checksums or downgrades — it is a prototype stopgap; never edit an applied file.
@@ -113,3 +116,5 @@ sales_user_map (organization_id, user_external_id) → users.id   -- explicit ma
 - `sales_user_map` is filled by the seed only; there is no screen to manage it (backlog C1).
 - Migration 0005 adds only generic org-unit types, same-tenant hierarchy, and effective-dated memberships as a Tribal foundation.
   It does not implement import, access grants, overlap validation, reports, scoring, leagues, or badges; those remain proposed.
+- Migration 0006 records demo game-store purchases/spends only. Existing game coin earnings remain in the game progress projection;
+  this is not a complete coin ledger or a production commerce system.
