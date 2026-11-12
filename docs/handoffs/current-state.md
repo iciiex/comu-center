@@ -40,6 +40,7 @@
 - Sales Quest Arena integration: public frontend reviewed; BFF prototype routes and migration `0004_game_progress.sql`
   are implemented. Contract/source snapshot: `docs/engineering/game-bff-alignment.md` + `app/game_catalog.json`.
   Agreed direction: server-authoritative game progress/rewards, with game XP/coins separate from organizational score events.
+  A dev/test-only visitor picker/login/logout API now sets an HttpOnly cookie and bootstrap CSRF header.
   Remaining: the React frontend is not wired to the API; its localStorage seam is synchronous and completion logic remains client-side.
 - A4: the demo script has an automated replay (`tests/test_demo_stability.py`) and a live local preview was smoke-tested
   on uvicorn. **Browser rehearsal on the final demo host is still not done.**
@@ -92,20 +93,20 @@
 - `POST /admin/score-events/{id}/reverse` now redirects sales-record corrections to `/admin/sales/{import_id}?reversed=1`.
 - `POST /admin/submissions/{id}/review` renders a Persian 409 and rolls back when scoring has no effective rule version.
 - Implemented endpoints listed in `docs/engineering/api-spec.md`, including `/api/v1/game/{bootstrap,progress,history}`,
-  profile/draft writes, and idempotent game completion. `/api/v1/game` uses JSON errors/401 and cookie sessions only;
-  URL session tokens are rejected.
+  profile/draft writes, idempotent game completion, and dev/test-only `/demo-users`, `/demo-login`, `/logout`.
+  `/api/v1/game` uses JSON errors/401 and cookie sessions only; URL session tokens are rejected.
 
 ## Tests and verification
 Run on 2026-11-12 after the A1/A2/A4/A6 slice:
 - `.venv/bin/ruff check app tests` → **All checks passed!**
-- `.venv/bin/pytest -q` → **79 passed, 1 warning** (Starlette `TestClient`/`httpx` deprecation notice):
-  71 prior tests + 8 in `tests/test_game_api.py`.
-- `make check` → Ruff clean; **79 passed, 1 warning**. Game API tests cover JSON auth/CSRF, profile/drafts,
-  canonical answer validation, unlocks, server rewards, daily bonus/replay, idempotency, history, user/role scope,
-  and no score-ledger writes.
+- `.venv/bin/pytest -q` → **81 passed, 1 warning** (Starlette `TestClient`/`httpx` deprecation notice):
+  71 prior tests + 10 in `tests/test_game_api.py`.
+- `make check` → Ruff clean; **81 passed, 1 warning**. Game API tests cover dev/test demo login/logout, JSON auth/CSRF,
+  profile/drafts, canonical answer validation, unlocks, server rewards, daily bonus/replay, idempotency, history,
+  user/role scope, and no score-ledger writes.
   `make docs` refreshed the generated documents.
-- `make graph` → rebuilt `graphify-out/` (1082 nodes, 3199 edges); `make docs-check` → generated docs current
-  (37 routes, 18 tables), knowledge graph up to date.
+- `make graph` → rebuilt `graphify-out/` (1090 nodes, 3226 edges); `make docs-check` → generated docs current
+  (40 routes, 18 tables), knowledge graph up to date.
 - `make doctor` → **8 ok · 0 warn · 0 fail**.
 - `make seed` and `.venv/bin/python -m app.sample_sales` → fresh demo DB and workbook created.
 - Live preview restarted **after A2**, without `--reload`: process `kiloos-club-a39f76b9`, port 8000,

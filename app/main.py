@@ -311,6 +311,62 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             }
         )
 
+    @app.get("/api/v1/game/demo-users")
+    def game_demo_users(conn: sqlite3.Connection = Depends(conn_dep)) -> JSONResponse:
+        if settings.env not in {"dev", "test"}:
+            raise HTTPException(
+                status_code=404, detail="Demo login is disabled in this environment."
+            )
+        users = conn.execute(
+            """SELECT id, full_name FROM users
+               WHERE role = 'visitor' AND is_active = 1 ORDER BY full_name"""
+        ).fetchall()
+        return JSONResponse(
+            {"users": [{"id": row["id"], "name": row["full_name"]} for row in users]}
+        )
+
+    @app.post("/api/v1/game/demo-login")
+    async def game_demo_login(
+        request: Request, conn: sqlite3.Connection = Depends(conn_dep)
+    ) -> JSONResponse:
+        if settings.env not in {"dev", "test"}:
+            raise HTTPException(
+                status_code=404, detail="Demo login is disabled in this environment."
+            )
+        client_ip = request.client.host if request.client else "unknown"
+        if login_rate_limited(client_ip):
+            raise game.GameError(
+                429, "RATE_LIMITED", "Too many demo login attempts; try again later."
+            )
+        try:
+            payload = await request.json()
+        except (ValueError, UnicodeDecodeError):
+            raise HTTPException(status_code=400, detail="Expected a JSON request body.") from None
+        if not isinstance(payload, dict) or set(payload) != {"user_id"}:
+            raise HTTPException(status_code=422, detail="Request must contain user_id only.")
+        user_id = payload["user_id"]
+        if not isinstance(user_id, str):
+            raise HTTPException(status_code=422, detail="user_id must be a string.")
+        row = conn.execute(
+            """SELECT id, full_name, role FROM users
+               WHERE id = ? AND role = 'visitor' AND is_active = 1""",
+            (user_id,),
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Demo visitor not found.")
+        response = JSONResponse({"user": {"id": row["id"], "name": row["full_name"]}})
+        token = set_session(response, row["id"], settings.secret)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-CSRF-Token"] = csrf_for(token, settings.secret)
+        return response
+
+    @app.post("/api/v1/game/logout", dependencies=[Depends(csrf_guard)])
+    def game_logout(user: CurrentUser = Depends(require_api_user)) -> JSONResponse:
+        response = JSONResponse({"logged_out": True})
+        clear_session(response)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
     @app.get("/api/v1/game/bootstrap")
     def game_bootstrap(
         request: Request,

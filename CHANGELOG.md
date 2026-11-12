@@ -18,7 +18,7 @@ exists, move them under a dated heading with its number
 ## [Unreleased]
 
 Sales Quest Arena BFF prototype plus demo stability slice (A1, A2, A4 technical prep, four A6 UI fixes).
-Tests: 79. Migration `0004_game_progress.sql` adds separate per-user game state/completions; no business
+Tests: 81. Migration `0004_game_progress.sql` adds separate per-user game state/completions; no business
 score ledger changes or new approved decisions; B6 policies unchanged.
 
 Fixed
@@ -37,9 +37,10 @@ Fixed
   the upload page links to it. `tests/test_demo_stability.py` replays the documented demo path,
   optional correction and new-rule-version award.
 - Sales Quest Arena BFF: added a source-pinned six-mission game catalog, JSON bootstrap/progress/history,
-  profile and draft APIs, and server-authoritative answer validation/rewards with transaction + idempotency.
-  XP/coins are stored separately and never enter organizational `score_events` (`app/game.py`,
-  `app/game_catalog.json`, `/api/v1/game/*`). The React frontend still needs async API integration.
+  profile and draft APIs, server-authoritative answer validation/rewards with transaction + idempotency,
+  and dev/test-only visitor selection/login/logout for the React shell. XP/coins are stored separately and never
+  enter organizational `score_events` (`app/game.py`, `app/game_catalog.json`, `/api/v1/game/*`).
+  The React frontend still needs async API integration.
 
 Not done
 
