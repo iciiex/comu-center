@@ -5,6 +5,7 @@ This is deliberately separate from Kiloos organizational score_events/wallet.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import uuid
@@ -16,6 +17,7 @@ from typing import Any
 from app import db
 
 CATALOG_PATH = Path(__file__).with_name("game_catalog.json")
+STORE_CATALOG_PATH = Path(__file__).with_name("game_store_catalog.json")
 AVATARS = {"fox", "bear", "cat", "bunny", "panda", "frog"}
 
 
@@ -30,6 +32,26 @@ class GameError(Exception):
 @lru_cache(maxsize=1)
 def catalog() -> dict[str, Any]:
     return json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+
+
+@lru_cache(maxsize=1)
+def store_catalog() -> dict[str, Any]:
+    return json.loads(STORE_CATALOG_PATH.read_text(encoding="utf-8"))
+
+
+def _all_missions() -> list[dict[str, Any]]:
+    missions = list(catalog()["missions"])
+    base_by_id = {mission["id"]: mission for mission in missions}
+    for offer in store_catalog()["offers"]:
+        template = base_by_id.get(offer["template_mission_id"])
+        if template is None:
+            raise RuntimeError(f"Store offer has unknown template mission: {offer['id']}")
+        special = copy.deepcopy(template)
+        special.update(offer["mission"])
+        special["unlock"] = {"storeOfferId": offer["id"]}
+        special["storePriceCoins"] = int(offer["price_coins"])
+        missions.append(special)
+    return missions
 
 
 def _now() -> datetime:
@@ -75,10 +97,11 @@ def _initial_progress(full_name: str, now: datetime | None = None) -> dict[str, 
 
 
 def _mission_map() -> dict[str, dict[str, Any]]:
-    return {mission["id"]: mission for mission in catalog()["missions"]}
+    return {mission["id"]: mission for mission in _all_missions()}
 
 
 def _daily_mission(progress: dict[str, Any], day_key: str) -> str:
+    # Daily picks remain in the original six-mission game; paid demos are opt-in only.
     missions = catalog()["missions"]
     available = [m for m in missions if not _lock_reason(m, progress)]
     pool = available or [missions[0]]
@@ -104,6 +127,9 @@ def _ensure_daily(progress: dict[str, Any], day_key: str) -> dict[str, Any]:
 
 def _lock_reason(mission: dict[str, Any], progress: dict[str, Any]) -> str | None:
     unlock = mission.get("unlock", {})
+    store_offer = unlock.get("storeOfferId")
+    if store_offer and store_offer not in progress.get("storeUnlocks", []):
+        return f"Unlock in the demo store for {int(mission.get('storePriceCoins', 0))} coins"
     after = unlock.get("afterMission")
     if after and int(progress.get("missions", {}).get(after, {}).get("completions", 0)) < 1:
         prerequisite = _mission_map().get(after)
@@ -115,9 +141,12 @@ def _lock_reason(mission: dict[str, Any], progress: dict[str, Any]) -> str | Non
     return None
 
 
-def _mission_views(progress: dict[str, Any], day_key: str) -> list[dict[str, Any]]:
+def _mission_views(
+    progress: dict[str, Any], day_key: str, *, include_special: bool = False
+) -> list[dict[str, Any]]:
     views: list[dict[str, Any]] = []
-    for definition in sorted(catalog()["missions"], key=lambda m: m["order"]):
+    definitions = _all_missions() if include_special else catalog()["missions"]
+    for definition in sorted(definitions, key=lambda m: m["order"]):
         record = progress.get("missions", {}).get(definition["id"], {})
         draft = progress.get("drafts", {}).get(definition["id"])
         lock_reason = _lock_reason(definition, progress)
@@ -146,6 +175,14 @@ def _mission_views(progress: dict[str, Any], day_key: str) -> list[dict[str, Any
         )
         views.append(view)
     return views
+
+
+def _special_mission_views(progress: dict[str, Any], day_key: str) -> list[dict[str, Any]]:
+    return [
+        mission
+        for mission in _mission_views(progress, day_key, include_special=True)
+        if mission.get("storeOfferId")
+    ]
 
 
 def _initialize(conn, user_id: str, full_name: str) -> dict[str, Any]:
@@ -196,6 +233,12 @@ def bootstrap(conn, user, csrf_value: str) -> dict[str, Any]:
         "categories": catalog()["categories"],
         "difficulty": catalog()["difficulty"],
         "missions": _mission_views(progress, day_key),
+        "special_missions": _special_mission_views(progress, day_key),
+        "store": {
+            "version": store_catalog()["version"],
+            "is_demo": True,
+            "currency": "game_coins",
+        },
         "achievements_catalog": catalog()["achievements"],
         "progress": _public_progress(progress),
     }
@@ -220,8 +263,125 @@ def get_progress(conn, user):
     return {
         "date_key": day_key,
         "missions": _mission_views(progress, day_key),
+        "special_missions": _special_mission_views(progress, day_key),
         "progress": _public_progress(progress),
     }
+
+
+def get_store(conn, user) -> dict[str, Any]:
+    progress = _initialize(conn, user.id, user.full_name)
+    purchased = {
+        row["offer_id"]
+        for row in conn.execute(
+            "SELECT offer_id FROM game_store_purchases WHERE user_id = ?", (user.id,)
+        ).fetchall()
+    }
+    offers = []
+    for offer in store_catalog()["offers"]:
+        mission = _mission_map()[offer["mission"]["id"]]
+        offers.append(
+            {
+                "id": offer["id"],
+                "title": offer["title"],
+                "description": offer["description"],
+                "price_coins": int(offer["price_coins"]),
+                "mission_id": mission["id"],
+                "mission_title": mission["title"],
+                "purchased": offer["id"] in purchased,
+            }
+        )
+    return {
+        "store_version": store_catalog()["version"],
+        "is_demo": True,
+        "currency": "game_coins",
+        "coin_balance": int(progress.get("coins", 0)),
+        "offers": offers,
+    }
+
+
+def purchase_store_offer(conn, user, offer_id: str, idempotency_key: str) -> tuple[dict, bool]:
+    if not idempotency_key or len(idempotency_key) > 128 or any(
+        ord(char) < 33 or ord(char) > 126 for char in idempotency_key
+    ):
+        raise GameError(400, "INVALID_IDEMPOTENCY_KEY", "A valid Idempotency-Key is required.")
+    offer = next((item for item in store_catalog()["offers"] if item["id"] == offer_id), None)
+    if offer is None:
+        raise GameError(404, "STORE_OFFER_NOT_FOUND", "Store offer was not found.")
+
+    price = int(offer["price_coins"])
+    canonical = json.dumps({"offer_id": offer_id}, sort_keys=True, separators=(",", ":"))
+    digest = hashlib.sha256(canonical.encode()).hexdigest()
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        existing = conn.execute(
+            """SELECT request_sha256, response_json FROM game_store_purchases
+               WHERE user_id = ? AND idempotency_key = ?""",
+            (user.id, idempotency_key),
+        ).fetchone()
+        if existing:
+            if existing["request_sha256"] != digest:
+                raise GameError(
+                    409,
+                    "IDEMPOTENCY_KEY_REUSED",
+                    "Idempotency-Key was already used with a different request.",
+                )
+            conn.commit()
+            return json.loads(existing["response_json"]), True
+
+        owned = conn.execute(
+            "SELECT 1 FROM game_store_purchases WHERE user_id = ? AND offer_id = ?",
+            (user.id, offer_id),
+        ).fetchone()
+        if owned:
+            raise GameError(409, "OFFER_ALREADY_PURCHASED", "This offer was already purchased.")
+
+        progress = _initialize(conn, user.id, user.full_name)
+        balance = int(progress.get("coins", 0))
+        if balance < price:
+            raise GameError(409, "INSUFFICIENT_GAME_COINS", "Not enough game coins for this offer.")
+        purchase_id = str(uuid.uuid4())
+        purchased_at = _now().isoformat()
+        progress["coins"] = balance - price
+        unlocked = set(progress.get("storeUnlocks", []))
+        unlocked.add(offer_id)
+        progress["storeUnlocks"] = sorted(unlocked)
+        response = {
+            "purchase_id": purchase_id,
+            "offer_id": offer_id,
+            "mission_id": offer["mission"]["id"],
+            "price_coins": price,
+            "coin_balance": progress["coins"],
+            "purchased_at": purchased_at,
+            "replayed": False,
+        }
+        conn.execute(
+            """INSERT INTO game_store_purchases
+               (id, user_id, offer_id, price_coins, idempotency_key, request_sha256,
+                response_json, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                purchase_id,
+                user.id,
+                offer_id,
+                price,
+                idempotency_key,
+                digest,
+                json.dumps(response, separators=(",", ":")),
+                purchased_at,
+            ),
+        )
+        conn.execute(
+            """INSERT INTO game_coin_transactions
+               (id, user_id, amount, transaction_type, source_id, created_at)
+               VALUES (?, ?, ?, 'store_purchase', ?, ?)""",
+            (str(uuid.uuid4()), user.id, -price, purchase_id, purchased_at),
+        )
+        _save(conn, user.id, progress)
+        conn.commit()
+        return response, False
+    except Exception:
+        conn.rollback()
+        raise
 
 
 def update_profile(conn, user, patch: dict[str, Any]) -> dict[str, Any]:
@@ -309,10 +469,11 @@ def _history(conn, user_id: str, *, limit: int = 200) -> list[dict[str, Any]]:
 
 
 def _new_achievements(progress: dict[str, Any], history: list[dict[str, Any]]) -> list[str]:
+    base_mission_ids = {mission["id"] for mission in catalog()["missions"]}
     done = {
         mission_id
         for mission_id, record in progress.get("missions", {}).items()
-        if record.get("completions", 0)
+        if mission_id in base_mission_ids and record.get("completions", 0)
     }
     flags = [flag for entry in history for flag in entry.get("flags", [])]
     unlocked: list[str] = []
@@ -490,6 +651,7 @@ def complete_mission(
             "entry": entry,
             "progress": _public_progress(progress),
             "missions": _mission_views(progress, day_key),
+            "special_missions": _special_mission_views(progress, day_key),
             "date_key": day_key,
         }
         completion_id = str(uuid.uuid4())
@@ -545,6 +707,7 @@ def save_draft(conn, user, mission_id: str, payload: dict[str, Any]) -> dict[str
     return {
         "progress": _public_progress(progress),
         "missions": _mission_views(progress, _day_key(_now())),
+        "special_missions": _special_mission_views(progress, _day_key(_now())),
     }
 
 
@@ -557,6 +720,7 @@ def discard_draft(conn, user, mission_id: str) -> dict[str, Any]:
     return {
         "progress": _public_progress(progress),
         "missions": _mission_views(progress, _day_key(_now())),
+        "special_missions": _special_mission_views(progress, _day_key(_now())),
     }
 
 

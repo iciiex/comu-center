@@ -1,6 +1,6 @@
 # Sales Quest Arena — Backend-for-Frontend Alignment
 
-- Status: **PARTIALLY IMPLEMENTED (prototype)** — read/bootstrap, profile, draft, progress, history and completion routes exist; frontend is not yet connected.
+- Status: **PARTIALLY IMPLEMENTED (prototype)** — read/bootstrap, profile, draft, progress, history, completion and demo game-store routes exist; frontend integration remains separate.
 - Mode: P · Updated: 2026-11-12
 - Frontend reviewed: public `mrkavousi/sales-quest-arena`, branch `main`.
 - Related: [`api-spec.md`](api-spec.md), [`backlog.md`](../delivery/backlog.md), [open decisions](../decisions/open-decisions.md).
@@ -40,6 +40,13 @@ All routes are under `/api/v1/game`. Game-state routes require a visitor session
 | `POST /missions/{mission_id}/completions` | Complete a run `{answers}` with required `Idempotency-Key` | Server checks unlock/completion rules, computes rewards, progression, streak, daily challenge, levels and achievements in one transaction; replay returns the original completion response and awards nothing twice. |
 | `GET /history?limit=&cursor=` | Paginated completion history | Newest first; user-scoped. |
 | `GET /progress` | Refresh the canonical progress projection | User-scoped; useful after reconnect/multi-tab changes. |
+| `GET /store` | List demo store offers and current game coin balance | User-scoped; currency is `game_coins`; offers are explicitly sample/demo. |
+| `POST /store/purchases` | Purchase one offer `{offer_id}` with `Idempotency-Key` | CSRF-protected and atomic; deducts game coins and unlocks its special mission once. No Kiloos points or Tribal ledger writes. |
+
+The demo store is intentionally small and temporary: two sample special missions cloned from existing mission schemas,
+priced at 40 and 60 game coins. Purchase rows and negative coin transactions are auditable and unique per user/offer;
+retries with the same key replay the result. The original six mission list remains unchanged; purchased missions are
+returned separately as `special_missions`. No real-money, inventory, redemption fulfillment, or cash-out behavior exists.
 
 ### Completion request / response sketch
 
