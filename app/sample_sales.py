@@ -24,7 +24,10 @@ SAMPLE_ROWS = [
 ]
 
 
-def build_sample_workbook(path: Path) -> Path:
+def sample_workbook_bytes() -> bytes:
+    """The same SAMPLE workbook as the CLI, for the admin download route."""
+    import io
+
     from openpyxl import Workbook
 
     workbook = Workbook()
@@ -34,8 +37,14 @@ def build_sample_workbook(path: Path) -> Path:
     for row in SAMPLE_ROWS:
         sheet.append(row)
     sheet.freeze_panes = "A2"
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    return buffer.getvalue()
+
+
+def build_sample_workbook(path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    workbook.save(path)
+    path.write_bytes(sample_workbook_bytes())
     return path
 
 

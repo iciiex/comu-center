@@ -1,7 +1,7 @@
 # Scoring Engine (prototype)
 
 - Status: **IMPLEMENTED** — `app/scoring.py`
-- Mode: P · Last updated: 2026-11-11
+- Mode: P · Last updated: 2026-11-12
 - Contract source: spec doc 06/06-A + `.agent/playbooks/scoring-and-rules.md`
 
 ---
@@ -25,6 +25,12 @@ Other proposed event types (`target.achieved`, `team.performance`) are **not** i
 require OD-04/OD-05 and are backlog items.
 
 ## Data written on approval (one transaction)
+
+`review_submission` owns the transaction: submission status, audit row and
+`award_mission_approval` commit together. `award_mission_approval` does **not** open its own
+transaction; a `ScoringError` rolls the review back to `submitted` and the route renders a Persian
+409 (`NO_ACTIVE_RULE_VERSION`). The auto-approve branch of `create_submission` uses the same
+caller-owned award inside its insert transaction.
 
 1. `score_events` row: `source_type='mission_submission'`, `source_id=submission.id`,
    `rule_code`, `rule_version_id`, `points`, `occurred_at`, `idempotency_key`, `explain_json`.
@@ -53,6 +59,11 @@ When an admin changes a mission's points:
 4. `audit_logs` records `mission.updated` with `new_rule_version: true`
 
 Past events keep their `rule_version_id`; their points never change.
+
+When only the start date moves, or a draft is published, `_ensure_rule_version` checks whether a
+published version is effective at `max(starts_at, now)`. If none is, it publishes a **same-points**
+new version from that moment; it never edits an existing version or a past event. This fixes the
+future-start moved-back repro without changing the open B6-2 policy (version selected at approval).
 
 ## Explainability
 
@@ -107,6 +118,8 @@ Invariants:
 - A correction cannot itself be corrected (`CANNOT_REVERSE_CORRECTION`).
 - The wallet may go negative; it is a projection of events (`OD-08`: non-redeemable points).
 - The submission keeps `status='approved'`; the correction is a score fact, not a review decision.
+- Sales events use the owner user's organization for scope; the admin reversal redirect returns to the
+  sales import detail page. The form is available on the admin review screen and import detail page (A2).
 - Leaderboard and balance need no special casing: both are sums over `score_events`.
 
 ## Test coverage (executed)
@@ -118,6 +131,8 @@ Invariants:
 - explain payload contains rule + version + `is_sample`
 - active-version selection after retirement
 - HTTP flow: approve → +10 for the visitor, second decision → 409, one event, one audit row, outbox written
+- A1 regressions: no effective rule → Persian 409 and full rollback; future start moved back → effective
+  same-points rule and atomic approval; draft published after a window move → effective rule
 - sales: 2.5M + 1M rows → 3 points, wallet +3, second process run creates nothing; sub-unit amount → no event
 - reversal: negative event + ledger + wallet + outbox + audit; double reversal 409; reason required;
   admin-only (operator/visitor 403); correction of a correction rejected; org scope enforced;
@@ -130,8 +145,6 @@ tests that cover each function are listed in `docs/agent-guide/code-map.md` §4.
 
 - partial corrections (part of an award), expiry-based reversals, and a correction approval workflow
 - tiered/percentage/target/multiplier calculations
-- correction of a sales event: the route returns 403 (backlog A2)
-- an atomic approve-and-award: the status change and the award are separate transactions (backlog A1)
 - recalculation jobs and leaderboard snapshots
 - cap/limit rules per period
 

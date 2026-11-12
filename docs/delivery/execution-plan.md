@@ -28,3 +28,6 @@ Mission → submission → review → score → wallet → leaderboard → admin
 The ordered, evidence-based list is `docs/delivery/backlog.md` (`PROPOSED`): rows A before MS-01,
 B client decisions, C MVP completion, D Harden. The MS-01 demo walk is
 `docs/delivery/demo-script.md`.
+
+2026-11-12: A1 and the four unambiguous A6 UI fixes are done; the demo path has an automated replay
+in `tests/test_demo_stability.py`. A4 remains open until a browser rehearsal on the demo host is recorded.

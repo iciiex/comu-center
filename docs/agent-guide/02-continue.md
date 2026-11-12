@@ -94,8 +94,8 @@ def publish_mission(conn: sqlite3.Connection, mission: sqlite3.Row, actor) -> No
 - **`with conn:` does not nest.** The inner block commits everything the outer block has done
   so far. If a function must take part in a caller's transaction, it must not open its own:
   `scoring.award_sales_record` is written that way (caller: `repo.process_sales_import`,
-  which uses `BEGIN IMMEDIATE` … `commit()`); `scoring.award_mission_approval` is not, which
-  is the cause of backlog A1.
+  which uses `BEGIN IMMEDIATE` … `commit()`); `scoring.award_mission_approval` is also
+  caller-owned now, and `repo.review_submission` wraps status + audit + award in one `with conn:`.
 
 ### 2.4 A score-producing path (`app/scoring.py`)
 

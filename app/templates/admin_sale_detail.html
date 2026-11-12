@@ -69,6 +69,34 @@
     {% endif %}
   </div>
 
+  {% if score_events %}
+    <div class="section-head"><h2>اصلاح امتیاز فروش</h2><span class="tiny muted">{{ score_events|length|fa }} رخداد</span></div>
+    {% for event in score_events %}
+      <div class="card card--flat">
+        <div class="card__row" style="align-items:flex-start">
+          <div>
+            <div class="card__title">ردیف {{ event['row_number']|fa }} · {{ event['external_id'] }}</div>
+            <div class="card__meta">+{{ event['points']|fa }} امتیاز · {{ event['rule_code'] }} · {{ event['occurred_at']|jdatetime }}</div>
+          </div>
+          {% if event['reversal_id'] %}<span class="pill pill--amber">اصلاح‌شده</span>{% endif %}
+        </div>
+        {% if event['reversal_id'] %}
+          <p class="small mb-0">این امتیاز اصلاح شده است — دلیل: {{ event['reversal_reason'] }} ({{ event['reversal_points']|fa }})</p>
+        {% else %}
+          <form method="post" action="{{ url('/admin/score-events/' ~ event['id'] ~ '/reverse') }}" class="stack mt-2">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <div class="field">
+              <label for="reason-{{ event['id'] }}">دلیل اصلاح (الزامی)</label>
+              <textarea id="reason-{{ event['id'] }}" name="reason" rows="2" required minlength="5"
+                        placeholder="مثلاً: ردیف فروش اشتباه پردازش شده است."></textarea>
+            </div>
+            <button class="btn btn--ghost btn--sm" type="submit">ثبت اصلاح امتیاز</button>
+          </form>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
+
   <div class="section-head"><h2>ردیف‌ها</h2><span class="tiny muted">{{ records|length|fa }} نمایش</span></div>
   <div class="card card--flat">
     <table class="table">

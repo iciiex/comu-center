@@ -39,7 +39,11 @@
         <div class="card__title">{{ submission['mission_title'] }}</div>
         <div class="card__meta">{{ submission['created_at']|jdatetime }}</div>
       </div>
-      <span class="pill pill--points">{{ submission['mission_points']|fa }} امتیاز</span>
+      {% if event %}
+        <span class="pill pill--points">{{ event['points']|fa }} امتیاز ثبت‌شده</span>
+      {% else %}
+        <span class="pill pill--points">{{ submission['mission_points']|fa }} امتیاز مأموریت</span>
+      {% endif %}
     </div>
     {% if submission['note'] %}
       <p class="small" style="margin:12px 0 0">{{ submission['note'] }}</p>

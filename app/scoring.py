@@ -121,7 +121,8 @@ def award_mission_approval(
     """Create (or return) the score event for an approved submission.
 
     Returns (event, created). Safe to call twice: the second call returns the
-    original event and creates no points.
+    original event and creates no points. The caller owns the transaction so a
+    review can commit its status change, audit row and award together (A1).
     """
     key = f"mission.approved:{submission['id']}"
     existing = _existing(conn, key)
@@ -151,27 +152,19 @@ def award_mission_approval(
     }
 
     event_id = str(uuid.uuid4())
-    try:
-        with conn:
-            _persist_award(
-                conn,
-                event_id=event_id,
-                user_id=submission["user_id"],
-                source_type="mission_submission",
-                source_id=submission["id"],
-                rule_code=mission["rule_code"],
-                rule_version_id=rule["id"],
-                points=points,
-                occurred_at=occurred_at,
-                key=key,
-                explain=explain,
-            )
-    except sqlite3.IntegrityError:
-        # Concurrent duplicate: the unique constraint won; return the winner.
-        existing = _existing(conn, key)
-        if existing is not None:
-            return existing, False
-        raise
+    _persist_award(
+        conn,
+        event_id=event_id,
+        user_id=submission["user_id"],
+        source_type="mission_submission",
+        source_id=submission["id"],
+        rule_code=mission["rule_code"],
+        rule_version_id=rule["id"],
+        points=points,
+        occurred_at=occurred_at,
+        key=key,
+        explain=explain,
+    )
 
     event = conn.execute("SELECT * FROM score_events WHERE id = ?", (event_id,)).fetchone()
     return event, True

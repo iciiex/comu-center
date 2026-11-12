@@ -3,7 +3,7 @@
 - Status: **PARTIAL** — automated tests exist for the demo path; full strategy is doc 10.
 - Mode: P
 
-## Implemented automated coverage (58 tests on 2026-11-11)
+## Implemented automated coverage (71 tests on 2026-11-12)
 
 Which test covers which route and function: `docs/agent-guide/code-map.md` §3, §4 and §7.
 Routes and requirements without a test are listed there and in `docs/agent-guide/traceability.md`.
@@ -34,6 +34,10 @@ Routes and requirements without a test are listed there and in `docs/agent-guide
   CSRF required; `/score` marks the correction; totals return to zero.
 - Documentation: generated agent documents are fresh; the code map lists exactly the served routes
   (`tests/test_docs.py`).
+- Demo stability (`tests/test_demo_stability.py`): A1 rollback/effective-rule regressions, A6 navigation/
+  badge/pending-count/typo fixes, admin-only SAMPLE workbook download, A2 correction from the admin
+  review screen and sales import detail (admin-only/org-scoped), and a replay of the documented demo
+  path including sales import and the optional mission-score correction.
 
 ## Not covered yet
 - Reports and notifications (features not built).

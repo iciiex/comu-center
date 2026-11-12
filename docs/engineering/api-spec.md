@@ -102,7 +102,8 @@ in an iframe. Narrow both before real users.
 
 - `reject` without `reason` → `409` + error message, nothing changes.
 - `approve` is idempotent at the score layer, but the **state machine** rejects a second decision (`409 ALREADY_REVIEWED`).
-- Approval creates exactly one `score_event` (see `scoring-engine.md`).
+- Approval creates exactly one `score_event` in the same transaction as the status/audit write
+  (see `scoring-engine.md`). A scoring configuration error rolls back and renders a Persian `409`.
 
 ## Admin (admin only)
 
@@ -116,6 +117,7 @@ in an iframe. Narrow both before real users.
 | POST | `/admin/missions/{id}/publish` | `draft → active` (409 otherwise) |
 | POST | `/admin/missions/{id}/archive` | `→ archived` |
 | GET | `/admin/sales` | Sales import list (status, counts, points) |
+| GET | `/admin/sales/sample` | Download the SAMPLE demo workbook (`sales-sample.xlsx`) |
 | GET/POST | `/admin/sales/new` · `/admin/sales` | Upload XLSX (multipart `file`) → validates, never scores |
 | GET | `/admin/sales/{id}` | Rows, row-level errors, reconciliation |
 | POST | `/admin/sales/{id}/process` | Score valid rows; idempotent (`?processed=<new events>`) |
@@ -136,7 +138,7 @@ Mission form fields: `title`, `description`, `points` (0–10000), `max_per_user
 | `TITLE_REQUIRED` / `DESCRIPTION_REQUIRED` | 422 | فیلد اجباری |
 | `INVALID_POINTS` / `INVALID_MAX` | 422 | محدوده عددی |
 | `NOT_DRAFT` | 409 | انتشار مأموریت غیرپیش‌نویس |
-| `NO_ACTIVE_RULE_VERSION` | 500 | قانون فعال برای رویداد وجود ندارد (خطای پیکربندی) |
+| `NO_ACTIVE_RULE_VERSION` | 409 | قانون فعال برای رویداد وجود ندارد؛ تأیید انجام نشد و rollback شد |
 | `REASON_REQUIRED` | 409 | اصلاح امتیاز بدون دلیل |
 | `ALREADY_REVERSED` | 409 | اصلاح دوم روی همان رویداد |
 | `CANNOT_REVERSE_CORRECTION` | 409 | اصلاح یک رویداد اصلاحی |
@@ -151,6 +153,9 @@ Mission form fields: `title`, `description`, `points` (0–10000), `max_per_user
 - Admin: mission CRUD + publish/archive, score corrections, **and the sales import**; org-scoped.
   Sales import (EP-07) is admin-only by decision (D-005); operators cannot upload or process.
 - Correction of an event outside the admin's organization → `403`; unknown event → `404`; no CSRF → `403`.
+- Mission events are scoped by mission organization; sales events by the owner user's organization.
+  Success redirects to `/submissions/{id}?reversed=1` for missions and `/admin/sales/{import_id}?reversed=1`
+  for sales records.
 
 ## Known gaps
 

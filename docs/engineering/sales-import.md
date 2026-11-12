@@ -1,6 +1,6 @@
 # Sales Import (EP-07) — implemented slice
 
-- Status: **IMPLEMENTED (prototype)** · Mode: P · Last updated: 2026-11-11
+- Status: **IMPLEMENTED (prototype)** · Mode: P · Last updated: 2026-11-12
 - Access: **admin only** (operator/visitor → 403)
 - Format: **XLSX** (employer decision, D-005) via `openpyxl` read-only
 - Data: contract and formula are **SAMPLE** until OD-03 / OD-04 are approved
@@ -86,21 +86,23 @@ row_count == valid + invalid + duplicate + scored
 sum(score_events.points for the import) == sales_imports.points_sum
 ```
 
-A mismatch is displayed as a red warning; it is never hidden.
+A mismatch is displayed as a red warning; it is never hidden. The detail page also lists the import's
+award events with a correction form (admin-only); a corrected event shows its reason and negative points.
 
 ## Demo
 
 ```bash
 python -m app.sample_sales            # writes var/sales-sample.xlsx (SAMPLE)
 ```
-Upload it at `/admin/sales/new` as «نگار تهرانی» (admin): 6 rows → 4 valid, 1 duplicate, 1 unmapped
-user; processing awards 15 points (4 + 2 + 8 + 1) across the three mapped visitors.
+Or download the same workbook from `/admin/sales/sample` (admin-only) via the link on
+`/admin/sales/new`. Upload it as «نگار تهرانی» (admin): 6 rows → 4 valid, 1 duplicate, 1 unmapped
+user; processing awards 15 points (4 + 2 + 8 + 1) across the three mapped visitors. After processing,
+the list shows pending `valid` rows (۰), not `valid_count - created_count`.
 
 ## Not implemented (explicit)
 
 - XLSX → CSV conversion, multi-sheet imports, column mapping UI
-- any correction of sales points: the score correction route returns 403 for a sales event
-  (backlog A2), and partial corrections do not exist
+- partial corrections do not exist; full sales-score correction is available on the import detail page
 - a Jalali date in `sale_date` is not rejected; it is read as a Gregorian year (backlog C4)
 - SKU multipliers, targets, caps (OD-05)
 - scheduled/automated imports and ERP integration (OD-11)

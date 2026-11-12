@@ -1,8 +1,8 @@
 {
   "meta": {
     "purpose": "Curated links from requirement ids to the code and tests that carry them. Rendered into docs/agent-guide/traceability.md and into the knowledge graph by .agent/tools/knowledge_map.py.",
-    "reviewed_on": "2026-11-11",
-    "reviewed_against": "main @ 60cad25 (code and tests unchanged since)",
+    "reviewed_on": "2026-11-12",
+    "reviewed_against": "arena/eb7fd929-comu-center (demo stability slice A1/A4/A6)",
     "how": "Written by an agent after reading app/*.py, db/migrations/*.sql and tests/*.py, and after running the test suite and the demo path. These are engineering judgements, not approvals.",
     "state_vocabulary": {
       "implemented": "the behaviour exists in code and at least one test exercises it",
@@ -33,14 +33,19 @@
         "tests/test_hardening.py::test_cookie_session_still_works"
       ],
       "note": "Demo user picker without credentials (OD-01 open). Signed token, expiry, CSRF and role checks are real. Demo login is not disabled outside dev/test, and a `?s=` link keeps working after logout.",
-      "backlog": ["B2", "C9"]
+      "backlog": [
+        "B2",
+        "C9"
+      ]
     },
     "MVP-02": {
       "state": "missing",
       "code": [],
       "tests": [],
       "note": "No profile route or page. Only the user's name and role appear in the header of `base.html`.",
-      "backlog": ["C7"]
+      "backlog": [
+        "C7"
+      ]
     },
     "MVP-03": {
       "state": "implemented",
@@ -56,7 +61,10 @@
         "tests/test_hardening.py::test_cookie_session_still_works"
       ],
       "note": "Balance, rank, active missions and the last three submissions. No progress-to-target view. Times are shown in UTC, not Asia/Tehran.",
-      "backlog": ["A3", "A5"]
+      "backlog": [
+        "A3",
+        "A5"
+      ]
     },
     "MVP-04": {
       "state": "implemented",
@@ -73,10 +81,14 @@
       ],
       "tests": [
         "tests/test_flow.py::test_mission_edit_publishes_new_rule_version",
-        "tests/test_flow.py::test_visitors_and_operators_have_no_admin_powers"
+        "tests/test_flow.py::test_visitors_and_operators_have_no_admin_powers",
+        "tests/test_demo_stability.py::test_moving_future_start_back_keeps_approval_and_score_atomic",
+        "tests/test_demo_stability.py::test_publish_after_moving_draft_start_back_has_an_effective_rule"
       ],
-      "note": "One mission type (photo), organization-wide audience, Gregorian date input read as UTC day bounds. Changing only the date window does not move the rule version's `effective_from`.",
-      "backlog": ["A1", "A3"]
+      "note": "One mission type (photo), organization-wide audience, Gregorian date input read as UTC day bounds. Moving a start date or publishing a draft ensures a same-points rule version is effective when needed; past events are not rewritten.",
+      "backlog": [
+        "A3"
+      ]
     },
     "MVP-05": {
       "state": "implemented",
@@ -94,7 +106,9 @@
         "tests/test_hardening.py::test_forged_csrf_upload_creates_nothing"
       ],
       "note": "Type and size are checked from the client-declared content type only; identical images are not flagged; a replayed or over-cap submit leaves an orphan file on disk.",
-      "backlog": ["C5"]
+      "backlog": [
+        "C5"
+      ]
     },
     "MVP-06": {
       "state": "implemented",
@@ -109,10 +123,14 @@
         "tests/test_flow.py::test_full_flow_approval_scores_once",
         "tests/test_flow.py::test_reject_requires_reason_and_awards_nothing",
         "tests/test_flow.py::test_approve_redirect_keeps_queue_filter",
-        "tests/test_hardening.py::test_admin_queue_paginates"
+        "tests/test_hardening.py::test_admin_queue_paginates",
+        "tests/test_demo_stability.py::test_approval_rolls_back_when_no_rule_version_is_effective",
+        "tests/test_demo_stability.py::test_moving_future_start_back_keeps_approval_and_score_atomic"
       ],
-      "note": "Status change and score award are two separate transactions: approval can end as `approved` with no score event. Staff can approve their own submission.",
-      "backlog": ["A1", "C6"]
+      "note": "Review status, audit and mission award commit in one transaction; a scoring configuration error rolls back to `submitted` and renders a Persian 409. Staff can still approve their own submission (C6/B6).",
+      "backlog": [
+        "C6"
+      ]
     },
     "MVP-07": {
       "state": "implemented",
@@ -127,10 +145,13 @@
         "tests/test_scoring.py::test_award_is_idempotent",
         "tests/test_scoring.py::test_event_has_traceable_explain",
         "tests/test_scoring.py::test_wallet_matches_ledger",
-        "tests/test_scoring.py::test_active_rule_version_selection_after_retirement"
+        "tests/test_scoring.py::test_active_rule_version_selection_after_retirement",
+        "tests/test_demo_stability.py::test_approval_rolls_back_when_no_rule_version_is_effective"
       ],
-      "note": "Two calculations exist: `fixed` (mission) and `per_unit_amount` (sales, SAMPLE). All point values are SAMPLE. `float` is used in the reversal path.",
-      "backlog": ["C8"]
+      "note": "Two calculations exist: `fixed` (mission) and `per_unit_amount` (sales, SAMPLE). Mission award is caller-transactional so approval can roll back with the score. All point values are SAMPLE. `float` is used in the reversal path.",
+      "backlog": [
+        "C8"
+      ]
     },
     "MVP-08": {
       "state": "sample",
@@ -141,16 +162,24 @@
         "app/main.py::admin_sales_process",
         "app/main.py::admin_sale_detail",
         "app/repo.py::create_sales_import",
-        "app/repo.py::process_sales_import"
+        "app/repo.py::process_sales_import",
+        "app/main.py::admin_sales_sample",
+        "app/repo.py::sales_score_events"
       ],
       "tests": [
         "tests/test_sales.py::test_upload_validates_without_scoring",
         "tests/test_sales.py::test_process_creates_each_score_once",
         "tests/test_sales.py::test_row_errors_do_not_block_valid_rows",
-        "tests/test_sales.py::test_processing_failure_rolls_back_all_events"
+        "tests/test_sales.py::test_processing_failure_rolls_back_all_events",
+        "tests/test_demo_stability.py::test_sample_sales_workbook_download_is_admin_only",
+        "tests/test_demo_stability.py::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing"
       ],
-      "note": "XLSX only, SAMPLE column contract and SAMPLE formula (OD-03, OD-04). The detail page shows the first 200 rows only; a Jalali date is read as a Gregorian year.",
-      "backlog": ["B4", "C4", "C10"]
+      "note": "XLSX only, SAMPLE column contract and SAMPLE formula (OD-03, OD-04). Admin can download the sample workbook. The detail page shows the first 200 rows only; a Jalali date is read as a Gregorian year.",
+      "backlog": [
+        "B4",
+        "C4",
+        "C10"
+      ]
     },
     "MVP-09": {
       "state": "partial",
@@ -163,14 +192,20 @@
         "tests/test_corrections.py::test_leaderboard_reflects_the_correction"
       ],
       "note": "Individual ranking in the active period, computed on read, top 50 only (a user below 50 gets no rank). The period exists only in the seed.",
-      "backlog": ["A4", "C2"]
+      "backlog": [
+        "A4",
+        "C2"
+      ]
     },
     "MVP-10": {
       "state": "missing",
       "code": [],
       "tests": [],
       "note": "No team concept in the schema or the code.",
-      "backlog": ["B3", "C11"]
+      "backlog": [
+        "B3",
+        "C11"
+      ]
     },
     "MVP-11": {
       "state": "partial",
@@ -182,17 +217,28 @@
       ],
       "tests": [
         "tests/test_flow.py::test_visitors_and_operators_have_no_admin_powers",
-        "tests/test_sales.py::test_only_admin_can_use_sales_import"
+        "tests/test_sales.py::test_only_admin_can_use_sales_import",
+        "tests/test_demo_stability.py::test_operator_navigation_hides_sales_import_link",
+        "tests/test_demo_stability.py::test_submission_badge_shows_recorded_points_after_mission_points_change",
+        "tests/test_demo_stability.py::test_sales_list_uses_pending_valid_count_after_zero_point_processing",
+        "tests/test_demo_stability.py::test_admin_review_screen_can_correct_a_mission_score",
+        "tests/test_demo_stability.py::test_sales_score_can_be_corrected_from_import_detail"
       ],
-      "note": "Three sections exist: review queue, missions, sales import. No users, organization, competitions, reports, permissions or settings. Score correction has no link from the panel.",
-      "backlog": ["A2", "A6", "C1", "C2", "C3"]
+      "note": "Three sections exist: review queue, missions, sales import. Sales navigation is admin-only; submission badges show recorded points; sales list uses pending valid rows. Score correction is reachable from the admin review screen and sales import detail. No users, organization, competitions, reports, permissions or settings.",
+      "backlog": [
+        "C1",
+        "C2",
+        "C3"
+      ]
     },
     "MVP-12": {
       "state": "missing",
       "code": [],
       "tests": [],
       "note": "No report and no CSV export.",
-      "backlog": ["C3"]
+      "backlog": [
+        "C3"
+      ]
     },
     "MVP-13": {
       "state": "implemented",
@@ -203,10 +249,13 @@
       ],
       "tests": [
         "tests/test_flow.py::test_full_flow_approval_scores_once",
-        "tests/test_corrections.py::test_reversal_creates_negative_event_and_fixes_projections"
+        "tests/test_corrections.py::test_reversal_creates_negative_event_and_fixes_projections",
+        "tests/test_demo_stability.py::test_sales_score_can_be_corrected_from_import_detail"
       ],
-      "note": "Last 30 events with a correction marker. Rows link nowhere, and sales points have no explanation view.",
-      "backlog": ["A5"]
+      "note": "Last 30 events with a correction marker. Rows link nowhere, and sales points have no explanation view; sales corrections are reachable from the import detail page.",
+      "backlog": [
+        "A5"
+      ]
     },
     "BR-001": {
       "state": "partial",
@@ -218,7 +267,9 @@
         "tests/test_flow.py::test_mission_window_and_status_filtering"
       ],
       "note": "Status, date window and organization are enforced. Target-audience membership is not: every mission is organization-wide (no `mission_audiences` table).",
-      "backlog": ["B3"]
+      "backlog": [
+        "B3"
+      ]
     },
     "BR-002": {
       "state": "implemented",
@@ -231,7 +282,9 @@
         "tests/test_flow.py::test_duplicate_request_id_is_idempotent"
       ],
       "note": "A rejected attempt also consumes the per-user cap (question B6-1, not yet a registered open decision).",
-      "backlog": ["B6"]
+      "backlog": [
+        "B6"
+      ]
     },
     "BR-003": {
       "state": "implemented",
@@ -241,10 +294,11 @@
       ],
       "tests": [
         "tests/test_flow.py::test_full_flow_approval_scores_once",
-        "tests/test_flow.py::test_reject_requires_reason_and_awards_nothing"
+        "tests/test_flow.py::test_reject_requires_reason_and_awards_nothing",
+        "tests/test_demo_stability.py::test_approval_rolls_back_when_no_rule_version_is_effective"
       ],
-      "note": "Holds on the tested path. When no rule version is effective the submission becomes `approved` with no score (HTTP 500).",
-      "backlog": ["A1"]
+      "note": "Approval and mission scoring share one transaction. If no rule version is effective, the review rolls back and the operator sees a Persian error instead of an approved submission without points.",
+      "backlog": []
     },
     "BR-004": {
       "state": "implemented",
@@ -267,15 +321,21 @@
         "app/scoring.py::reverse_event",
         "app/repo.py::reverse_score_event",
         "app/main.py::admin_reverse_score",
-        "db/migrations/0002_score_corrections.sql::ux_score_events_corrects"
+        "db/migrations/0002_score_corrections.sql::ux_score_events_corrects",
+        "app/repo.py::score_event_detail",
+        "app/repo.py::sales_score_events"
       ],
       "tests": [
         "tests/test_corrections.py::test_reversal_creates_negative_event_and_fixes_projections",
         "tests/test_corrections.py::test_second_reversal_is_rejected",
-        "tests/test_corrections.py::test_a_correction_cannot_be_reversed"
+        "tests/test_corrections.py::test_a_correction_cannot_be_reversed",
+        "tests/test_demo_stability.py::test_sales_score_can_be_corrected_from_import_detail",
+        "tests/test_demo_stability.py::test_sales_score_correction_is_admin_only_and_org_scoped"
       ],
-      "note": "No UPDATE or DELETE on `score_events` anywhere in `app/`. Reversing a `sales_record` event returns 403, so sales points cannot be corrected yet.",
-      "backlog": ["A2", "C8"]
+      "note": "No UPDATE or DELETE on `score_events` anywhere in `app/`. Mission and sales awards can be reversed from the admin panel; sales events are org-scoped through the owner user. Partial corrections and period attribution remain open.",
+      "backlog": [
+        "C8"
+      ]
     },
     "BR-006": {
       "state": "implemented",
@@ -299,7 +359,10 @@
         "tests/test_sales.py::test_amount_below_one_unit_scores_nothing"
       ],
       "note": "`floor(amount / unit_size) * points`; both numbers are rows in `scoring_rule_versions`. The formula itself is SAMPLE until OD-04 is approved.",
-      "backlog": ["B4", "C10"]
+      "backlog": [
+        "B4",
+        "C10"
+      ]
     },
     "BR-008": {
       "state": "partial",
@@ -311,7 +374,10 @@
         "tests/test_corrections.py::test_leaderboard_reflects_the_correction"
       ],
       "note": "The total is the algebraic sum of events inside the active period. A correction made after a period ends is subtracted from the current period.",
-      "backlog": ["B6", "C8"]
+      "backlog": [
+        "B6",
+        "C8"
+      ]
     },
     "BR-009": {
       "state": "partial",
@@ -321,7 +387,9 @@
       ],
       "tests": [],
       "note": "Temporary tie-break in SQL: total, then earliest first score, then name. The rule is not approved and no test covers it.",
-      "backlog": ["B3"]
+      "backlog": [
+        "B3"
+      ]
     },
     "BR-010": {
       "state": "partial",
@@ -336,24 +404,34 @@
         "tests/test_sales.py::test_same_file_is_rejected_by_fingerprint",
         "tests/test_sales.py::test_duplicate_external_id_across_imports_is_skipped",
         "tests/test_sales.py::test_row_errors_do_not_block_valid_rows",
-        "tests/test_sales.py::test_detail_page_shows_reconciliation"
+        "tests/test_sales.py::test_detail_page_shows_reconciliation",
+        "tests/test_demo_stability.py::test_sales_score_can_be_corrected_from_import_detail"
       ],
-      "note": "Import id, per-row error report, no duplicate scoring and reconciliation exist. Missing: correction of sales points (403), an error report beyond 200 rows, voiding an import.",
-      "backlog": ["A2", "C4", "C10"]
+      "note": "Import id, per-row error report, no duplicate scoring, reconciliation and sales-score correction exist. Missing: an error report beyond 200 rows, voiding an import.",
+      "backlog": [
+        "C4",
+        "C10"
+      ]
     },
     "BR-011": {
       "state": "implemented",
       "code": [
         "app/scoring.py::find_rule_version",
         "app/repo.py::update_mission",
-        "app/repo.py::create_mission"
+        "app/repo.py::create_mission",
+        "app/repo.py::_ensure_rule_version",
+        "app/repo.py::publish_mission"
       ],
       "tests": [
         "tests/test_flow.py::test_mission_edit_publishes_new_rule_version",
-        "tests/test_scoring.py::test_active_rule_version_selection_after_retirement"
+        "tests/test_scoring.py::test_active_rule_version_selection_after_retirement",
+        "tests/test_demo_stability.py::test_moving_future_start_back_keeps_approval_and_score_atomic",
+        "tests/test_demo_stability.py::test_publish_after_moving_draft_start_back_has_an_effective_rule"
       ],
-      "note": "A points change retires the current version and publishes the next; past events keep their `rule_version_id`. The version is chosen at approval time, not at submit time (question B6-2).",
-      "backlog": ["A1", "B6"]
+      "note": "A points change retires the current version and publishes the next; a window move/publish can publish a same-points version when none is effective. Past events keep their `rule_version_id`. The version is chosen at approval time, not at submit time (question B6-2).",
+      "backlog": [
+        "B6"
+      ]
     },
     "BR-012": {
       "state": "partial",
@@ -364,7 +442,9 @@
       ],
       "tests": [],
       "note": "An inactive user cannot sign in or keep a session, and is hidden from the leaderboard; history is kept. Nothing can deactivate a user (no admin screen), `is_active` has no test, and a pending submission of a deactivated user can still be approved and scored.",
-      "backlog": ["C1"]
+      "backlog": [
+        "C1"
+      ]
     },
     "BR-013": {
       "state": "partial",
@@ -372,9 +452,14 @@
         "app/repo.py::active_competition",
         "app/seed.py::seed_demo"
       ],
-      "tests": [],
-      "note": "A competition has an organization and a time window only: no audience, no ranking criterion, no management screen. The only row is created by the seed and ends 7 days after seeding.",
-      "backlog": ["A4", "C2"]
+      "tests": [
+        "tests/test_demo_stability.py::test_demo_script_main_path_and_optional_correction"
+      ],
+      "note": "A competition has an organization and a time window only: no audience, no ranking criterion, no management screen. The only row is created by the seed and ends 7 days after seeding; the demo script must be reseeded on demo morning.",
+      "backlog": [
+        "A4",
+        "C2"
+      ]
     },
     "BR-014": {
       "state": "implemented",
@@ -387,98 +472,187 @@
         "tests/test_corrections.py::test_reversal_creates_negative_event_and_fixes_projections"
       ],
       "note": "The wallet row is written in the same transaction as the event and the ledger row. There is no redemption or cash-out path anywhere (OD-08 open).",
-      "backlog": ["B5"]
+      "backlog": [
+        "B5"
+      ]
     },
     "EP-01": {
       "state": "demo-only",
-      "code": ["app/security.py::current_user", "app/main.py::demo_login"],
-      "tests": ["tests/test_hardening.py::test_session_token_in_url_works_without_cookies"],
+      "code": [
+        "app/security.py::current_user",
+        "app/main.py::demo_login"
+      ],
+      "tests": [
+        "tests/test_hardening.py::test_session_token_in_url_works_without_cookies"
+      ],
       "note": "Demo login only; users are created by the seed, not by a screen.",
-      "backlog": ["B2", "C1", "C9"]
+      "backlog": [
+        "B2",
+        "C1",
+        "C9"
+      ]
     },
     "EP-02": {
       "state": "partial",
-      "code": ["app/seed.py::seed_demo"],
-      "tests": ["tests/test_flow.py::test_organization_scope_blocks_foreign_submission"],
+      "code": [
+        "app/seed.py::seed_demo"
+      ],
+      "tests": [
+        "tests/test_flow.py::test_organization_scope_blocks_foreign_submission"
+      ],
       "note": "One organization row; every query is organization-scoped. No branch, city or team level (OD-02 open).",
-      "backlog": ["B3", "C1", "C11"]
+      "backlog": [
+        "B3",
+        "C1",
+        "C11"
+      ]
     },
     "EP-03": {
       "state": "implemented",
-      "code": ["app/repo.py::create_mission", "app/repo.py::update_mission"],
-      "tests": ["tests/test_flow.py::test_mission_edit_publishes_new_rule_version"],
+      "code": [
+        "app/repo.py::create_mission",
+        "app/repo.py::update_mission"
+      ],
+      "tests": [
+        "tests/test_flow.py::test_mission_edit_publishes_new_rule_version",
+        "tests/test_demo_stability.py::test_publish_after_moving_draft_start_back_has_an_effective_rule"
+      ],
       "note": "See MVP-04.",
-      "backlog": ["A1"]
+      "backlog": []
     },
     "EP-04": {
       "state": "implemented",
-      "code": ["app/main.py::submit_mission", "app/repo.py::create_submission"],
-      "tests": ["tests/test_flow.py::test_full_flow_approval_scores_once"],
+      "code": [
+        "app/main.py::submit_mission",
+        "app/repo.py::create_submission"
+      ],
+      "tests": [
+        "tests/test_flow.py::test_full_flow_approval_scores_once"
+      ],
       "note": "See MVP-05.",
-      "backlog": ["C5"]
+      "backlog": [
+        "C5"
+      ]
     },
     "EP-05": {
       "state": "implemented",
-      "code": ["app/main.py::admin_decide", "app/repo.py::review_submission"],
-      "tests": ["tests/test_flow.py::test_reject_requires_reason_and_awards_nothing"],
-      "note": "Manual review only; the auto-approve branch in `create_submission` is unreachable from the admin form and untested (OD-06 open).",
-      "backlog": ["A1", "C6"]
+      "code": [
+        "app/main.py::admin_decide",
+        "app/repo.py::review_submission"
+      ],
+      "tests": [
+        "tests/test_flow.py::test_reject_requires_reason_and_awards_nothing",
+        "tests/test_demo_stability.py::test_approval_rolls_back_when_no_rule_version_is_effective"
+      ],
+      "note": "Manual review only; approval is atomic with scoring. The auto-approve branch in `create_submission` is unreachable from the admin form and has no UI test (OD-06 open).",
+      "backlog": [
+        "C6"
+      ]
     },
     "EP-06": {
       "state": "implemented",
-      "code": ["app/scoring.py::award_mission_approval", "app/scoring.py::reverse_event"],
-      "tests": ["tests/test_scoring.py::test_award_is_idempotent"],
+      "code": [
+        "app/scoring.py::award_mission_approval",
+        "app/scoring.py::reverse_event"
+      ],
+      "tests": [
+        "tests/test_scoring.py::test_award_is_idempotent",
+        "tests/test_demo_stability.py::test_approval_rolls_back_when_no_rule_version_is_effective",
+        "tests/test_demo_stability.py::test_sales_score_can_be_corrected_from_import_detail"
+      ],
       "note": "See MVP-07.",
-      "backlog": ["A1", "A2", "C8"]
+      "backlog": [
+        "C8"
+      ]
     },
     "EP-07": {
       "state": "sample",
-      "code": ["app/sales.py::validate_rows", "app/repo.py::process_sales_import"],
-      "tests": ["tests/test_sales.py::test_process_creates_each_score_once"],
+      "code": [
+        "app/sales.py::validate_rows",
+        "app/repo.py::process_sales_import"
+      ],
+      "tests": [
+        "tests/test_sales.py::test_process_creates_each_score_once"
+      ],
       "note": "See MVP-08. File upload only; no ERP connection (OD-11 open).",
-      "backlog": ["B4", "C4", "C10"]
+      "backlog": [
+        "B4",
+        "C4",
+        "C10"
+      ]
     },
     "EP-08": {
       "state": "partial",
-      "code": ["app/repo.py::leaderboard"],
-      "tests": ["tests/test_corrections.py::test_leaderboard_reflects_the_correction"],
+      "code": [
+        "app/repo.py::leaderboard"
+      ],
+      "tests": [
+        "tests/test_corrections.py::test_leaderboard_reflects_the_correction"
+      ],
       "note": "Individual leaderboard only; no competition management and no group competition.",
-      "backlog": ["C2", "C11"]
+      "backlog": [
+        "C2",
+        "C11"
+      ]
     },
     "EP-09": {
       "state": "partial",
-      "code": ["app/main.py::admin_queue", "app/main.py::admin_missions", "app/main.py::admin_sales"],
-      "tests": ["tests/test_flow.py::test_visitors_and_operators_have_no_admin_powers"],
+      "code": [
+        "app/main.py::admin_queue",
+        "app/main.py::admin_missions",
+        "app/main.py::admin_sales"
+      ],
+      "tests": [
+        "tests/test_flow.py::test_visitors_and_operators_have_no_admin_powers",
+        "tests/test_demo_stability.py::test_operator_navigation_hides_sales_import_link",
+        "tests/test_demo_stability.py::test_admin_review_screen_can_correct_a_mission_score"
+      ],
       "note": "See MVP-11.",
-      "backlog": ["A2", "A6", "C1"]
+      "backlog": [
+        "C1"
+      ]
     },
     "EP-10": {
       "state": "missing",
       "code": [],
       "tests": [],
       "note": "Not started.",
-      "backlog": ["C3"]
+      "backlog": [
+        "C3"
+      ]
     },
     "EP-11": {
       "state": "missing",
-      "code": ["app/scoring.py::_persist_award"],
+      "code": [
+        "app/scoring.py::_persist_award"
+      ],
       "tests": [],
       "note": "`outbox_events` rows are written with every score event, but nothing reads them: no notification exists.",
-      "backlog": ["C13"]
+      "backlog": [
+        "C13"
+      ]
     },
     "EP-12": {
       "state": "partial",
       "code": [],
       "tests": [],
       "note": "One CI workflow (lint, tests, boot check). No container, no staging, unpinned dependencies. The CI secret scan step never fails (see backlog A10).",
-      "backlog": ["A7", "A10", "D1", "D3"]
+      "backlog": [
+        "A7",
+        "A10",
+        "D1",
+        "D3"
+      ]
     },
     "EP-13": {
       "state": "partial",
       "code": [],
       "tests": [],
       "note": "HTTP-level tests with pytest only; no type check, no browser test, no load test.",
-      "backlog": ["D4", "D6"]
+      "backlog": [
+        "D4",
+        "D6"
+      ]
     }
   }
 }

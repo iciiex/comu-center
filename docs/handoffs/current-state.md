@@ -1,53 +1,55 @@
 # Current Project State
 
-- Last updated: 2026-11-11 (۲۰ آبان ۱۴۰۵)
+- Last updated: 2026-11-12 (۲۱ آبان ۱۴۰۵)
 - Updated by: Kiloos engineering agent
 - Mode: P
 - Current phase: Prototype
 - Current milestone: MS-01 — Prototype Delivery (2026-11-18)
-- Main branch / working branch: `main` / `arena/26ce8c46-comu-center` (documentation work of 2026-11-11: PR #8)
+- Main branch / working branch: `main` / `arena/eb7fd929-comu-center`
 - Prioritised backlog: `docs/delivery/backlog.md` (PROPOSED)
 - Project handover (dated snapshot, Persian): `docs/handoffs/handover.md`
-- Agent guide (start, continue, deliver, code map, traceability, knowledge graph): `docs/agent-guide/README.md`
+- Agent guide: `docs/agent-guide/README.md`
 - Change history: `CHANGELOG.md`
 
 ## Working features
 - Demo login with 5 seeded users (visitor ×3, operator, admin) and role-aware redirect.
-- Cookie-less session fallback: signed token in `?s=` propagated through links/forms/redirects, so the
-  demo works inside the embedded preview where third-party cookies are blocked (D-002).
-- CSRF guard on every state-changing route (value derived from the session token), rate-limited demo login,
-  security headers, Persian 404/403/422 pages, paginated review queue.
-- Mission list/detail filtered by `status=active`, date window, and organization (BR-001); expired and draft missions are hidden.
-- Photo submission with type/size validation, private storage, sha256, and `request_id` idempotency (`UNIQUE(user_id, request_id)`).
+- Cookie-less session fallback: signed token in `?s=` propagated through links/forms/redirects (D-002, demo only).
+- CSRF guard on every state-changing route except `/demo-login`, rate-limited demo login, security headers,
+  Persian 404/403/422 pages, paginated review queue.
+- Mission list/detail filtered by `status=active`, date window, and organization (BR-001).
+- Photo submission with client-declared type/size validation, private storage, sha256, `request_id` idempotency.
 - Operator review queue with approve/reject; rejection reason required; state machine blocks double review (409).
-- Scoring on approval: append-only `score_events`, `idempotency_key`, ledger row, wallet projection, outbox row in one transaction.
-- "Why this score" explanation surfaced to the user (rule code, version, conditions, sample flag).
-- Wallet + score history; period leaderboard with rank and temporary tie-break.
-- Admin mission CRUD: create draft → publish → archive; changing points publishes a new rule version and retires the old one.
-- Sales import (EP-07, D-005): admin uploads XLSX → file/row validation (never scores) → explicit,
-  idempotent processing that awards `floor(amount / unit_size) * points`; explicit
-  `sales_user_map`, fingerprint-level file dedupe, row-level duplicate/error report and reconciliation.
-- Score corrections (D-004): admin reverses an event with a negative event (`corrects_event_id`, reason required);
-  ledger, wallet, outbox and audit are written in one transaction; double correction is impossible
-  (`ux_score_events_corrects`); `/score` marks corrections and the leaderboard sums them automatically.
+- **A1 fixed:** review status, audit row and mission score award commit in one transaction. If no rule version is
+  effective, the review rolls back to `submitted` and the operator sees a Persian 409. Moving a mission start date
+  or publishing a draft ensures an effective same-points rule version when needed; past events are not rewritten.
+- Scoring: append-only `score_events`, idempotency key, ledger row, wallet projection, outbox row; explain payload.
+- Wallet + score history; period leaderboard with temporary tie-break.
+- Admin mission CRUD: create draft → publish → archive; points change publishes a new rule version.
+- Sales import (EP-07, D-005): admin-only XLSX upload, file/row validation, explicit idempotent processing,
+  fingerprint dedupe, row-level duplicate/error report, reconciliation. Admin can download the SAMPLE workbook
+  from `GET /admin/sales/sample` or the link on `/admin/sales/new`.
+- **A2 fixed:** score correction is reachable from the admin review screen and the sales import detail page.
+  Sales events are org-scoped through the owner user; reversal redirects to the sales import for sales records.
+- **A6 fixed (four unambiguous items):** sales navigation is admin-only; submission/review badges show recorded
+  event points after a mission points change; the sales list counts pending `valid` rows; processing banner typo fixed.
+  The rejected-attempt cap display remains open under B6-1/C6.
 - Server-side authorization: visitor / operator / admin + same-organization scope (negative tests exist).
-- Documentation tooling (no effect on the running app): `make docs` regenerates
-  `docs/agent-guide/code-map.md` and `traceability.md` from code, tests and documents;
-  `tests/test_docs.py` fails when they are stale; `make graph` rebuilds the knowledge graph in
-  `graphify-out/`; `make doctor` runs the repository health check.
+- Documentation tooling: `make docs`, `make docs-check`, `make graph`, `make doctor`.
 
 ## In progress
+- A4: the demo script has an automated replay (`tests/test_demo_stability.py`) and a live local preview was smoke-tested
+  on uvicorn. **Browser rehearsal on the final demo host is still not done.**
 - Sales import is XLSX-only with the SAMPLE contract; a real export (OD-03) may add columns or a mapping UI.
 - Reports (EP-10) and notifications (EP-11): not started.
 - Partial corrections (correcting part of an award) are not implemented.
 
 ## Mocked / Demo-only
-- **Auth:** demo user picker instead of OTP/SMS (OD-01). Exit condition: approved login method + provider.
+- **Auth:** demo user picker instead of OTP/SMS (OD-01). Exit: approved login method + provider.
 - **Tenant:** one organization; multi-company not exposed (OD-02). Exit: approved org model.
 - **Points:** all seeded values (10/15/5/20) are `SAMPLE` (OD-04/05). Exit: approved rule matrix.
 - **Wallet:** non-redeemable, display only (OD-08). Exit: approved wallet policy.
 - **Dates in admin forms:** Gregorian input, Jalali display. Exit: unified calendar in Harden.
-- **Leaderboard:** computed on read with proposed tie-break (BR-009). Exit: approved competition criteria + snapshot strategy.
+- **Leaderboard:** computed on read with proposed tie-break (BR-009). Exit: approved competition criteria.
 
 ## Known issues
 - `?s=` puts the session token in the URL (history/logs/referrer); demo-only, exit condition in D-002.
@@ -55,106 +57,84 @@
 - Evidence retention is a manual command; no scheduler, and the 90-day window is a sample default (D-003).
 - SQLite single-writer; no connection pooling or WAL tuning yet.
 - Mission and leaderboard lists are still unpaginated (queue is paginated).
-- The migration runner is a stopgap (`app/db.py::apply_migrations`): files run once at startup in filename
-  order; no checksums, no downgrades.
+- The migration runner is a stopgap: files run once at startup in filename order; no checksums, no downgrades.
 - The secret-scan step in CI can never fail (backlog A10); `make doctor` is the only working secret check.
 - `tests/` uses FastAPI TestClient; Starlette emits a deprecation warning about `httpx` (harmless for now).
-
-Found on 2026-11-11 by running the code (reproduction and proposed fix per item in
-`docs/delivery/backlog.md`; none of these is fixed yet):
-- **A1** Approval can end as `approved` with no score event (HTTP 500, retry → 409) when no rule version is
-  effective, e.g. a mission created with a future start whose start date is later moved back.
-- **A2** Score corrections have no entry point in the admin panel (the form lives on `/submissions/{id}` only),
-  and reversing a `sales_record` event returns 403, so sales points cannot be corrected.
 - **A3** Dates and times are rendered in raw UTC (3:30 behind Asia/Tehran); admin date inputs are UTC day bounds.
-- **A4** The seeded competition ends exactly 7 days after seeding; the leaderboard then silently falls back to
-  all-time totals. `docs/delivery/demo-script.md` now exists and its numbers were checked by an automated run,
-  but no browser rehearsal on the demo host has been done.
+- **A4** The seeded competition ends exactly 7 days after seeding; reseed on demo morning. No browser rehearsal
+  on the final demo host has been recorded.
 - **A5** Sales points have no "why this score" view; `/score` rows link nowhere.
 - **C2** Users ranked below 50 get no rank at all (`LIMIT 50`).
-- **C4** Sales detail shows only the first 200 rows with no filter or export; a Jalali `sale_date` such as
-  `1405/08/10` is accepted as a Gregorian year, while `1405/02/31` is rejected.
-- **C5** Evidence content type is trusted from the client, identical images are not flagged, and replayed or
-  over-cap submissions leave orphan files that `purge-evidence` never removes.
-- **C6** An operator can approve their own submission.
-- **C8** A correction made after a period ends is subtracted from the current period (BR-008).
+- **C4** Sales detail shows only the first 200 rows with no filter or export; a Jalali `sale_date` is read as Gregorian.
+- **C5** Evidence content type is trusted from the client, identical images are not flagged, orphan files can remain.
+- **C6** An operator can approve their own submission; rejected attempts consume the per-user cap (B6-1).
+- **C8** A correction made after a period ends is subtracted from the current period (BR-008); reversal path uses `float`.
 - **C9** Demo login works under any `KILOOS_ENV`; a `?s=` link keeps working after logout.
 
 ## Decisions approved
-- None yet. D-001…D-005 are all **PROPOSED** (D-005 also carries "Approved by: کارفرما" and needs an explicit
-  confirmation before its status changes).
+- None yet. D-001…D-005 are all **PROPOSED** (D-005 also carries "Approved by: کارفرما" and needs explicit confirmation).
+- This slice changed no business rule: B6-1 rejected-attempt cap, B6-2 approval-time rule selection, B6-3 staff
+  self-approval and B6-4 period attribution remain open.
 
 ## Open decisions / assumptions
 - OD-01…OD-12 remain OPEN (see `docs/decisions/open-decisions.md`).
 - Assumptions in force: A-P1 demo auth, A-P2 single tenant, A-P3 photo mission, A-P4 manual review,
   A-P5 sample fixed points, A-P7 temporary tie-break, A-P8 non-redeemable wallet.
-- Four business-rule questions surfaced on 2026-11-11 and are **not yet registered** as open decisions:
-  rejected attempts consuming the per-user cap, rule version chosen at approval time, staff self-approval,
-  and period attribution of corrections and sales points (backlog B4 and B6).
+- Four business-rule questions surfaced on 2026-11-11 are still **not registered** as open decisions (backlog B4/B6).
 
 ## Recent migrations / API changes
-- `db/migrations/0001_init.sql`: initial schema (organizations, users, missions, scoring_rule_versions,
-  submissions, submission_evidences, score_events, point_transactions, point_wallets, competitions,
-  audit_logs, outbox_events).
-- `db/migrations/0002_score_corrections.sql`: `ux_score_events_corrects` — one correction per event.
-- `db/migrations/0003_sales_import.sql`: `sales_imports`, `sales_records`, `sales_user_map` and
-  `scoring_rule_versions.unit_size`; `ux_sales_records_external` is partial (valid/scored only).
-- `app.db.apply_migrations` runs each file once, tracked in `schema_migrations (name, applied_at)`.
+- No new migration in this slice. Schema remains `0001_init.sql`, `0002_score_corrections.sql`, `0003_sales_import.sql`.
+- New route: `GET /admin/sales/sample` (admin-only) downloads the SAMPLE workbook.
+- `POST /admin/score-events/{id}/reverse` now redirects sales-record corrections to `/admin/sales/{import_id}?reversed=1`.
+- `POST /admin/submissions/{id}/review` renders a Persian 409 and rolls back when scoring has no effective rule version.
 - Implemented endpoints listed in `docs/engineering/api-spec.md`.
 
 ## Tests and verification
-Run on 2026-11-11 (virtualenv from `pip install -e ".[dev]"`; fastapi 0.162.4, starlette 1.10.0), after the
-last documentation edit of the session:
-- `make check` → ruff **All checks passed!** · pytest **58 passed, 1 warning** (about 6 seconds; the warning is
-  Starlette's `TestClient` deprecation notice). 58 = the 56 application tests + 2 in `tests/test_docs.py`.
-- `make doctor` (`python3 .agent/tools/doctor.py --root . --strict`) → **8 ok · 0 warn · 0 fail**
-- `make docs-check` → generated documents current (29 routes, 16 tables); knowledge graph up to date
-- `make graph` → graph rebuilt with graphify 0.9.106; counts in `graphify-out/BUILD_INFO.json`
-- Demo walk (`docs/delivery/demo-script.md` §۳ and §۴) replayed with `TestClient` on a fresh seed: every
-  number in the script was observed. Not done: a browser rehearsal on the demo host.
-- HTTP smoke test against a real uvicorn process with a temporary database: health → visitor login → submit →
-  operator approve → +۱۰ with explanation → balance ۱۰ → rank ۲ → admin changes points 10→15 (new rule
-  version) → sample sales upload and processing (4 events, 15 points) → wallet equals ledger.
-- The defects listed under "Known issues" were reproduced with throwaway `TestClient` scripts on temporary
-  databases. Those scripts are not in the repository; each fix must add its own regression test.
-- No application code changed in this session. Added: documentation, the generator
-  `.agent/tools/knowledge_map.py`, `tests/test_docs.py`, Makefile targets.
-- Not verified: Mermaid rendering in `docs/agent-guide/01-start.md`, and `graphify-out/graph.html` in a
-  browser (it needs internet access for one script).
+Run on 2026-11-12 after the A1/A2/A4/A6 slice:
+- `.venv/bin/ruff check app tests` → **All checks passed!**
+- `.venv/bin/pytest -q` → **71 passed, 1 warning** (Starlette `TestClient`/`httpx` deprecation notice).
+  58 prior tests + 13 in `tests/test_demo_stability.py`.
+- `make check` → Ruff clean; **71 passed, 1 warning**. `make docs` refreshed the generated documents.
+- `make graph` → rebuilt `graphify-out/`; `make docs-check` → generated docs current (30 routes, 16 tables),
+  knowledge graph up to date.
+- `make doctor` → **8 ok · 0 warn · 0 fail**.
+- `make seed` and `.venv/bin/python -m app.sample_sales` → fresh demo DB and workbook created.
+- Live preview restarted **after A2**, without `--reload`: process `kiloos-club-a39f76b9`, port 8000,
+  <https://8000-i5n8yqkt7cn44zmnczefp.e2b.app>. This sandbox URL is not the final demo host.
+- HTTP smoke on the restarted preview, using the shared-preview Host header: health → admin demo login →
+  sales upload page/sample download (6 data rows) → review/sales/mission pages. Result: **OK**; no demo records changed.
+- Earlier full HTTP smoke (before A2) against a separate uvicorn process on port 8001 with a temporary DB:
+  health → visitor login/submit → operator approve (+1 event) → admin sample download/upload/process/reprocess
+  → sales list pending count ۰. Result: **OK**. The smoke process was stopped afterwards. The current A2 behavior
+  is covered by the three new integration tests and the automated demo replay above.
+- Automated demo replay: `tests/test_demo_stability.py::test_demo_script_main_path_and_optional_correction` and
+  `test_demo_optional_new_rule_version_awards_fifteen_at_approval` pass with the documented numbers.
+- Not verified: a real browser rehearsal on the final demo host; Mermaid rendering; `graphify-out/graph.html` in a browser.
 
 ## Next recommended tasks
-Full list with evidence, IDs and size estimates: `docs/delivery/backlog.md` (PROPOSED order).
-1. **Before MS-01 (group A):** start with A1 in `app/repo.py:review_submission`, then A2 (correction entry point
-   and sales events), A3 (Asia/Tehran display), A4 (the script exists; reseed on demo morning and do one
-   browser rehearsal on the demo host), then A5–A7, A9 and A10. A8 (documents aligned with code) is done
-   except two items that need the owner (D-005 status, the ownership table in `AGENTS.md` §5).
-2. **At MS-01 / MS-02 (group B):** collect the decisions that unblock the MVP — route approval and P→H,
-   D-001…D-005, production stack, OD-01…OD-08 and OD-10, plus the four questions in B6.
-3. **MVP completion (group C):** user management and sales-ID mapping (C1), competition periods (C2),
-   reports + CSV (C3, EP-10), sales error report and date validation (C4), evidence controls (C5); the earlier
-   candidates map to C8 (correction hardening), C9 (auth, needs OD-01) and C10 (real sales contract,
-   needs OD-03/04/05).
-4. **Harden (group D):** only after P→H is recorded in `docs/decisions/decision-log.md`.
+Full list with evidence: `docs/delivery/backlog.md`.
+1. **A4 final step:** run the demo script in a browser on the actual demo host and record it in `demo-script.md` §9.
+2. **A3:** Asia/Tehran display and admin day bounds (`app/jalali.py`, `app/repo.py::_parse_day`).
+3. **A5:** score-event detail/explain links from history and sales points.
+4. **A7 + A10:** dependency constraints and a CI secret scan that can actually fail.
+5. **B decisions:** collect client answers at MS-01/MS-02; register B6 questions before changing cap/self-approval/period rules.
+6. **C/D:** only after the relevant decisions; do not start Harden without recorded P→H.
 
 ## Important files and entry points
 - `app/main.py` — routes and access dependencies
-- `app/scoring.py` — score event contract
-- `app/repo.py` — org-scoped data access + domain errors
+- `app/scoring.py` — score event contract; mission award is caller-transactional
+- `app/repo.py` — org-scoped data access, atomic review, rule effective-date guard, sales correction context
 - `app/sales.py` — sales workbook parsing and row validation
-- `db/migrations/*.sql` — schema (three files, applied in order)
-- `tests/test_flow.py`, `tests/test_scoring.py`, `tests/test_sales.py`, `tests/test_corrections.py`,
-  `tests/test_hardening.py` — executable behaviour spec
-- `docs/agent-guide/code-map.md` — every route, function, table and test, generated from the code
-- `docs/agent-guide/traceability.md` — requirement ↔ code ↔ test ↔ backlog row
-- `.agent/context/traceability.json` — the curated links behind that matrix; update it when a requirement's
-  code or state changes
-- `.agent/playbooks/prototype-9-days.md` — demo plan and fallbacks
-- `docs/delivery/backlog.md` — prioritised backlog with evidence (start here for the next task)
+- `app/sample_sales.py` — CLI and in-memory SAMPLE workbook
+- `tests/test_demo_stability.py` — A1/A2/A4/A6 regressions and demo replay
+- `docs/agent-guide/code-map.md` / `traceability.md` — generated; run `make docs`
+- `.agent/context/traceability.json` — curated links behind the matrix
+- `docs/delivery/backlog.md` — prioritised backlog
+- `docs/delivery/demo-script.md` — demo accounts, numbers, rehearsal table
 
 ## Demo status
 - Runnable from scratch? Yes (`make setup && make run`, or `make seed` to reset).
 - Demo data labeled? Yes — persistent DEMO strip plus «نمونه» pills.
-- Last successful demo run: 2026-11-11 (automated flow tests, HTTP smoke test of the main path on uvicorn, and
-  an automated replay of `docs/delivery/demo-script.md`). No browser rehearsal yet.
+- Last successful demo run: 2026-11-12 (automated replay + uvicorn HTTP smoke). No final-host browser rehearsal yet.
 - Demo-day caveat: reseed on the morning of the demo, otherwise the sample competition period may have ended (A4).
 - Demo script, accounts, expected numbers, things not to do on stage: `docs/delivery/demo-script.md`.

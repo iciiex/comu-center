@@ -11,7 +11,11 @@
           {{ submission['user_name'] }} · {{ submission['created_at']|jdatetime }}
         </div>
       </div>
-      <span class="pill pill--points">{{ submission['mission_points']|fa }} امتیاز</span>
+      {% if event %}
+        <span class="pill pill--points">{{ event['points']|fa }} امتیاز ثبت‌شده</span>
+      {% else %}
+        <span class="pill pill--points">{{ submission['mission_points']|fa }} امتیاز مأموریت</span>
+      {% endif %}
     </div>
     {% if submission['note'] %}
       <p class="small" style="margin:12px 0 0">{{ submission['note'] }}</p>
@@ -39,6 +43,31 @@
       <p class="small muted" style="margin:4px 0 0">
         +{{ event['points']|fa }} امتیاز · {{ event['rule_code'] }} · {{ event['occurred_at']|jdatetime }}
       </p>
+    </div>
+  {% endif %}
+
+  {% if reversal %}
+    <div class="card card--flat" style="border-color:#f3c2be; background:#fff6f5">
+      <div class="card__title">این امتیاز اصلاح شده است</div>
+      <p class="small" style="margin:6px 0">دلیل ثبت‌شده: {{ reversal['reason'] }}</p>
+      <p class="tiny muted mb-0">امتیاز اصلاحی {{ reversal['points']|fa }} · {{ reversal['occurred_at']|jdatetime }}</p>
+    </div>
+  {% elif can_correct %}
+    <div class="card card--flat">
+      <div class="card__title">اصلاح امتیاز</div>
+      <p class="small muted" style="margin:4px 0 10px">
+        اصلاح، تاریخچه را حذف نمی‌کند: یک رخداد منفی جدید ثبت می‌شود و موجودی کیف و رتبه‌بندی
+        به‌صورت خودکار به‌روز می‌شوند. این عمل فقط برای مدیر سیستم مجاز است.
+      </p>
+      <form method="post" action="{{ url('/admin/score-events/' ~ event['id'] ~ '/reverse') }}" class="stack">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="field">
+          <label for="reason">دلیل اصلاح (الزامی)</label>
+          <textarea id="reason" name="reason" rows="3" required minlength="5"
+                    placeholder="مثلاً: تصویر تکراری بود و مأموریت دوباره انجام نشده است."></textarea>
+        </div>
+        <button class="btn btn--ghost" type="submit">ثبت اصلاح امتیاز</button>
+      </form>
     </div>
   {% endif %}
 
