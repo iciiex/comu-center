@@ -5,7 +5,7 @@
 - Mode: P
 - Current phase: Prototype
 - Current milestone: MS-01 — Prototype Delivery (2026-11-18)
-- Main branch / working branch: `main` / `arena/eb7fd929-comu-center`
+- Main branch / working branch: `main` / `arena/a7dc5adb-comu-center`
 - Prioritised backlog: `docs/delivery/backlog.md` (PROPOSED)
 - Project handover (dated snapshot, Persian): `docs/handoffs/handover.md`
 - Agent guide: `docs/agent-guide/README.md`
@@ -37,6 +37,10 @@
 - Documentation tooling: `make docs`, `make docs-check`, `make graph`, `make doctor`.
 
 ## In progress
+- Sales Quest Arena integration: public frontend reviewed; BFF prototype routes and migration `0004_game_progress.sql`
+  are implemented. Contract/source snapshot: `docs/engineering/game-bff-alignment.md` + `app/game_catalog.json`.
+  Agreed direction: server-authoritative game progress/rewards, with game XP/coins separate from organizational score events.
+  Remaining: the React frontend is not wired to the API; its localStorage seam is synchronous and completion logic remains client-side.
 - A4: the demo script has an automated replay (`tests/test_demo_stability.py`) and a live local preview was smoke-tested
   on uvicorn. **Browser rehearsal on the final demo host is still not done.**
 - Sales import is XLSX-only with the SAMPLE contract; a real export (OD-03) may add columns or a mapping UI.
@@ -83,26 +87,34 @@
 - Four business-rule questions surfaced on 2026-11-11 are still **not registered** as open decisions (backlog B4/B6).
 
 ## Recent migrations / API changes
-- No new migration in this slice. Schema remains `0001_init.sql`, `0002_score_corrections.sql`, `0003_sales_import.sql`.
+- Added `0004_game_progress.sql`: per-user game projection and append-only idempotent game completions, separate from score ledger.
 - New route: `GET /admin/sales/sample` (admin-only) downloads the SAMPLE workbook.
 - `POST /admin/score-events/{id}/reverse` now redirects sales-record corrections to `/admin/sales/{import_id}?reversed=1`.
 - `POST /admin/submissions/{id}/review` renders a Persian 409 and rolls back when scoring has no effective rule version.
-- Implemented endpoints listed in `docs/engineering/api-spec.md`.
+- Implemented endpoints listed in `docs/engineering/api-spec.md`, including `/api/v1/game/{bootstrap,progress,history}`,
+  profile/draft writes, and idempotent game completion. `/api/v1/game` uses JSON errors/401 and cookie sessions only;
+  URL session tokens are rejected.
 
 ## Tests and verification
 Run on 2026-11-12 after the A1/A2/A4/A6 slice:
 - `.venv/bin/ruff check app tests` → **All checks passed!**
-- `.venv/bin/pytest -q` → **71 passed, 1 warning** (Starlette `TestClient`/`httpx` deprecation notice).
-  58 prior tests + 13 in `tests/test_demo_stability.py`.
-- `make check` → Ruff clean; **71 passed, 1 warning**. `make docs` refreshed the generated documents.
-- `make graph` → rebuilt `graphify-out/`; `make docs-check` → generated docs current (30 routes, 16 tables),
-  knowledge graph up to date.
+- `.venv/bin/pytest -q` → **79 passed, 1 warning** (Starlette `TestClient`/`httpx` deprecation notice):
+  71 prior tests + 8 in `tests/test_game_api.py`.
+- `make check` → Ruff clean; **79 passed, 1 warning**. Game API tests cover JSON auth/CSRF, profile/drafts,
+  canonical answer validation, unlocks, server rewards, daily bonus/replay, idempotency, history, user/role scope,
+  and no score-ledger writes.
+  `make docs` refreshed the generated documents.
+- `make graph` → rebuilt `graphify-out/` (1082 nodes, 3199 edges); `make docs-check` → generated docs current
+  (37 routes, 18 tables), knowledge graph up to date.
 - `make doctor` → **8 ok · 0 warn · 0 fail**.
 - `make seed` and `.venv/bin/python -m app.sample_sales` → fresh demo DB and workbook created.
 - Live preview restarted **after A2**, without `--reload`: process `kiloos-club-a39f76b9`, port 8000,
   <https://8000-i5n8yqkt7cn44zmnczefp.e2b.app>. This sandbox URL is not the final demo host.
 - HTTP smoke on the restarted preview, using the shared-preview Host header: health → admin demo login →
   sales upload page/sample download (6 data rows) → review/sales/mission pages. Result: **OK**; no demo records changed.
+- Sales Quest BFF HTTP smoke on temporary DB, uvicorn port 8002: anonymous bootstrap → JSON 401; visitor demo login →
+  bootstrap (6 missions) → server completion (+180 sample XP/+20 coins) → same-key replay. Result: **OK**;
+  replay header `Idempotent-Replay: true`.
 - Earlier full HTTP smoke (before A2) against a separate uvicorn process on port 8001 with a temporary DB:
   health → visitor login/submit → operator approve (+1 event) → admin sample download/upload/process/reprocess
   → sales list pending count ۰. Result: **OK**. The smoke process was stopped afterwards. The current A2 behavior

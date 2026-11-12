@@ -9,7 +9,9 @@
 - Response type: HTML pages for the app; `GET /health` returns JSON. Machine-readable schema: `GET /api/docs` (OpenAPI).
 
 > Planned REST surface `POST /api/v1/...` is **not** implemented yet; this document describes what exists so
-> the next agent does not invent endpoints or break the contract.
+> the next agent does not invent endpoints or break the contract. The proposed BFF contract for the public
+> Sales Quest Arena frontend is documented separately in [`game-bff-alignment.md`](game-bff-alignment.md);
+> none of those game routes are implemented by this prototype.
 
 ---
 ## Session transport (D-002)
@@ -55,6 +57,26 @@ in an iframe. Narrow both before real users.
 
 ---
 
+
+## Sales Quest Arena BFF (prototype, separate game economy)
+
+These JSON routes are implemented under `/api/v1/game`; details, content snapshot and frontend integration
+requirements are in [`game-bff-alignment.md`](game-bff-alignment.md). All require an authenticated visitor account
+except that anonymous access returns JSON `401`. URL session tokens (`?s=`) are rejected. Mutations require
+`X-CSRF-Token` from `/bootstrap`; completion additionally requires `Idempotency-Key`.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/game/bootstrap` | Versioned catalog/config + user game projection + CSRF token |
+| GET | `/api/v1/game/progress` | Refresh canonical server-owned game state |
+| GET | `/api/v1/game/history?limit=&cursor=` | User-scoped completion history |
+| PATCH | `/api/v1/game/profile` | Set display name/avatar |
+| PUT/DELETE | `/api/v1/game/missions/{id}/draft` | Save or discard a validated draft |
+| POST | `/api/v1/game/missions/{id}/completions` | Validate answers, score server-side, atomically persist and deduplicate |
+
+Game XP/coins are stored in `game_progress` / `game_completions` and never touch organizational `score_events`.
+The catalog is pinned to a frontend source commit. The current demo login/session layer is still prototype-only;
+the React frontend has not yet been wired to these endpoints.
 
 ## Public
 
@@ -159,7 +181,7 @@ Mission form fields: `title`, `description`, `points` (0–10000), `max_per_user
 
 ## Known gaps
 
-- No REST/JSON API for mobile clients yet (planned `/api/v1`, `Idempotency-Key` header).
+- No general mobile REST API yet. `/api/v1/game` is a prototype-specific BFF for Sales Quest Arena, not the full planned mobile API.
 - `?s=` session transport leaks the token into URLs; demo-only until OD-01 (see D-002).
 - Rate limiting and the session store are in-process memory (single worker only).
 - Evidence retention exists as a manual command (`python -m app.maintenance purge-evidence`), no scheduler.

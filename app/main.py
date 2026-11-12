@@ -23,7 +23,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app import db, repo, sales
+from app import db, game, repo, sales
 from app.config import Settings
 from app.jalali import format_jalali, to_persian_digits
 from app.repo import DomainError
@@ -120,12 +120,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         finally:
             conn.close()
 
-    def require_user(
-        request: Request, conn: sqlite3.Connection = Depends(conn_dep)
-    ) -> CurrentUser:
+    def require_user(request: Request, conn: sqlite3.Connection = Depends(conn_dep)) -> CurrentUser:
         user = current_user(request, conn)
         if user is None:
             raise LoginRequired()
+        return user
+
+    def require_api_user(
+        request: Request, conn: sqlite3.Connection = Depends(conn_dep)
+    ) -> CurrentUser:
+        if request.query_params.get("s"):
+            raise HTTPException(
+                status_code=400, detail="Session tokens are not accepted in API URLs."
+            )
+        user = current_user(request, conn)
+        if user is None:
+            raise LoginRequired()
+        if user.role != "visitor":
+            raise HTTPException(
+                status_code=403, detail="The game is available to visitor accounts only."
+            )
         return user
 
     def require_staff(
@@ -149,8 +163,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return user
 
     # ------------------------------------------------------------------ errors
+    @app.exception_handler(game.GameError)
+    async def _game_error(request: Request, exc: game.GameError) -> JSONResponse:
+        return JSONResponse(
+            {"error": {"code": exc.code, "message": exc.message}},
+            status_code=exc.status_code,
+        )
+
     @app.exception_handler(LoginRequired)
-    async def _login_required(request: Request, exc: LoginRequired) -> RedirectResponse:
+    async def _login_required(request: Request, exc: LoginRequired) -> Response:
+        if request.url.path.startswith("/api/v1/"):
+            return JSONResponse(
+                {"error": {"code": "AUTHENTICATION_REQUIRED", "message": "Sign in is required."}},
+                status_code=401,
+            )
         return RedirectResponse("/login", status_code=303)
 
     ERROR_MESSAGES = {
@@ -163,7 +189,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     }
 
     @app.exception_handler(HTTPException)
-    async def _http_error(request: Request, exc: HTTPException) -> HTMLResponse:
+    async def _http_error(request: Request, exc: HTTPException) -> Response:
+        if request.url.path.startswith("/api/v1/"):
+            detail = exc.detail if isinstance(exc.detail, str) else "Request failed."
+            return JSONResponse(
+                {"error": {"code": f"HTTP_{exc.status_code}", "message": detail}},
+                status_code=exc.status_code,
+            )
         return page(
             request,
             "error.html",
@@ -172,10 +204,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     @app.exception_handler(StarletteHTTPException)
-    async def _starlette_error(
-        request: Request, exc: StarletteHTTPException
-    ) -> HTMLResponse:
+    async def _starlette_error(request: Request, exc: StarletteHTTPException) -> Response:
         detail = exc.detail if isinstance(exc.detail, str) else ""
+        if request.url.path.startswith("/api/v1/"):
+            return JSONResponse(
+                {
+                    "error": {
+                        "code": f"HTTP_{exc.status_code}",
+                        "message": detail or "Request failed.",
+                    }
+                },
+                status_code=exc.status_code,
+            )
         message = (
             detail
             if detail and detail not in {"Not Found", "Method Not Allowed"}
@@ -218,8 +258,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         token = session_token(request)
         if token is None:
             raise LoginRequired()
-        form = await request.form()
-        supplied = str(form.get("csrf") or "")
+        if request.url.path.startswith("/api/v1/"):
+            supplied = request.headers.get("x-csrf-token", "")
+        else:
+            form = await request.form()
+            supplied = str(form.get("csrf") or "")
         if not hmac.compare_digest(supplied, csrf_for(token, settings.secret)):
             raise HTTPException(
                 status_code=403,
@@ -237,8 +280,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     {
                         "code": 429,
                         "message": (
-                            "تلاش‌های ورود بیش از حد مجاز است؛ "
-                            "یک دقیقه بعد دوباره امتحان کنید."
+                            "تلاش‌های ورود بیش از حد مجاز است؛ یک دقیقه بعد دوباره امتحان کنید."
                         ),
                     },
                     status_code=429,
@@ -268,6 +310,91 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "message": "Prototype — sample data only",
             }
         )
+
+    @app.get("/api/v1/game/bootstrap")
+    def game_bootstrap(
+        request: Request,
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        result = game.bootstrap(conn, user, csrf_token(request))
+        conn.commit()
+        return JSONResponse(result)
+
+    @app.get("/api/v1/game/progress")
+    def game_progress(
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        result = game.get_progress(conn, user)
+        conn.commit()
+        return JSONResponse(result)
+
+    @app.get("/api/v1/game/history")
+    def game_history(
+        limit: int = Query(20),
+        cursor: str | None = Query(None),
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        return JSONResponse(game.list_history(conn, user, limit, cursor))
+
+    @app.patch("/api/v1/game/profile", dependencies=[Depends(csrf_guard)])
+    async def game_profile(
+        request: Request,
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        try:
+            payload = await request.json()
+        except (ValueError, UnicodeDecodeError):
+            raise HTTPException(status_code=400, detail="Expected a JSON request body.") from None
+        result = game.update_profile(conn, user, payload)
+        conn.commit()
+        return JSONResponse(result)
+
+    @app.put("/api/v1/game/missions/{mission_id}/draft", dependencies=[Depends(csrf_guard)])
+    async def game_save_draft(
+        mission_id: str,
+        request: Request,
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        try:
+            payload = await request.json()
+        except (ValueError, UnicodeDecodeError):
+            raise HTTPException(status_code=400, detail="Expected a JSON request body.") from None
+        result = game.save_draft(conn, user, mission_id, payload)
+        conn.commit()
+        return JSONResponse(result)
+
+    @app.delete("/api/v1/game/missions/{mission_id}/draft", dependencies=[Depends(csrf_guard)])
+    def game_discard_draft(
+        mission_id: str,
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        result = game.discard_draft(conn, user, mission_id)
+        conn.commit()
+        return JSONResponse(result)
+
+    @app.post("/api/v1/game/missions/{mission_id}/completions", dependencies=[Depends(csrf_guard)])
+    async def game_complete_mission(
+        mission_id: str,
+        request: Request,
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        try:
+            payload = await request.json()
+        except (ValueError, UnicodeDecodeError):
+            raise HTTPException(status_code=400, detail="Expected a JSON request body.") from None
+        if not isinstance(payload, dict) or set(payload) != {"answers"}:
+            raise HTTPException(status_code=422, detail="Request may contain answers only.")
+        result, replayed = game.complete_mission(
+            conn, user, mission_id, payload["answers"], request.headers.get("Idempotency-Key", "")
+        )
+        return JSONResponse(result, headers={"Idempotent-Replay": "true" if replayed else "false"})
 
     @app.get("/", response_class=HTMLResponse)
     def root(request: Request, conn: sqlite3.Connection = Depends(conn_dep)):
@@ -394,8 +521,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "mission": mission,
                     "submissions": repo.list_user_submissions(conn, user.id, mission_id),
                     "request_id": request_id,
-                    "remaining": max(0, mission["max_per_user"]
-                                     - repo.count_user_submissions(conn, user.id, mission_id)),
+                    "remaining": max(
+                        0,
+                        mission["max_per_user"]
+                        - repo.count_user_submissions(conn, user.id, mission_id),
+                    ),
                     "error": message,
                 },
                 status_code=status_code,
