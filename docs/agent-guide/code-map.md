@@ -34,7 +34,7 @@ Contents: [1 Modules](#1-modules) · [2 Routes](#2-routes) · [3 Route details](
 | `app/db.py` | 4 | `config`, `seed` |
 | `app/game.py` | 27 | `db` |
 | `app/jalali.py` | 3 | — |
-| `app/main.py` | 60 | `config`, `db`, `game`, `jalali`, `repo`, `sales`, `sample_sales`, `security` |
+| `app/main.py` | 64 | `config`, `db`, `game`, `jalali`, `repo`, `sales`, `sample_sales`, `security`, `tribal` |
 | `app/maintenance.py` | 3 | `config`, `db` |
 | `app/repo.py` | 42 | `scoring` |
 | `app/sales.py` | 11 | — |
@@ -42,6 +42,7 @@ Contents: [1 Modules](#1-modules) · [2 Routes](#2-routes) · [3 Route details](
 | `app/scoring.py` | 9 | — |
 | `app/security.py` | 11 | — |
 | `app/seed.py` | 4 | `config`, `db`, `scoring` |
+| `app/tribal.py` | 4 | — |
 
 ```mermaid
 graph LR
@@ -56,6 +57,7 @@ graph LR
     main --> sales
     main --> sample_sales
     main --> security
+    main --> tribal
     maintenance --> config
     maintenance --> db
     repo --> scoring
@@ -97,7 +99,10 @@ graph LR
 | PUT | `/api/v1/game/missions/{mission_id}/draft` | token | yes | `main.game_save_draft` | — | 0 |
 | PATCH | `/api/v1/game/profile` | token | yes | `main.game_profile` | — | 0 |
 | GET | `/api/v1/game/progress` | public | — | `main.game_progress` | — | 1 |
-| POST | `/demo-login` | public | exempt | `main.demo_login` | — | 62 |
+| GET | `/api/v1/tribal/bootstrap` | user | — | `main.tribal_bootstrap` | — | 2 |
+| GET | `/api/v1/tribal/org-units` | user | — | `main.tribal_org_units` | — | 2 |
+| GET | `/api/v1/tribal/org-units/{unit_id}` | user | — | `main.tribal_org_unit` | — | 1 |
+| POST | `/demo-login` | public | exempt | `main.demo_login` | — | 66 |
 | GET | `/evidence/{evidence_id}` | user | — | `main.evidence_file` | — | 0 |
 | GET | `/health` | public | — | `main.health` | — | 2 |
 | GET | `/home` | user | — | `main.home` | `home.html` | 3 |
@@ -110,7 +115,7 @@ graph LR
 | GET | `/score` | user | — | `main.score_page` | `score.html` | 3 |
 | GET | `/submissions/{submission_id}` | user | — | `main.submission_page` | `submission.html` | 4 |
 
-40 routes. FastAPI also serves `/api/docs`, `/openapi.json` and the
+43 routes. FastAPI also serves `/api/docs`, `/openapi.json` and the
 `/static` mount; they are framework-provided and not listed.
 
 ## 3. Route details
@@ -453,6 +458,43 @@ graph LR
 - Error codes reachable: —
 - Tests (1): `test_game_api::test_game_profile_draft_history_and_user_scope`
 
+### `GET /api/v1/tribal/bootstrap`
+
+- Handler: `main.tribal_bootstrap` — access **user** — CSRF not needed (GET)
+- Purpose: Fail closed until the Tribal API contract and data are implemented.
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `404`, `503`
+- Calls: —
+- Closures used: `main.require_user`
+- Reads: `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (2): `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_gate::test_tribal_bootstrap_is_feature_disabled_by_default`
+
+### `GET /api/v1/tribal/org-units`
+
+- Handler: `main.tribal_org_units` — access **user** — CSRF not needed (GET)
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `404`
+- Calls: `tribal.list_units`
+- Closures used: `main.conn_dep`, `main.require_user`, `main.tribal_disabled_response`
+- Reads: `org_unit_types`, `org_units`, `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (2): `test_tribal_org_api::test_org_units_api_is_gated_when_feature_is_off`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated`
+
+### `GET /api/v1/tribal/org-units/{unit_id}`
+
+- Handler: `main.tribal_org_unit` — access **user** — CSRF not needed (GET)
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `404`
+- Calls: `tribal.get_unit`
+- Closures used: `main.conn_dep`, `main.require_user`, `main.tribal_disabled_response`
+- Reads: `org_unit_types`, `org_units`, `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (1): `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated`
+
 ### `POST /demo-login`
 
 - Handler: `main.demo_login` — access **public** — CSRF exempt
@@ -463,7 +505,7 @@ graph LR
 - Reads: `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (62): `test_corrections::test_a_correction_cannot_be_reversed`, `test_corrections::test_leaderboard_reflects_the_correction`, `test_corrections::test_missing_event_returns_404`, `test_corrections::test_only_admin_can_reverse`, `test_corrections::test_other_organization_event_is_forbidden`, `test_corrections::test_reason_is_required`, `test_corrections::test_reversal_creates_negative_event_and_fixes_projections`, `test_corrections::test_reversal_requires_csrf`, `test_corrections::test_second_reversal_is_rejected`, `test_demo_stability::test_admin_review_screen_can_correct_a_mission_score`, `test_demo_stability::test_approval_rolls_back_when_no_rule_version_is_effective`, `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_operator_navigation_hides_sales_import_link`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_demo_stability::test_sales_score_correction_is_admin_only_and_org_scoped`, `test_demo_stability::test_sample_sales_workbook_download_is_admin_only`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_approve_redirect_keeps_queue_filter`, `test_flow::test_duplicate_request_id_is_idempotent`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_mission_edit_publishes_new_rule_version`, `test_flow::test_mission_respects_max_per_user`, `test_flow::test_mission_window_and_status_filtering`, `test_flow::test_organization_scope_blocks_foreign_submission`, `test_flow::test_reject_requires_reason_and_awards_nothing`, `test_flow::test_visitors_and_operators_have_no_admin_powers`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`, `test_hardening::test_admin_queue_carries_token_between_pages`, `test_hardening::test_admin_queue_paginates`, `test_hardening::test_cookie_session_still_works`, `test_hardening::test_forged_csrf_upload_creates_nothing`, `test_hardening::test_forms_render_a_csrf_field`, `test_hardening::test_login_is_rate_limited`, `test_hardening::test_post_with_forged_csrf_is_rejected`, `test_hardening::test_post_without_csrf_is_rejected`, `test_hardening::test_session_token_in_url_works_without_cookies`, `test_hardening::test_token_only_session_can_post_forms`, `test_sales::test_amount_below_one_unit_scores_nothing`, `test_sales::test_detail_page_shows_reconciliation`, `test_sales::test_duplicate_external_id_across_imports_is_skipped`, `test_sales::test_missing_columns_reject_the_file`, `test_sales::test_non_xlsx_is_rejected`, `test_sales::test_only_admin_can_use_sales_import`, `test_sales::test_other_organization_import_is_not_visible`, `test_sales::test_process_creates_each_score_once`, `test_sales::test_processing_failure_rolls_back_all_events`, `test_sales::test_row_errors_do_not_block_valid_rows`, `test_sales::test_same_file_is_rejected_by_fingerprint`, `test_sales::test_upload_requires_csrf`, `test_sales::test_upload_validates_without_scoring`
+- Tests (66): `test_corrections::test_a_correction_cannot_be_reversed`, `test_corrections::test_leaderboard_reflects_the_correction`, `test_corrections::test_missing_event_returns_404`, `test_corrections::test_only_admin_can_reverse`, `test_corrections::test_other_organization_event_is_forbidden`, `test_corrections::test_reason_is_required`, `test_corrections::test_reversal_creates_negative_event_and_fixes_projections`, `test_corrections::test_reversal_requires_csrf`, `test_corrections::test_second_reversal_is_rejected`, `test_demo_stability::test_admin_review_screen_can_correct_a_mission_score`, `test_demo_stability::test_approval_rolls_back_when_no_rule_version_is_effective`, `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_operator_navigation_hides_sales_import_link`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_demo_stability::test_sales_score_correction_is_admin_only_and_org_scoped`, `test_demo_stability::test_sample_sales_workbook_download_is_admin_only`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_approve_redirect_keeps_queue_filter`, `test_flow::test_duplicate_request_id_is_idempotent`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_mission_edit_publishes_new_rule_version`, `test_flow::test_mission_respects_max_per_user`, `test_flow::test_mission_window_and_status_filtering`, `test_flow::test_organization_scope_blocks_foreign_submission`, `test_flow::test_reject_requires_reason_and_awards_nothing`, `test_flow::test_visitors_and_operators_have_no_admin_powers`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`, `test_hardening::test_admin_queue_carries_token_between_pages`, `test_hardening::test_admin_queue_paginates`, `test_hardening::test_cookie_session_still_works`, `test_hardening::test_forged_csrf_upload_creates_nothing`, `test_hardening::test_forms_render_a_csrf_field`, `test_hardening::test_login_is_rate_limited`, `test_hardening::test_post_with_forged_csrf_is_rejected`, `test_hardening::test_post_without_csrf_is_rejected`, `test_hardening::test_session_token_in_url_works_without_cookies`, `test_hardening::test_token_only_session_can_post_forms`, `test_sales::test_amount_below_one_unit_scores_nothing`, `test_sales::test_detail_page_shows_reconciliation`, `test_sales::test_duplicate_external_id_across_imports_is_skipped`, `test_sales::test_missing_columns_reject_the_file`, `test_sales::test_non_xlsx_is_rejected`, `test_sales::test_only_admin_can_use_sales_import`, `test_sales::test_other_organization_import_is_not_visible`, `test_sales::test_process_creates_each_score_once`, `test_sales::test_processing_failure_rolls_back_all_events`, `test_sales::test_row_errors_do_not_block_valid_rows`, `test_sales::test_same_file_is_rejected_by_fingerprint`, `test_sales::test_upload_requires_csrf`, `test_sales::test_upload_validates_without_scoring`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_gate::test_tribal_bootstrap_is_feature_disabled_by_default`, `test_tribal_org_api::test_org_units_api_is_gated_when_feature_is_off`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated`
 
 ### `GET /evidence/{evidence_id}`
 
@@ -608,8 +650,8 @@ graph LR
 | `_http_error` | exception-handler | — | — | — | `main.page` | — |
 | `_login_required` | exception-handler | — | — | — | — | — |
 | `_starlette_error` | exception-handler | — | — | — | `main.page` | — |
-| `conn_dep` | closure | — | — | — | `db.connect` | 39 callers |
-| `create_app` | function | — | — | — | `config.Settings`, `db.init_db`, `jalali.format_jalali` | `conftest::client`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`, `test_hardening::test_admin_queue_paginates` |
+| `conn_dep` | closure | — | — | — | `db.connect` | 41 callers |
+| `create_app` | function | — | — | — | `config.Settings`, `db.init_db`, `jalali.format_jalali` | `conftest::client`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`, `test_hardening::test_admin_queue_paginates`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated` |
 | `csrf_guard` | closure | Reject form posts whose CSRF value does not match the session token. | — | — | `main.LoginRequired`, `security.csrf_for`, `security.session_token` | 15 callers |
 | `go` | closure | — | — | — | `main.url_session`, `main.with_token` | 10 callers |
 | `hardening` | middleware | — | — | — | `main.login_rate_limited`, `main.page` | — |
@@ -618,8 +660,9 @@ graph LR
 | `require_admin` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | 13 callers |
 | `require_api_user` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | `main.game_bootstrap`, `main.game_complete_mission`, `main.game_discard_draft`, `main.game_history`, `main.game_logout`, `main.game_profile`, `main.game_progress`, `main.game_save_draft` |
 | `require_staff` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | `main.admin_decide`, `main.admin_missions`, `main.admin_queue`, `main.admin_review` |
-| `require_user` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | `main.evidence_file`, `main.home`, `main.leaderboard_page`, `main.mission_page`, `main.missions_page`, `main.score_page`, `main.submission_page`, `main.submit_mission` |
+| `require_user` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | 11 callers |
 | `sales_page_context` | closure | — | `sales_user_map`, `scoring_rule_versions`, `users` | — | — | `main.admin_sales_new`, `main.admin_sales_upload` |
+| `tribal_disabled_response` | closure | — | — | — | — | `main.tribal_org_unit`, `main.tribal_org_units` |
 | `url` | closure | — | — | — | `main.with_token` | — |
 | `url_session` | closure | The token to keep in internal links — only when it came from the URL. | — | — | `security.read_token` | `main.go`, `main.page` |
 | `with_token` | closure | — | — | — | — | `main.demo_login`, `main.go`, `main.url` |
@@ -798,6 +841,15 @@ graph LR
 | `main` | function | Rebuild an empty demo database (`make seed`). | — | — | `config.Settings`, `db.init_db` | — |
 | `seed_demo` | function | — | `submissions` | `competitions`, `missions`, `organizations`, `sales_user_map`, `scoring_rule_versions`, `submission_evidences`, `submissions`, `users` | `scoring.award_mission_approval`, `seed._id`, `seed._iso` | `db.init_db` |
 
+### `app/tribal.py`
+
+| Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
+|---|---|---|---|---|---|---|
+| `_decode_cursor` | function | — | — | — | — | `tribal.list_units` |
+| `_encode_cursor` | function | — | — | — | — | `tribal.list_units` |
+| `get_unit` | function | — | `org_unit_types`, `org_units` | — | — | `main.tribal_org_unit` |
+| `list_units` | function | List active children in one organization using stable keyset pagination. | `org_unit_types`, `org_units` | — | `tribal._decode_cursor`, `tribal._encode_cursor` | `main.tribal_org_units` |
+
 Route handlers of `app/main.py` are listed in section 3. "Reads" and "Writes" here are
 the SQL statements written in that function only; follow "Calls" for the rest of the
 chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
@@ -850,6 +902,44 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Read by: `repo.count_queue`, `repo.evidence`, `repo.get_mission_for_user`, `repo.list_active_missions`, `repo.list_missions_admin`, `repo.list_queue`, `repo.list_user_submissions`, `repo.mission_by_id`, `repo.score_event_detail`, `repo.score_history`, `repo.submission_detail`, `scoring.award_mission_approval`
 - INSERT by: `repo.create_mission`, `seed.seed_demo`
 - UPDATE by: `repo.archive_mission`, `repo.publish_mission`, `repo.update_mission`
+
+### `org_memberships`
+
+- Defined in: `db/migrations/0005_tribal_org_foundation.sql`
+- Columns: `id` TEXT PRIMARY KEY; `organization_id` TEXT NOT NULL REFERENCES organizations(id); `user_id` TEXT NOT NULL; `unit_id` TEXT NOT NULL; `source_system` TEXT; `external_key` TEXT; `valid_from` TEXT NOT NULL; `valid_to` TEXT; `created_at` TEXT NOT NULL; `REFERENCES` org_units(id, organization_id); `REFERENCES` users(id, organization_id) CHECK (valid_to IS NULL OR valid_to > valid_from) CHECK ((source_system IS NULL) = (external_key IS NULL))
+- Table constraints: FOREIGN KEY (unit_id, organization_id); FOREIGN KEY (user_id, organization_id)
+- Indexes: UNIQUE `ux_org_membership_source_key` (organization_id, source_system, external_key) WHERE source_system IS NOT NULL — db/migrations/0005_tribal_org_foundation.sql; `ix_org_memberships_user_period` (organization_id, user_id, valid_from, valid_to) — db/migrations/0005_tribal_org_foundation.sql; `ix_org_memberships_unit_period` (organization_id, unit_id, valid_from, valid_to) — db/migrations/0005_tribal_org_foundation.sql
+- References: `org_units`, `organizations`, `users`
+- Read by: —
+- Written by: —
+
+### `org_unit_type_parent_types`
+
+- Defined in: `db/migrations/0005_tribal_org_foundation.sql`
+- Columns: `organization_id` TEXT NOT NULL REFERENCES organizations(id); `child_type_id` TEXT NOT NULL; `parent_type_id` TEXT NOT NULL; `REFERENCES` org_unit_types(id, organization_id); `REFERENCES` org_unit_types(id, organization_id) CHECK (child_type_id <> parent_type_id)
+- Table constraints: PRIMARY KEY (child_type_id, parent_type_id); FOREIGN KEY (child_type_id, organization_id); FOREIGN KEY (parent_type_id, organization_id)
+- References: `org_unit_types`, `organizations`
+- Read by: —
+- Written by: —
+
+### `org_unit_types`
+
+- Defined in: `db/migrations/0005_tribal_org_foundation.sql`
+- Columns: `id` TEXT PRIMARY KEY; `organization_id` TEXT NOT NULL REFERENCES organizations(id); `code` TEXT NOT NULL; `label` TEXT NOT NULL; `labels_json` TEXT NOT NULL DEFAULT '{}'; `display_order` INTEGER NOT NULL DEFAULT 0; `is_active` INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)); `created_at` TEXT NOT NULL
+- Table constraints: UNIQUE (organization_id, code); UNIQUE (id, organization_id)
+- References: `organizations`
+- Read by: `tribal.get_unit`, `tribal.list_units`
+- Written by: —
+
+### `org_units`
+
+- Defined in: `db/migrations/0005_tribal_org_foundation.sql`
+- Columns: `id` TEXT PRIMARY KEY; `organization_id` TEXT NOT NULL REFERENCES organizations(id); `type_id` TEXT NOT NULL; `parent_id` TEXT; `external_key` TEXT; `name` TEXT NOT NULL; `flag_asset_key` TEXT; `status` TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived')); `valid_from` TEXT; `valid_to` TEXT; `created_at` TEXT NOT NULL; `updated_at` TEXT NOT NULL; `REFERENCES` org_unit_types(id, organization_id); `REFERENCES` org_units(id, organization_id) CHECK (parent_id IS NULL OR parent_id <> id) CHECK (valid_to IS NULL OR valid_from IS NULL OR valid_to > valid_from)
+- Table constraints: UNIQUE (id, organization_id); FOREIGN KEY (type_id, organization_id); FOREIGN KEY (parent_id, organization_id); UNIQUE (organization_id, external_key)
+- Indexes: `ix_org_units_parent` (organization_id, parent_id, status, name) — db/migrations/0005_tribal_org_foundation.sql; `ix_org_units_type` (organization_id, type_id, status) — db/migrations/0005_tribal_org_foundation.sql
+- References: `org_unit_types`, `org_units`, `organizations`
+- Read by: `tribal.get_unit`, `tribal.list_units`
+- Written by: —
 
 ### `organizations`
 
@@ -965,6 +1055,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Defined in: `db/migrations/0001_init.sql`
 - Columns: `id` TEXT PRIMARY KEY; `organization_id` TEXT NOT NULL REFERENCES organizations(id); `full_name` TEXT NOT NULL; `mobile` TEXT NOT NULL; `role` TEXT NOT NULL CHECK (role IN ('visitor', 'operator', 'admin')); `is_active` INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)); `created_at` TEXT NOT NULL
 - Table constraints: UNIQUE (organization_id, mobile)
+- Indexes: UNIQUE `ux_users_id_organization` (id, organization_id) — db/migrations/0005_tribal_org_foundation.sql
 - References: `organizations`
 - Read by: `db.init_db`, `main.demo_login`, `main.game_demo_login`, `main.game_demo_users`, `main.login_page`, `main.sales_page_context`, `repo.count_queue`, `repo.leaderboard`, `repo.list_queue`, `repo.list_sales_imports`, `repo.sales_import`, `repo.score_event_detail`, `repo.submission_detail`, `security.current_user`
 - INSERT by: `seed.seed_demo`
@@ -1121,8 +1212,29 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_wallet_matches_ledger` | — | — | — |
 | `test_active_rule_version_selection_after_retirement` | — | `scoring.find_rule_version` | — |
 
-81 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
-Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::row_id`, `conftest::settings`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_hardening::token_csrf`, `test_sales::upload`, `test_sales::workbook_bytes`.
+### `tests/test_tribal_gate.py` (2 tests)
+
+| Test | Routes exercised | Direct domain calls | IDs |
+|---|---|---|---|
+| `test_tribal_bootstrap_is_feature_disabled_by_default` | `GET /api/v1/tribal/bootstrap`, `POST /demo-login` | — | — |
+| `test_tribal_bootstrap_does_not_expose_legacy_demo_data` | `GET /api/v1/tribal/bootstrap`, `POST /demo-login` | — | — |
+
+### `tests/test_tribal_org_api.py` (2 tests)
+
+| Test | Routes exercised | Direct domain calls | IDs |
+|---|---|---|---|
+| `test_org_units_api_is_gated_when_feature_is_off` | `GET /api/v1/tribal/org-units`, `POST /demo-login` | — | — |
+| `test_org_units_api_is_tenant_scoped_and_paginated` | `GET /api/v1/tribal/org-units`, `GET /api/v1/tribal/org-units/{unit_id}`, `POST /demo-login` | — | — |
+
+### `tests/test_tribal_org_schema.py` (2 tests)
+
+| Test | Routes exercised | Direct domain calls | IDs |
+|---|---|---|---|
+| `test_org_tree_and_membership_are_generic_and_tenant_scoped` | — | — | — |
+| `test_org_membership_cannot_cross_organization_boundary` | — | — | — |
+
+87 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
+Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::row_id`, `conftest::settings`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_hardening::token_csrf`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`.
 
 ## 8. Error codes
 
@@ -1220,6 +1332,7 @@ Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db
 | `KILOOS_SALES_MAX_ROWS` | `5000` | `sales_max_rows` |
 | `KILOOS_SECRET` | `DEV_FALLBACK_KEY` | `secret` |
 | `KILOOS_SESSION_TTL` | `12 * 60 * 60` | `session_ttl_seconds` |
+| `KILOOS_TRIBAL_GAMIFICATION_ENABLED` | `'false'` | `tribal_gamification_enabled` |
 
 Read in `app/config.py::Settings.from_env`. Meaning of each variable:
 `docs/operations/runbook.md`.

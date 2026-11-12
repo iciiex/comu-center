@@ -5,7 +5,7 @@
 - Mode: P
 - Current phase: Prototype
 - Current milestone: MS-01 — Prototype Delivery (2026-11-18)
-- Main branch / working branch: `main` / `arena/a7dc5adb-comu-center`
+- Main branch / working branch: `main` / `arena/8a27acad-comu-center`
 - Prioritised backlog: `docs/delivery/backlog.md` (PROPOSED)
 - Project handover (dated snapshot, Persian): `docs/handoffs/handover.md`
 - Agent guide: `docs/agent-guide/README.md`
@@ -37,6 +37,15 @@
 - Documentation tooling: `make docs`, `make docs-check`, `make graph`, `make doctor`.
 
 ## In progress
+- Tribal Gamification: architecture, conceptual ERD, two-agent work split and proposed API contract are documented in
+  `docs/architecture/tribal-gamification-plan.md` and `docs/engineering/tribal-api-contract.md`. User clarified
+  UX metaphor, admin/Excel-managed data, RBAC reviewer (admin/scoped supervisor), global default visibility fields,
+  configurable league wizard, separate ledger, offline queue and Asia/Tehran server receipt dates. Design is still
+  awaiting domain-contract approval. Backend has only added a fail-closed `GET /api/v1/tribal/bootstrap` sentinel
+  behind `KILOOS_TRIBAL_GAMIFICATION_ENABLED` (default OFF): disabled returns `FEATURE_DISABLED`; enabled returns
+  `MODULE_NOT_CONFIGURED`. `GET /api/v1/tribal/org-units` and `/org-units/{id}` provide tenant-scoped read-only generic units when enabled;
+  no writes or scoring. Additive migration `0005_tribal_org_foundation.sql` adds configurable unit types, same-tenant hierarchy and
+  effective-dated memberships only; no RBAC, imports, reports or scoring logic.
 - Sales Quest Arena integration: public frontend reviewed; BFF prototype routes and migration `0004_game_progress.sql`
   are implemented. Contract/source snapshot: `docs/engineering/game-bff-alignment.md` + `app/game_catalog.json`.
   Agreed direction: server-authoritative game progress/rewards, with game XP/coins separate from organizational score events.
