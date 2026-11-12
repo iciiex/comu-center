@@ -34,11 +34,11 @@
 | 07-A | Sales Import (EP-07) | `engineering/sales-import.md` | پیاده‌سازی‌شده (XLSX، SAMPLE) |
 | 08 | UX/UI Specification | `product/ux-ui-spec.md` | جزئی |
 | 09 | Admin Panel Specification | `product/admin-panel-spec.md` | جزئی |
-| 10 | QA & Test Strategy | `quality/qa-test-strategy.md` | جزئی (۵۸ تست) |
+| 10 | QA & Test Strategy | `quality/qa-test-strategy.md` | جزئی (۷۱ تست) |
 | 11 | DevOps & Deployment | `architecture/deployment-architecture.md` | فقط prototype |
 | 12 | Execution Plan | `delivery/execution-plan.md` | جزئی |
 | 12-A | Backlog و نقشه ادامه توسعه | `delivery/backlog.md` | PROPOSED (۲۰ آبان ۱۴۰۵) |
-| 12-B | سناریوی دمو MS-01 | `delivery/demo-script.md` | PROPOSED (تمرین با مرورگر انجام نشده) |
+| 12-B | سناریوی دمو MS-01 | `delivery/demo-script.md` | PROPOSED (بازپخش خودکار ۲۱ آبان؛ تمرین با مرورگر انجام نشده) |
 | 13 | Open Decisions | `decisions/open-decisions.md` | seed شده (OD-01..12) |
 | — | Decision Log | `decisions/decision-log.md` | D-001 تا D-005 (همه PROPOSED) |
 | — | Runbook | `operations/runbook.md` | prototype |

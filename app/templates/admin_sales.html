@@ -32,7 +32,7 @@
               </td>
               <td class="tiny muted">
                 {{ item['row_count']|fa }} کل ·
-                {{ (item['valid_count'] - item['created_count'])|fa }} معتبر ·
+                {{ item['pending_valid_count']|fa }} معتبر ·
                 {{ item['invalid_count']|fa }} خراب ·
                 {{ item['duplicate_count']|fa }} تکراری
               </td>

@@ -17,7 +17,30 @@ exists, move them under a dated heading with its number
 
 ## [Unreleased]
 
-Nothing yet.
+Demo stability slice (A1, A2, A4 technical prep, four A6 UI fixes). Tests: 71. No migration, no new
+business decision; B6 policies unchanged.
+
+Fixed
+
+- A1: mission review status, audit and score award now commit in one transaction. A missing active
+  rule version rolls the submission back to `submitted` and renders a Persian 409 instead of HTTP 500.
+  Moving a mission start date or publishing a draft ensures an effective same-points rule version
+  without rewriting past events (`app/repo.py`, `app/scoring.py`).
+- A6: sales-import navigation is admin-only; submission/review badges show recorded event points after
+  a mission points change; the sales list counts pending `valid` rows instead of
+  `valid_count - created_count`; the processing banner typo is fixed.
+- A2: score correction is reachable from the admin review screen and the sales import detail page.
+  Sales events are org-scoped through the owner user, and the reversal redirect returns to the sales
+  import for `sales_record` events (`app/repo.py`, `app/main.py`, templates).
+- A4 technical prep: admin-only `GET /admin/sales/sample` downloads the same SAMPLE workbook as the CLI;
+  the upload page links to it. `tests/test_demo_stability.py` replays the documented demo path,
+  optional correction and new-rule-version award.
+
+Not done
+
+- A4 browser rehearsal on the final demo host; A3 Tehran time; A5 score history explain links;
+  A7/A10 dependency lock and CI secret scan.
+
 
 ## 2026-11-11 — Documentation, agent guide and knowledge graph — [PR #8](https://github.com/iciiex/comu-center/pull/8)
 

@@ -17,7 +17,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
@@ -27,6 +27,7 @@ from app import db, repo, sales
 from app.config import Settings
 from app.jalali import format_jalali, to_persian_digits
 from app.repo import DomainError
+from app.sample_sales import sample_workbook_bytes
 from app.security import (
     CurrentUser,
     clear_session,
@@ -565,6 +566,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if submission["organization_id"] != user.organization_id:
             raise HTTPException(status_code=403, detail="خارج از محدوده سازمانی شما.")
         event = repo.score_event_for_source(conn, submission_id)
+        reversal = repo.reversal_for(conn, event["id"]) if event else None
         return page(
             request,
             "admin_review.html",
@@ -573,6 +575,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "submission": submission,
                 "evidences": repo.submission_evidences(conn, submission_id),
                 "event": event,
+                "reversal": reversal,
+                "can_correct": bool(
+                    user.is_admin and event and not event["corrects_event_id"] and not reversal
+                ),
             },
             user=user,
         )
@@ -642,6 +648,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 status_code=409,
                 user=user,
             )
+        if event["source_type"] == "sales_record" and event["sales_import_id"]:
+            return go(f"/admin/sales/{event['sales_import_id']}?reversed=1", request)
         return go(f"/submissions/{event['source_id']}?reversed=1", request)
 
     # ------------------------------------------------------------------ sales
@@ -683,6 +691,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "admin_sales_new.html",
             {"active": "sales", **sales_page_context(conn, user.organization_id)},
             user=user,
+        )
+
+    @app.get("/admin/sales/sample")
+    def admin_sales_sample(
+        user: CurrentUser = Depends(require_admin),
+    ) -> Response:
+        """Download the same SAMPLE workbook the CLI generates (A4)."""
+        return Response(
+            content=sample_workbook_bytes(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="sales-sample.xlsx"'},
         )
 
     @app.post(
@@ -776,6 +795,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "import": import_row,
                 "counts": counts,
                 "records": repo.sales_records(conn, import_id, limit=200),
+                "score_events": repo.sales_score_events(conn, import_id),
                 "scored_points": scored_points,
                 "rows_ok": accounted == import_row["row_count"],
                 "points_ok": int(scored_points) == int(import_row["points_sum"]),

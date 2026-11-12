@@ -5,10 +5,12 @@
 
 ## Implemented
 - Login (demo picker) → Home (wallet, rank, missions, recent activity)
-- Missions list → Mission detail → Submit with photo → Submission status (timeline + why-this-score)
+- Missions list → Mission detail → Submit with photo → Submission status (timeline + why-this-score);
+  the badge shows recorded event points once scored, not the mission's current points
 - My points (balance + history) → Leaderboard (period, rank, tie-break note)
 - Admin: review queue (tabs) → Review screen → approve/reject with reason
 - Admin: missions list → create/edit form → publish/archive
+- Admin: sales import list → upload form with SAMPLE workbook download → row report/process
 
 ## UX rules applied
 - Mobile-first, RTL, Persian digits, Jalali dates for display.

@@ -7,10 +7,12 @@
 - Review queue by status with evidence count; review screen with private evidence, approve/reject.
 - Mission list with status; create draft; edit; publish; archive.
 - Changing points publishes a new rule version (old version retired).
-- Sales import (admin): XLSX upload, row report, explicit processing, reconciliation
-  (`docs/engineering/sales-import.md`).
-- Score correction (admin): the form is on the submission page `/submissions/{id}` only; no
-  admin screen links to it yet, and it fails for sales events (backlog A2).
+- Sales import (admin): XLSX upload, sample-workbook download, row report, explicit processing,
+  reconciliation (`docs/engineering/sales-import.md`). The «ورود فروش» navigation link is admin-only.
+- Score correction (admin): available on the visitor submission page, the admin review screen
+  `/admin/submissions/{id}`, and the sales import detail `/admin/sales/{id}`. Sales events are corrected
+  with the same negative-event flow and return to the import page.
+- Review/submission badges show the **recorded** event points after a mission points change.
 - Every admin action writes to `audit_logs`.
 
 ## Not implemented

@@ -16,6 +16,7 @@ from app.scoring import (
     ScoringError,
     award_mission_approval,
     award_sales_record,
+    find_rule_version,
     reverse_event,
 )
 
@@ -151,6 +152,11 @@ def create_submission(
             )
             audit(conn, user.id, "submission.created", "submission", submission_id,
                   {"mission_id": mission["id"]})
+            if not mission["requires_review"]:
+                submission = conn.execute(
+                    "SELECT * FROM submissions WHERE id = ?", (submission_id,)
+                ).fetchone()
+                award_mission_approval(conn, submission, actor_id=None)
     except sqlite3.IntegrityError:
         duplicate = conn.execute(
             "SELECT * FROM submissions WHERE user_id = ? AND request_id = ?",
@@ -163,8 +169,6 @@ def create_submission(
     submission = conn.execute(
         "SELECT * FROM submissions WHERE id = ?", (submission_id,)
     ).fetchone()
-    if not mission["requires_review"]:
-        award_mission_approval(conn, submission, actor_id=None)
     return submission, True
 
 
@@ -260,25 +264,36 @@ def review_submission(
         raise DomainError("REASON_REQUIRED", "برای رد، ثبت دلیل الزامی است.")
 
     new_status = "approved" if decision == "approve" else "rejected"
-    with conn:
-        cursor = conn.execute(
-            """UPDATE submissions
-               SET status = ?, reviewed_at = ?, reviewed_by = ?, rejection_reason = ?
-               WHERE id = ? AND status = 'submitted'""",
-            (new_status, now_iso(), actor.id, reason.strip() or None, submission["id"]),
-        )
-        if cursor.rowcount != 1:
-            # Another reviewer won the race; rolling back keeps state consistent.
-            raise DomainError("ALREADY_REVIEWED", "این درخواست قبلاً بررسی شده است.")
-        audit(conn, actor.id, f"submission.{new_status}", "submission", submission["id"],
-              {"reason": reason.strip()[:300]})
-
-    updated = conn.execute(
-        "SELECT * FROM submissions WHERE id = ?", (submission["id"],)
-    ).fetchone()
     created = False
-    if new_status == "approved":
-        _, created = award_mission_approval(conn, updated, actor_id=actor.id)
+    try:
+        with conn:
+            cursor = conn.execute(
+                """UPDATE submissions
+                   SET status = ?, reviewed_at = ?, reviewed_by = ?, rejection_reason = ?
+                   WHERE id = ? AND status = 'submitted'""",
+                (new_status, now_iso(), actor.id, reason.strip() or None, submission["id"]),
+            )
+            if cursor.rowcount != 1:
+                # Another reviewer won the race; rolling back keeps state consistent.
+                raise DomainError("ALREADY_REVIEWED", "این درخواست قبلاً بررسی شده است.")
+            audit(conn, actor.id, f"submission.{new_status}", "submission", submission["id"],
+                  {"reason": reason.strip()[:300]})
+            updated = conn.execute(
+                "SELECT * FROM submissions WHERE id = ?", (submission["id"],)
+            ).fetchone()
+            if new_status == "approved":
+                _, created = award_mission_approval(conn, updated, actor_id=actor.id)
+    except ScoringError as exc:
+        code = str(exc)
+        messages = {
+            "NO_ACTIVE_RULE_VERSION": (
+                "قانون امتیاز فعالی برای این مأموریت وجود ندارد؛ تأیید انجام نشد."
+            ),
+            "MISSION_NOT_FOUND": "مأموریت این درخواست یافت نشد؛ تأیید انجام نشد.",
+        }
+        raise DomainError(
+            code, messages.get(code, "ثبت امتیاز انجام نشد؛ تأیید انجام نشد.")
+        ) from exc
     return updated, created
 
 
@@ -294,15 +309,22 @@ def score_event_for_source(conn: sqlite3.Connection, submission_id: str) -> sqli
 
 
 def score_event_detail(conn: sqlite3.Connection, event_id: str) -> sqlite3.Row | None:
-    """Score event plus the org/submission context needed for authorization."""
+    """Score event plus the org/source context needed for authorization.
+
+    Mission events stay scoped by the mission organization; sales events use the
+    owner's organization because they have no submission/mission join (A2).
+    """
     return conn.execute(
         """SELECT se.*, s.id AS submission_id, s.status AS submission_status,
-                  s.user_id AS owner_id, m.organization_id, m.title AS mission_title,
-                  u.full_name AS user_name
+                  u.id AS owner_id,
+                  COALESCE(m.organization_id, u.organization_id) AS organization_id,
+                  m.title AS mission_title, u.full_name AS user_name,
+                  sr.import_id AS sales_import_id
            FROM score_events se
-           LEFT JOIN submissions s ON s.id = se.source_id
+           LEFT JOIN submissions s ON s.id = se.source_id AND se.source_type = 'mission_submission'
            LEFT JOIN missions m ON m.id = s.mission_id
            LEFT JOIN users u ON u.id = se.user_id
+           LEFT JOIN sales_records sr ON sr.id = se.source_id AND se.source_type = 'sales_record'
            WHERE se.id = ?""",
         (event_id,),
     ).fetchone()
@@ -487,6 +509,31 @@ def create_mission(conn: sqlite3.Connection, org_id: str, form: dict[str, Any], 
     return mission_id
 
 
+def _ensure_rule_version(
+    conn: sqlite3.Connection, rule_code: str, points: int, effective_from: str
+) -> bool:
+    """Publish a same-points version when no published rule is effective at a date.
+
+    Used after a mission window moves or a draft is published (A1). It never
+    edits an existing version or a past score event; the new version wins from
+    ``effective_from`` onward because rule selection orders by version DESC.
+    """
+    if find_rule_version(conn, rule_code, at=effective_from) is not None:
+        return False
+    row = conn.execute(
+        "SELECT COALESCE(MAX(version), 0) AS v FROM scoring_rule_versions WHERE rule_code = ?",
+        (rule_code,),
+    ).fetchone()
+    conn.execute(
+        """INSERT INTO scoring_rule_versions
+           (id, rule_code, version, calculation_type, points, effective_from,
+            effective_to, status, is_sample)
+           VALUES (?, ?, ?, 'fixed', ?, ?, NULL, 'published', 1)""",
+        (_new_id(), rule_code, int(row["v"]) + 1, points, effective_from),
+    )
+    return True
+
+
 def update_mission(
     conn: sqlite3.Connection, mission: sqlite3.Row, form: dict[str, Any], actor
 ) -> bool:
@@ -518,6 +565,13 @@ def update_mission(
                 (_new_id(), mission["rule_code"], int(row["v"]) + 1, data["points"], moment),
             )
             new_version = True
+        elif data["starts_at"] != mission["starts_at"]:
+            # A window move must not leave an active mission without an effective
+            # rule. Keep the existing approval-time selection policy (B6-2 open).
+            target = max(data["starts_at"], now_iso())
+            new_version = _ensure_rule_version(
+                conn, mission["rule_code"], data["points"], target
+            )
 
         conn.execute(
             """UPDATE missions
@@ -537,7 +591,10 @@ def publish_mission(conn: sqlite3.Connection, mission: sqlite3.Row, actor) -> No
         raise DomainError("NOT_DRAFT", "فقط مأموریت پیش‌نویس قابل انتشار است.")
     with conn:
         conn.execute("UPDATE missions SET status = 'active' WHERE id = ?", (mission["id"],))
-        audit(conn, actor.id, "mission.published", "mission", mission["id"])
+        target = max(mission["starts_at"], now_iso())
+        ensured = _ensure_rule_version(conn, mission["rule_code"], mission["points"], target)
+        audit(conn, actor.id, "mission.published", "mission", mission["id"],
+              {"ensured_rule_version": ensured})
 
 
 def archive_mission(conn: sqlite3.Connection, mission: sqlite3.Row, actor) -> None:
@@ -656,7 +713,9 @@ def create_sales_import(
 
 def list_sales_imports(conn: sqlite3.Connection, org_id: str) -> list[sqlite3.Row]:
     return conn.execute(
-        """SELECT i.*, u.full_name AS uploaded_by_name
+        """SELECT i.*, u.full_name AS uploaded_by_name,
+                  (SELECT COUNT(*) FROM sales_records r
+                    WHERE r.import_id = i.id AND r.status = 'valid') AS pending_valid_count
            FROM sales_imports i
            JOIN users u ON u.id = i.uploaded_by
            WHERE i.organization_id = ?
@@ -684,6 +743,22 @@ def sales_records(
         """SELECT * FROM sales_records WHERE import_id = ?
            ORDER BY row_number LIMIT ?""",
         (import_id, limit),
+    ).fetchall()
+
+
+def sales_score_events(conn: sqlite3.Connection, import_id: str) -> list[sqlite3.Row]:
+    """Award events for an import, with row context and any correction (A2)."""
+    return conn.execute(
+        """SELECT se.*, r.row_number, r.external_id,
+                  rev.id AS reversal_id, rev.reason AS reversal_reason,
+                  rev.points AS reversal_points
+           FROM score_events se
+           JOIN sales_records r ON r.id = se.source_id
+           LEFT JOIN score_events rev ON rev.corrects_event_id = se.id
+           WHERE r.import_id = ? AND se.source_type = 'sales_record'
+             AND se.corrects_event_id IS NULL
+           ORDER BY r.row_number""",
+        (import_id,),
     ).fetchall()
 
 

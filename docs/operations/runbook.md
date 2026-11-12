@@ -47,6 +47,7 @@ the 90-day default is a sample value until the employer approves a policy.
 ```bash
 python -m app.sample_sales        # var/sales-sample.xlsx (SAMPLE: 4 valid, 1 duplicate, 1 unmapped)
 ```
+Or use the admin-only download link on `/admin/sales/new` (`GET /admin/sales/sample`).
 Upload at `/admin/sales/new`, check the row report, then press «پردازش».
 
 | Symptom | Cause | Action |
