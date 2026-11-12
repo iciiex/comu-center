@@ -32,6 +32,7 @@
 | 06-A | Scoring Rule Matrix | `engineering/scoring-rule-matrix.md` | نمونه (SAMPLE) |
 | 07 | API Specification | `engineering/api-spec.md` | پیاده‌سازی‌شده (زیرمجموعه) |
 | 07-A | Sales Import (EP-07) | `engineering/sales-import.md` | پیاده‌سازی‌شده (XLSX، SAMPLE) |
+| 07-B | Sales Quest Arena BFF alignment | `engineering/game-bff-alignment.md` | BFF prototype پیاده‌سازی شد؛ اتصال فرانت‌اند باز |
 | 08 | UX/UI Specification | `product/ux-ui-spec.md` | جزئی |
 | 09 | Admin Panel Specification | `product/admin-panel-spec.md` | جزئی |
 | 10 | QA & Test Strategy | `quality/qa-test-strategy.md` | جزئی (۷۱ تست) |

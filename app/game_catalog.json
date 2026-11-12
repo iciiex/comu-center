@@ -1,0 +1,891 @@
+{
+  "api_version": "1",
+  "content_version": "sales-quest-arena-7de8a5a0a0da",
+  "source": {
+    "repository": "mrkavousi/sales-quest-arena",
+    "branch": "main",
+    "commit": "7de8a5a0a0dac02fda1461a8d23c0e2c13f55a60"
+  },
+  "game_config": {
+    "rewards": {
+      "missionXp": 100,
+      "missionCoins": 20,
+      "dailyBonusXp": 50,
+      "orderBonusXp": 30
+    },
+    "levels": [
+      {
+        "level": 1,
+        "title": "Rookie",
+        "minXp": 0,
+        "color": "#8b93b8"
+      },
+      {
+        "level": 2,
+        "title": "Explorer",
+        "minXp": 150,
+        "color": "#2ea8ff"
+      },
+      {
+        "level": 3,
+        "title": "Challenger",
+        "minXp": 400,
+        "color": "#2fbf71"
+      },
+      {
+        "level": 4,
+        "title": "Performer",
+        "minXp": 800,
+        "color": "#ff8a3d"
+      },
+      {
+        "level": 5,
+        "title": "Champion",
+        "minXp": 1400,
+        "color": "#ffb020"
+      }
+    ],
+    "history": {
+      "maxEntries": 200
+    }
+  },
+  "categories": {
+    "customer_visit": {
+      "label": "Customer Visit",
+      "color": "#2ea8ff",
+      "dark": "#1581d6",
+      "soft": "#e1f3ff"
+    },
+    "product_intro": {
+      "label": "Product Introduction",
+      "color": "#9366ff",
+      "dark": "#6f41e0",
+      "soft": "#efe7ff"
+    },
+    "follow_up": {
+      "label": "Customer Follow-up",
+      "color": "#19c9b2",
+      "dark": "#0e9f8c",
+      "soft": "#dcf8f3"
+    },
+    "new_customer": {
+      "label": "New Customer Acquisition",
+      "color": "#ff6b8e",
+      "dark": "#dd446b",
+      "soft": "#ffe5ec"
+    },
+    "market_research": {
+      "label": "Market Research",
+      "color": "#ff8f3d",
+      "dark": "#de6a17",
+      "soft": "#ffeddd"
+    },
+    "sales_achievement": {
+      "label": "Sales Achievement",
+      "color": "#ffb81f",
+      "dark": "#e09200",
+      "soft": "#fff3d1"
+    }
+  },
+  "difficulty": {
+    "easy": {
+      "label": "Easy",
+      "dots": 1
+    },
+    "medium": {
+      "label": "Medium",
+      "dots": 2
+    },
+    "hard": {
+      "label": "Hard",
+      "dots": 3
+    }
+  },
+  "missions": [
+    {
+      "id": "customer-visit-challenge",
+      "order": 1,
+      "title": "Customer Visit Challenge",
+      "shortTitle": "Customer Visit",
+      "description": "Visit a customer and record the result.",
+      "category": "customer_visit",
+      "difficulty": "easy",
+      "estimatedMinutes": 1,
+      "xpReward": 100,
+      "coinReward": 20,
+      "unlock": {},
+      "completion": {
+        "requiredSteps": [
+          "customer_type",
+          "outcome",
+          "rating"
+        ]
+      },
+      "steps": [
+        {
+          "id": "customer_type",
+          "type": "choice",
+          "label": "Customer",
+          "question": "Who did you visit?",
+          "helper": "Pick the one that fits best.",
+          "options": [
+            {
+              "id": "existing",
+              "label": "Existing Customer",
+              "emoji": "🤝",
+              "hint": "Someone you already work with"
+            },
+            {
+              "id": "new",
+              "label": "New Customer",
+              "emoji": "✨",
+              "hint": "Just started buying from you"
+            },
+            {
+              "id": "potential",
+              "label": "Potential Customer",
+              "emoji": "🎯",
+              "hint": "Not a customer… yet"
+            }
+          ]
+        },
+        {
+          "id": "outcome",
+          "type": "choice",
+          "label": "Outcome",
+          "question": "What happened during the visit?",
+          "helper": "Choose the main result.",
+          "options": [
+            {
+              "id": "successful_meeting",
+              "label": "Successful Meeting",
+              "emoji": "😊",
+              "hint": "A good conversation"
+            },
+            {
+              "id": "product_presentation",
+              "label": "Product Presentation",
+              "emoji": "📦",
+              "hint": "You showed what you offer"
+            },
+            {
+              "id": "order_received",
+              "label": "Order Received",
+              "emoji": "🛒",
+              "hint": "Bonus XP!",
+              "flags": [
+                "order_received"
+              ]
+            },
+            {
+              "id": "follow_up_required",
+              "label": "Follow-up Required",
+              "emoji": "📅",
+              "hint": "More steps needed"
+            },
+            {
+              "id": "customer_unavailable",
+              "label": "Customer Unavailable",
+              "emoji": "🚪",
+              "hint": "Nobody to talk to"
+            }
+          ]
+        },
+        {
+          "id": "rating",
+          "type": "rating",
+          "label": "Rating",
+          "question": "How did the visit go?",
+          "helper": "Tap a star.",
+          "scale": [
+            "Rough one",
+            "Could be better",
+            "It was okay",
+            "Went well",
+            "Nailed it!"
+          ]
+        },
+        {
+          "id": "note",
+          "type": "note",
+          "label": "Note",
+          "question": "Add a short visit note",
+          "helper": "One line is plenty.",
+          "placeholder": "e.g. Wants a quote for 20 units by Friday",
+          "maxLength": 240,
+          "suggestions": [
+            "Asked for a price list",
+            "Call back next week",
+            "Met the decision maker"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "product-spotlight",
+      "order": 2,
+      "title": "Product Spotlight",
+      "shortTitle": "Product Spotlight",
+      "description": "Introduce a product to a customer and capture their reaction.",
+      "category": "product_intro",
+      "difficulty": "easy",
+      "estimatedMinutes": 1,
+      "xpReward": 100,
+      "coinReward": 20,
+      "unlock": {
+        "afterMission": "customer-visit-challenge"
+      },
+      "completion": {
+        "requiredSteps": [
+          "showcase",
+          "reaction",
+          "rating"
+        ]
+      },
+      "steps": [
+        {
+          "id": "showcase",
+          "type": "choice",
+          "label": "Showcased",
+          "question": "What did you put in the spotlight?",
+          "options": [
+            {
+              "id": "new_product",
+              "label": "New Product",
+              "emoji": "🆕",
+              "hint": "Fresh in the catalog"
+            },
+            {
+              "id": "best_seller",
+              "label": "Best Seller",
+              "emoji": "🏅",
+              "hint": "A proven favorite"
+            },
+            {
+              "id": "special_offer",
+              "label": "Special Offer",
+              "emoji": "🏷️",
+              "hint": "Discount or promotion"
+            },
+            {
+              "id": "bundle",
+              "label": "Product Bundle",
+              "emoji": "🎁",
+              "hint": "Several items together"
+            }
+          ]
+        },
+        {
+          "id": "reaction",
+          "type": "choice",
+          "label": "Reaction",
+          "question": "How did the customer react?",
+          "options": [
+            {
+              "id": "ordered",
+              "label": "Ordered on the Spot",
+              "emoji": "🛒",
+              "hint": "Bonus XP!",
+              "flags": [
+                "order_received"
+              ]
+            },
+            {
+              "id": "loved_it",
+              "label": "Loved It",
+              "emoji": "😍",
+              "hint": "Clearly interested"
+            },
+            {
+              "id": "curious",
+              "label": "Curious",
+              "emoji": "🤔",
+              "hint": "Asked questions"
+            },
+            {
+              "id": "needs_time",
+              "label": "Needs Time",
+              "emoji": "⏳",
+              "hint": "Will think about it"
+            },
+            {
+              "id": "not_interested",
+              "label": "Not Interested",
+              "emoji": "🙅",
+              "hint": "Not a fit right now"
+            }
+          ]
+        },
+        {
+          "id": "rating",
+          "type": "rating",
+          "label": "Rating",
+          "question": "How strong was your pitch?",
+          "scale": [
+            "Stumbled",
+            "A bit shaky",
+            "Solid",
+            "Convincing",
+            "Showstopper!"
+          ]
+        },
+        {
+          "id": "note",
+          "type": "note",
+          "label": "Note",
+          "question": "Add a short note",
+          "helper": "One line is plenty.",
+          "placeholder": "e.g. Liked the new size, asked about delivery time",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "id": "follow-up-sprint",
+      "order": 3,
+      "title": "Follow-up Sprint",
+      "shortTitle": "Follow-up Sprint",
+      "description": "Reconnect with a customer you spoke to before and log what moved.",
+      "category": "follow_up",
+      "difficulty": "easy",
+      "estimatedMinutes": 1,
+      "xpReward": 100,
+      "coinReward": 20,
+      "unlock": {
+        "afterMission": "product-spotlight"
+      },
+      "completion": {
+        "requiredSteps": [
+          "channel",
+          "result",
+          "rating"
+        ]
+      },
+      "steps": [
+        {
+          "id": "channel",
+          "type": "choice",
+          "label": "Channel",
+          "question": "How did you follow up?",
+          "options": [
+            {
+              "id": "call",
+              "label": "Phone Call",
+              "emoji": "📞"
+            },
+            {
+              "id": "message",
+              "label": "Message",
+              "emoji": "💬"
+            },
+            {
+              "id": "email",
+              "label": "Email",
+              "emoji": "✉️"
+            },
+            {
+              "id": "in_person",
+              "label": "In Person",
+              "emoji": "🚶"
+            }
+          ]
+        },
+        {
+          "id": "result",
+          "type": "choice",
+          "label": "Result",
+          "question": "What came out of it?",
+          "options": [
+            {
+              "id": "order",
+              "label": "Order Received",
+              "emoji": "🛒",
+              "hint": "Bonus XP!",
+              "flags": [
+                "order_received"
+              ]
+            },
+            {
+              "id": "meeting_booked",
+              "label": "Meeting Booked",
+              "emoji": "📅",
+              "hint": "Next step is set"
+            },
+            {
+              "id": "still_deciding",
+              "label": "Still Deciding",
+              "emoji": "🤔",
+              "hint": "Keep it warm"
+            },
+            {
+              "id": "no_answer",
+              "label": "No Answer",
+              "emoji": "📵",
+              "hint": "Try again later"
+            },
+            {
+              "id": "not_interested",
+              "label": "Not Interested",
+              "emoji": "🙅",
+              "hint": "Closed for now"
+            }
+          ]
+        },
+        {
+          "id": "rating",
+          "type": "rating",
+          "label": "Lead warmth",
+          "question": "How warm is this lead now?",
+          "scale": [
+            "Ice cold",
+            "Cool",
+            "Lukewarm",
+            "Warm",
+            "On fire!"
+          ]
+        },
+        {
+          "id": "note",
+          "type": "note",
+          "label": "Note",
+          "question": "Add a short note",
+          "helper": "One line is plenty.",
+          "placeholder": "e.g. Decision next Tuesday, send updated offer",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "id": "new-customer-hunt",
+      "order": 4,
+      "title": "New Customer Hunt",
+      "shortTitle": "New Customer Hunt",
+      "description": "Find a brand-new prospect and log how far you got.",
+      "category": "new_customer",
+      "difficulty": "medium",
+      "estimatedMinutes": 2,
+      "xpReward": 100,
+      "coinReward": 20,
+      "unlock": {
+        "afterMission": "follow-up-sprint",
+        "minLevel": 2
+      },
+      "completion": {
+        "requiredSteps": [
+          "source",
+          "stage",
+          "rating"
+        ]
+      },
+      "steps": [
+        {
+          "id": "source",
+          "type": "choice",
+          "label": "Source",
+          "question": "How did you find them?",
+          "options": [
+            {
+              "id": "referral",
+              "label": "Referral",
+              "emoji": "🗣️",
+              "hint": "Someone recommended you"
+            },
+            {
+              "id": "walk_in",
+              "label": "Cold Visit",
+              "emoji": "🚶",
+              "hint": "You knocked on the door"
+            },
+            {
+              "id": "event",
+              "label": "Event",
+              "emoji": "🎪",
+              "hint": "Fair, meetup or exhibition"
+            },
+            {
+              "id": "online",
+              "label": "Online",
+              "emoji": "🌐",
+              "hint": "Web or social media"
+            }
+          ]
+        },
+        {
+          "id": "stage",
+          "type": "choice",
+          "label": "Stage",
+          "question": "How far did you get?",
+          "options": [
+            {
+              "id": "first_contact",
+              "label": "First Contact",
+              "emoji": "👋",
+              "hint": "Introduced yourself"
+            },
+            {
+              "id": "meeting_booked",
+              "label": "Meeting Booked",
+              "emoji": "📅",
+              "hint": "They want to hear more"
+            },
+            {
+              "id": "offer_sent",
+              "label": "Offer Sent",
+              "emoji": "📨",
+              "hint": "Numbers are on the table"
+            },
+            {
+              "id": "first_order",
+              "label": "First Order",
+              "emoji": "🛒",
+              "hint": "Bonus XP!",
+              "flags": [
+                "order_received"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rating",
+          "type": "rating",
+          "label": "Potential",
+          "question": "How promising is this customer?",
+          "scale": [
+            "Long shot",
+            "Maybe",
+            "Decent",
+            "Promising",
+            "Golden!"
+          ]
+        },
+        {
+          "id": "note",
+          "type": "note",
+          "label": "Note",
+          "question": "Add a short note",
+          "helper": "One line is plenty.",
+          "placeholder": "e.g. Owner is Sara, buys monthly, prefers WhatsApp",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "id": "market-scout",
+      "order": 5,
+      "title": "Market Scout",
+      "shortTitle": "Market Scout",
+      "description": "Scout your territory and report one useful market insight.",
+      "category": "market_research",
+      "difficulty": "medium",
+      "estimatedMinutes": 2,
+      "xpReward": 100,
+      "coinReward": 20,
+      "unlock": {
+        "afterMission": "new-customer-hunt"
+      },
+      "completion": {
+        "requiredSteps": [
+          "topic",
+          "finding",
+          "rating"
+        ]
+      },
+      "steps": [
+        {
+          "id": "topic",
+          "type": "choice",
+          "label": "Topic",
+          "question": "What did you scout?",
+          "options": [
+            {
+              "id": "competitor_prices",
+              "label": "Competitor Prices",
+              "emoji": "💲"
+            },
+            {
+              "id": "shelf_display",
+              "label": "Shelf & Display",
+              "emoji": "🗄️"
+            },
+            {
+              "id": "customer_needs",
+              "label": "Customer Needs",
+              "emoji": "💡"
+            },
+            {
+              "id": "new_trends",
+              "label": "New Trends",
+              "emoji": "📈"
+            }
+          ]
+        },
+        {
+          "id": "finding",
+          "type": "choice",
+          "label": "Finding",
+          "question": "What did you find?",
+          "options": [
+            {
+              "id": "opportunity",
+              "label": "An Opportunity",
+              "emoji": "🚀",
+              "hint": "Room to grow"
+            },
+            {
+              "id": "threat",
+              "label": "A Threat",
+              "emoji": "⚠️",
+              "hint": "Competition is moving"
+            },
+            {
+              "id": "needs_deeper_look",
+              "label": "Needs a Deeper Look",
+              "emoji": "🔬",
+              "hint": "Worth another visit"
+            },
+            {
+              "id": "nothing_new",
+              "label": "Nothing New",
+              "emoji": "😌",
+              "hint": "All quiet out there"
+            }
+          ]
+        },
+        {
+          "id": "rating",
+          "type": "rating",
+          "label": "Insight value",
+          "question": "How valuable is this insight?",
+          "scale": [
+            "Trivia",
+            "Minor",
+            "Useful",
+            "Valuable",
+            "Game changer!"
+          ]
+        },
+        {
+          "id": "note",
+          "type": "note",
+          "label": "Note",
+          "question": "Describe what you saw",
+          "helper": "One line is plenty.",
+          "placeholder": "e.g. Competitor dropped prices 10% on two items",
+          "maxLength": 240
+        }
+      ]
+    },
+    {
+      "id": "sales-summit",
+      "order": 6,
+      "title": "Sales Summit",
+      "shortTitle": "Sales Summit",
+      "description": "Celebrate a real sales win and claim your place at the summit.",
+      "category": "sales_achievement",
+      "difficulty": "hard",
+      "estimatedMinutes": 2,
+      "xpReward": 100,
+      "coinReward": 20,
+      "unlock": {
+        "afterMission": "market-scout",
+        "minLevel": 3
+      },
+      "completion": {
+        "requiredSteps": [
+          "win",
+          "size",
+          "rating"
+        ]
+      },
+      "steps": [
+        {
+          "id": "win",
+          "type": "choice",
+          "label": "Win",
+          "question": "What did you achieve?",
+          "options": [
+            {
+              "id": "closed_deal",
+              "label": "Closed a Deal",
+              "emoji": "🛒",
+              "hint": "Bonus XP!",
+              "flags": [
+                "order_received"
+              ]
+            },
+            {
+              "id": "hit_target",
+              "label": "Hit My Target",
+              "emoji": "🎯",
+              "hint": "Daily or weekly goal"
+            },
+            {
+              "id": "upsell",
+              "label": "Upsell",
+              "emoji": "⬆️",
+              "hint": "Customer bought more"
+            },
+            {
+              "id": "renewal",
+              "label": "Renewal",
+              "emoji": "🔁",
+              "hint": "Customer stayed with you"
+            }
+          ]
+        },
+        {
+          "id": "size",
+          "type": "choice",
+          "label": "Size",
+          "question": "How big was the win?",
+          "options": [
+            {
+              "id": "small",
+              "label": "Small but Sweet",
+              "emoji": "🍬"
+            },
+            {
+              "id": "medium",
+              "label": "Solid",
+              "emoji": "💪"
+            },
+            {
+              "id": "big",
+              "label": "Big",
+              "emoji": "🏆"
+            },
+            {
+              "id": "record",
+              "label": "Record Breaking",
+              "emoji": "🚀"
+            }
+          ]
+        },
+        {
+          "id": "rating",
+          "type": "rating",
+          "label": "Pride",
+          "question": "How proud are you?",
+          "scale": [
+            "Just a day",
+            "A little",
+            "Pleased",
+            "Proud",
+            "Legendary!"
+          ]
+        },
+        {
+          "id": "note",
+          "type": "note",
+          "label": "Note",
+          "question": "What made it work?",
+          "helper": "One line is plenty.",
+          "placeholder": "e.g. Bundled delivery with the order",
+          "maxLength": 240
+        }
+      ]
+    }
+  ],
+  "achievements": [
+    {
+      "id": "first_steps",
+      "title": "First Steps",
+      "description": "Complete your first mission.",
+      "emoji": "👟",
+      "colors": [
+        "#7ad7ff",
+        "#2ea8ff"
+      ]
+    },
+    {
+      "id": "deal_maker",
+      "title": "Deal Maker",
+      "description": "Log a mission where you received an order.",
+      "emoji": "🛒",
+      "colors": [
+        "#7ee6a8",
+        "#2fbf71"
+      ]
+    },
+    {
+      "id": "five_star",
+      "title": "Five-Star Rep",
+      "description": "Rate a mission a full 5 stars.",
+      "emoji": "⭐",
+      "colors": [
+        "#ffe07a",
+        "#ffb81f"
+      ]
+    },
+    {
+      "id": "daily_hero",
+      "title": "Daily Hero",
+      "description": "Complete a daily challenge.",
+      "emoji": "☀️",
+      "colors": [
+        "#ffc98a",
+        "#ff8f3d"
+      ]
+    },
+    {
+      "id": "storyteller",
+      "title": "Storyteller",
+      "description": "Add a note to 3 missions.",
+      "emoji": "📝",
+      "colors": [
+        "#c9b3ff",
+        "#9366ff"
+      ]
+    },
+    {
+      "id": "high_five",
+      "title": "High Five",
+      "description": "Complete 5 missions.",
+      "emoji": "🖐️",
+      "colors": [
+        "#ffb3c4",
+        "#ff6b8e"
+      ]
+    },
+    {
+      "id": "on_fire",
+      "title": "On Fire",
+      "description": "Reach a 3-day streak.",
+      "emoji": "🔥",
+      "colors": [
+        "#ffb08a",
+        "#ff6a3d"
+      ]
+    },
+    {
+      "id": "explorer",
+      "title": "Rising Explorer",
+      "description": "Reach Level 2.",
+      "emoji": "🧭",
+      "colors": [
+        "#8fe3d6",
+        "#19c9b2"
+      ]
+    },
+    {
+      "id": "trailblazer",
+      "title": "Trailblazer",
+      "description": "Complete every mission on the map.",
+      "emoji": "🗺️",
+      "colors": [
+        "#a9b8ff",
+        "#5b3df5"
+      ]
+    },
+    {
+      "id": "champion",
+      "title": "Champion",
+      "description": "Reach Level 5.",
+      "emoji": "👑",
+      "colors": [
+        "#ffe07a",
+        "#f59e0b"
+      ]
+    }
+  ]
+}
