@@ -1831,6 +1831,7 @@ test asks for an unknown page on purpose; anything else is a broken link.
 - tests/test_realimport.py::test_calculation_is_traceable_and_labelled_proposed: GET {}/rules matches no route
 - tests/test_realimport.py::test_calculation_is_traceable_and_labelled_proposed: GET {}/runs/{} matches no route
 - tests/test_realimport.py::test_calculation_is_traceable_and_labelled_proposed: POST /batches/{}/runs matches no route
+- tests/test_realimport.py::test_changed_rule_params_create_a_distinct_run: GET {}/batches/{}/runs matches no route
 - tests/test_realimport.py::test_changed_rule_params_create_a_distinct_run: GET {}/rules matches no route
 - tests/test_realimport.py::test_changed_rule_params_create_a_distinct_run: POST /batches/{}/runs matches no route
 - tests/test_realimport.py::test_changed_rule_params_create_a_distinct_run: POST /rules matches no route

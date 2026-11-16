@@ -372,6 +372,9 @@ def test_changed_rule_params_create_a_distinct_run(ri, synthetic) -> None:
     run1 = post(client, headers, f"/batches/{batch_id}/runs", {"rule_set_id": seed["id"]}).json()["run"]
     run2 = post(client, headers, f"/batches/{batch_id}/runs", {"rule_set_id": v2["id"]}).json()["run"]
     assert run1["id"] != run2["id"] and run1["rule"]["version"] == 1 and run2["rule"]["version"] == 2
+    # history is newest-first even when both runs were created within the same second (stable tiebreaker)
+    listed = client.get(f"{BASE}/batches/{batch_id}/runs", headers=headers).json()["runs"]
+    assert [r["id"] for r in listed][:2] == [run2["id"], run1["id"]]
 
 
 # ----------------------------------------------------------------------------- reconciliation

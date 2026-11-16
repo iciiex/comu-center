@@ -95,7 +95,7 @@ def register(app, *, settings, conn_dep, require_admin, csrf_guard) -> None:
 
     @app.get(f"{base}/workbooks")
     def workbooks(user=Depends(require_admin), conn: sqlite3.Connection = Depends(conn_dep)):
-        rows = conn.execute("SELECT * FROM ri_workbooks ORDER BY created_at DESC").fetchall()
+        rows = conn.execute("SELECT * FROM ri_workbooks ORDER BY created_at DESC, rowid DESC").fetchall()
         return out(conn, {"workbooks": [_workbook(r) for r in rows]})
 
     @app.post(f"{base}/batches", dependencies=[Depends(csrf_guard)])
@@ -111,7 +111,7 @@ def register(app, *, settings, conn_dep, require_admin, csrf_guard) -> None:
 
     @app.get(f"{base}/batches")
     def batches(user=Depends(require_admin), conn: sqlite3.Connection = Depends(conn_dep)):
-        rows = conn.execute("SELECT * FROM ri_import_batches ORDER BY created_at DESC").fetchall()
+        rows = conn.execute("SELECT * FROM ri_import_batches ORDER BY created_at DESC, rowid DESC").fetchall()
         return out(conn, {"batches": [pipeline.batch_dict(conn, r) for r in rows]})
 
     @app.get(f"{base}/batches/{{batch_id}}")
@@ -202,7 +202,7 @@ def register(app, *, settings, conn_dep, require_admin, csrf_guard) -> None:
     @app.get(f"{base}/batches/{{batch_id}}/runs")
     def runs(batch_id: str, user=Depends(require_admin), conn: sqlite3.Connection = Depends(conn_dep)):
         pipeline.get_batch(conn, batch_id)
-        rows = conn.execute("SELECT * FROM ri_calc_runs WHERE batch_id = ? ORDER BY created_at DESC", (batch_id,)).fetchall()
+        rows = conn.execute("SELECT * FROM ri_calc_runs WHERE batch_id = ? ORDER BY created_at DESC, rowid DESC", (batch_id,)).fetchall()
         return out(conn, {"runs": [calc.run_dict(conn, r) for r in rows]})
 
     @app.get(f"{base}/runs/{{run_id}}")
@@ -268,7 +268,7 @@ def register(app, *, settings, conn_dep, require_admin, csrf_guard) -> None:
                 (batch_id, basis, b["id"]))), Decimal(0))
             levels = []
             for run in conn.execute(
-                "SELECT * FROM ri_calc_runs WHERE batch_id = ? AND brand_id = ? ORDER BY created_at DESC", (batch_id, b["id"])):
+                "SELECT * FROM ri_calc_runs WHERE batch_id = ? AND brand_id = ? ORDER BY created_at DESC, rowid DESC", (batch_id, b["id"])):
                 d = calc.run_dict(conn, run)
                 levels.append({"org_level": d["org_level"], "run_id": d["id"], "rule": d["rule"], "results": d["result_count"],
                                "errors": d["error_count"], **d["totals"]})
