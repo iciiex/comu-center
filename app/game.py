@@ -14,7 +14,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from app import db, perf, scoring
+from app import db, game_quests, perf, scoring
 
 CATALOG_PATH = Path(__file__).with_name("game_catalog.json")
 STORE_CATALOG_PATH = Path(__file__).with_name("game_store_catalog.json")
@@ -300,6 +300,7 @@ def bootstrap(conn, user, csrf_value: str) -> dict[str, Any]:
             "currency": "game_coins",
         },
         "achievements_catalog": catalog()["achievements"],
+        "quests": game_quests.weekly_quests(progress, day_key, _category_of),
         "progress": _public_progress(progress),
     }
 
@@ -324,6 +325,7 @@ def get_progress(conn, user):
         "date_key": day_key,
         "missions": _mission_views(progress, day_key),
         "special_missions": _special_mission_views(progress, day_key),
+        "quests": game_quests.weekly_quests(progress, day_key, _category_of),
         "progress": _public_progress(progress),
     }
 
@@ -716,6 +718,7 @@ def complete_mission(
             "progress": _public_progress(progress),
             "missions": _mission_views(progress, day_key),
             "special_missions": _special_mission_views(progress, day_key),
+            "quests": game_quests.weekly_quests(progress, day_key, _category_of),
             "date_key": day_key,
         }
         completion_id = str(uuid.uuid4())
@@ -732,6 +735,114 @@ def complete_mission(
                 digest,
                 json.dumps(response, ensure_ascii=False, separators=(",", ":")),
                 completed_at,
+            ),
+        )
+        _save(conn, user.id, progress)
+        conn.commit()
+        return response, False
+    except Exception:
+        conn.rollback()
+        raise
+
+
+def _category_of(mission_id: str) -> str | None:
+    mission = _mission_map().get(mission_id)
+    return mission.get("category") if mission else None
+
+
+def claim_quest(conn, user, quest_id: str, idempotency_key: str) -> tuple[dict[str, Any], bool]:
+    """Claim a completed weekly quest (DEMO). Rewards are GAME XP only, never organizational points.
+
+    Progress is recomputed here from the server history; the client only names the quest. A quest
+    pays once per user, quest and ISO week, and an Idempotency-Key replay returns the stored result.
+    """
+    if not idempotency_key or len(idempotency_key) > 128 or any(
+        ord(char) < 33 or ord(char) > 126 for char in idempotency_key
+    ):
+        raise GameError(400, "INVALID_IDEMPOTENCY_KEY", "A valid Idempotency-Key is required.")
+    if game_quests.quest_definition(quest_id) is None:
+        raise GameError(404, "QUEST_NOT_FOUND", "Weekly quest was not found.")
+
+    canonical = json.dumps({"quest_id": quest_id}, sort_keys=True, separators=(",", ":"))
+    digest = hashlib.sha256(canonical.encode()).hexdigest()
+    now = _now()
+    claimed_at = now.isoformat()
+    day_key = _day_key(now)
+
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        existing = conn.execute(
+            """SELECT request_sha256, response_json FROM game_quest_claims
+               WHERE user_id = ? AND idempotency_key = ?""",
+            (user.id, idempotency_key),
+        ).fetchone()
+        if existing:
+            if existing["request_sha256"] != digest:
+                raise GameError(
+                    409,
+                    "IDEMPOTENCY_KEY_REUSED",
+                    "Idempotency-Key was already used with a different request.",
+                )
+            conn.commit()
+            return json.loads(existing["response_json"]), True
+
+        progress = _initialize(conn, user.id, user.full_name)
+        view = game_quests.weekly_quests(progress, day_key, _category_of)
+        quest = next(item for item in view["quests"] if item["id"] == quest_id)
+        if quest["claimed"]:
+            raise GameError(
+                409, "QUEST_ALREADY_CLAIMED", "This quest was already claimed this week."
+            )
+        if not quest["complete"]:
+            raise GameError(
+                409,
+                "QUEST_NOT_COMPLETE",
+                f"Progress {quest['progress']} of {quest['target']}. "
+                "Finish the objective before claiming.",
+            )
+
+        reward = int(quest["rewardXp"])
+        xp_before = int(progress["xp"])
+        xp_after = xp_before + reward
+        progress["xp"] = xp_after
+        progress["quests"] = game_quests.with_claim(progress, day_key, quest_id, claimed_at, reward)
+        unlocked = _new_achievements(progress, progress.get("history", []))
+        for achievement_id in unlocked:
+            progress.setdefault("achievements", {})[achievement_id] = claimed_at
+        view = game_quests.weekly_quests(progress, day_key, _category_of)
+        response = {
+            "claim": {
+                "quest_id": quest_id,
+                "week_key": view["weekKey"],
+                "xp": reward,
+                "xp_before": xp_before,
+                "xp_after": xp_after,
+                "level_before": _level(xp_before),
+                "level_after": _level(xp_after),
+                "achievements_unlocked": unlocked,
+                "claimed_at": claimed_at,
+            },
+            "progress": _public_progress(progress),
+            "quests": view,
+            "missions": _mission_views(progress, day_key),
+            "special_missions": _special_mission_views(progress, day_key),
+            "date_key": day_key,
+        }
+        conn.execute(
+            """INSERT INTO game_quest_claims
+               (id, user_id, week_key, quest_id, xp_awarded, idempotency_key, request_sha256,
+                response_json, claimed_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                str(uuid.uuid4()),
+                user.id,
+                view["weekKey"],
+                quest_id,
+                reward,
+                idempotency_key,
+                digest,
+                json.dumps(response, ensure_ascii=False, separators=(",", ":")),
+                claimed_at,
             ),
         )
         _save(conn, user.id, progress)

@@ -1,0 +1,40 @@
+{
+  "version": "kiloos-demo-weekly-quests-1",
+  "status": "DEMO",
+  "cadence": "iso_week_utc",
+  "note": "DEMO quests. Progress is computed on the server from completed missions in the current ISO week (UTC). Rewards are game XP only, never organizational points or money.",
+  "quests": [
+    {
+      "id": "weekly-momentum",
+      "title": "Weekly Momentum",
+      "description": "Complete 5 missions this week.",
+      "objective": { "type": "completions", "target": 5 },
+      "rewardXp": 150,
+      "icon": "bolt"
+    },
+    {
+      "id": "product-champion",
+      "title": "Product Champion",
+      "description": "Complete 2 Product Introduction missions this week.",
+      "objective": { "type": "category", "category": "product_intro", "target": 2 },
+      "rewardXp": 100,
+      "icon": "box"
+    },
+    {
+      "id": "customer-coverage",
+      "title": "Customer Coverage",
+      "description": "Complete missions from 3 different categories this week.",
+      "objective": { "type": "distinct_categories", "target": 3 },
+      "rewardXp": 120,
+      "icon": "map"
+    },
+    {
+      "id": "consistency-streak",
+      "title": "Consistency Streak",
+      "description": "Complete at least one mission on 3 different days this week.",
+      "objective": { "type": "active_days", "target": 3 },
+      "rewardXp": 120,
+      "icon": "flame"
+    }
+  ]
+}

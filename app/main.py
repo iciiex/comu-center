@@ -551,6 +551,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         return JSONResponse(result, headers={"Idempotent-Replay": "true" if replayed else "false"})
 
+    @app.post("/api/v1/game/quests/{quest_id}/claim", dependencies=[Depends(csrf_guard)])
+    def game_claim_quest(
+        quest_id: str,
+        request: Request,
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        result, replayed = game.claim_quest(
+            conn, user, quest_id, request.headers.get("Idempotency-Key", "")
+        )
+        return JSONResponse(result, headers={"Idempotent-Replay": "true" if replayed else "false"})
+
     spa_index = settings.spa_dir / "index.html" if settings.spa_dir else None
     if spa_index is not None and spa_index.is_file():
         app.mount("/assets", StaticFiles(directory=settings.spa_dir / "assets"), name="spa-assets")
