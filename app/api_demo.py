@@ -18,7 +18,7 @@ from typing import Any
 from fastapi import Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 
-from app import game, imports, kiloos_demo, perf, ranking, repo
+from app import command_center, game, imports, kiloos_demo, perf, ranking, repo
 from app.repo import DomainError
 from app.security import (
     CurrentUser,
@@ -530,6 +530,7 @@ def register(app, *, settings, conn_dep, require_user, require_admin, csrf_guard
                     "org_points": sum(e["org_points"] for e in entries),
                 },
                 "data_origin": _origins(conn, org_id, period, ids),
+                "command_center": command_center.build(conn, ids, names),
             }
         )
 

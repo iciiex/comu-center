@@ -30,7 +30,8 @@ Contents: [1 Modules](#1-modules) · [2 Routes](#2-routes) · [3 Route details](
 
 | Module | Symbols | Imports (project modules) |
 |---|---|---|
-| `app/api_demo.py` | 13 | `game`, `imports`, `kiloos_demo`, `perf`, `ranking`, `repo`, `security` |
+| `app/api_demo.py` | 13 | `command_center`, `game`, `imports`, `kiloos_demo`, `perf`, `ranking`, `repo`, `security` |
+| `app/command_center.py` | 1 | `game`, `game_quests` |
 | `app/config.py` | 2 | — |
 | `app/db.py` | 4 | `config`, `kiloos_demo`, `seed` |
 | `app/game.py` | 37 | `db`, `game_quests`, `perf`, `scoring` |
@@ -52,6 +53,7 @@ Contents: [1 Modules](#1-modules) · [2 Routes](#2-routes) · [3 Route details](
 
 ```mermaid
 graph LR
+    api_demo --> command_center
     api_demo --> game
     api_demo --> imports
     api_demo --> kiloos_demo
@@ -59,6 +61,8 @@ graph LR
     api_demo --> ranking
     api_demo --> repo
     api_demo --> security
+    command_center --> game
+    command_center --> game_quests
     db --> config
     db --> kiloos_demo
     db --> seed
@@ -118,12 +122,12 @@ graph LR
 | GET | `/admin/submissions` | staff | — | `main.admin_queue` | `admin_queue.html` | 5 |
 | GET | `/admin/submissions/{submission_id}` | staff | — | `main.admin_review` | `admin_review.html` | 2 |
 | POST | `/admin/submissions/{submission_id}/review` | staff | yes | `main.admin_decide` | `admin_review.html` | 18 |
-| GET | `/api/v1/game/bootstrap` | public | — | `main.game_bootstrap` | — | 15 |
+| GET | `/api/v1/game/bootstrap` | public | — | `main.game_bootstrap` | — | 17 |
 | POST | `/api/v1/game/demo-login` | public | exempt | `main.game_demo_login` | — | 2 |
 | GET | `/api/v1/game/demo-users` | public | — | `main.game_demo_users` | — | 2 |
 | GET | `/api/v1/game/history` | public | — | `main.game_history` | — | 1 |
 | POST | `/api/v1/game/logout` | token | yes | `main.game_logout` | — | 1 |
-| POST | `/api/v1/game/missions/{mission_id}/completions` | token | yes | `main.game_complete_mission` | — | 8 |
+| POST | `/api/v1/game/missions/{mission_id}/completions` | token | yes | `main.game_complete_mission` | — | 10 |
 | DELETE | `/api/v1/game/missions/{mission_id}/draft` | token | yes | `main.game_discard_draft` | — | 0 |
 | PUT | `/api/v1/game/missions/{mission_id}/draft` | token | yes | `main.game_save_draft` | — | 0 |
 | PATCH | `/api/v1/game/profile` | token | yes | `main.game_profile` | — | 0 |
@@ -380,7 +384,7 @@ graph LR
 - Reads: `employee_positions`, `game_progress`, `sales_records`, `sales_targets`, `score_events`, `users`
 - Writes: `game_progress`
 - Error codes reachable: —
-- Tests (15): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`, `test_game_quests::test_weekly_quest_claims_are_server_checked_once_per_week_and_pay_game_xp_only`, `test_game_quests::test_weekly_quests_are_demo_labelled_and_start_in_progress`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_game_store::test_demo_store_rejects_insufficient_balance_and_missing_csrf`, `test_kiloos_demo::test_sales_mission_is_gated_by_processed_sales_and_awards_once`, `test_ranking::test_daily_and_weekly_windows_count_recorded_xp_and_mark_new_movement`
+- Tests (17): `test_command_center::test_management_command_center_counts_engagement_across_visible_reps`, `test_command_center::test_supervisor_command_center_counts_only_their_own_team`, `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`, `test_game_quests::test_weekly_quest_claims_are_server_checked_once_per_week_and_pay_game_xp_only`, `test_game_quests::test_weekly_quests_are_demo_labelled_and_start_in_progress`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_game_store::test_demo_store_rejects_insufficient_balance_and_missing_csrf`, `test_kiloos_demo::test_sales_mission_is_gated_by_processed_sales_and_awards_once`, `test_ranking::test_daily_and_weekly_windows_count_recorded_xp_and_mark_new_movement`
 
 ### `POST /api/v1/game/demo-login`
 
@@ -440,7 +444,7 @@ graph LR
 - Reads: `employee_positions`, `game_completions`, `game_progress`, `sales_records`, `sales_targets`, `score_events`, `scoring_rule_versions`, `users`
 - Writes: `game_completions`, `game_progress`, `outbox_events`, `point_transactions`, `point_wallets`, `score_events`
 - Error codes reachable: —
-- Tests (8): `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_quests::test_weekly_quest_claims_are_server_checked_once_per_week_and_pay_game_xp_only`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_kiloos_demo::test_sales_mission_is_gated_by_processed_sales_and_awards_once`, `test_ranking::test_daily_and_weekly_windows_count_recorded_xp_and_mark_new_movement`
+- Tests (10): `test_command_center::test_management_command_center_counts_engagement_across_visible_reps`, `test_command_center::test_supervisor_command_center_counts_only_their_own_team`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_quests::test_weekly_quest_claims_are_server_checked_once_per_week_and_pay_game_xp_only`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_kiloos_demo::test_sales_mission_is_gated_by_processed_sales_and_awards_once`, `test_ranking::test_daily_and_weekly_windows_count_recorded_xp_and_mark_new_movement`
 
 ### `DELETE /api/v1/game/missions/{mission_id}/draft`
 
@@ -719,7 +723,7 @@ graph LR
 | `_login_required` | exception-handler | — | — | — | — | — |
 | `_starlette_error` | exception-handler | — | — | — | `main.page` | — |
 | `conn_dep` | closure | — | — | — | `db.connect` | 44 callers |
-| `create_app` | function | — | — | — | `api_demo.register`, `config.Settings`, `db.init_db`, `jalali.format_jalali` | `conftest::client`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`, `test_hardening::test_admin_queue_paginates`, `test_kiloos_demo::demo`, `test_ranking::demo`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated` |
+| `create_app` | function | — | — | — | `api_demo.register`, `config.Settings`, `db.init_db`, `jalali.format_jalali` | `conftest::client`, `test_command_center::demo`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`, `test_hardening::test_admin_queue_paginates`, `test_kiloos_demo::demo`, `test_ranking::demo`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated` |
 | `csrf_guard` | closure | Reject form posts whose CSRF value does not match the session token. | — | — | `main.LoginRequired`, `security.csrf_for`, `security.session_token` | 17 callers |
 | `go` | closure | — | — | — | `main.url_session`, `main.with_token` | 10 callers |
 | `hardening` | middleware | — | — | — | `main.login_rate_limited`, `main.page` | — |
@@ -848,9 +852,15 @@ graph LR
 | `game_status` | function | — | `game_progress` | — | `game._level`, `game.catalog` | `api_demo.leaderboard_rows`, `api_demo.register`, `api_demo.rep_detail` |
 | `leaderboard_rows` | function | — | `employee_positions`, `score_events`, `users` | — | `api_demo.game_status`, `repo.active_competition` | `api_demo.rep_detail` |
 | `member_profile` | function | — | `branches`, `employee_positions` | — | — | `api_demo.register` |
-| `register` | function | — | `branches`, `employee_positions`, `sales_imports`, `users` | — | `api_demo._brand_rollup`, `api_demo._entry`, `api_demo._names`, `api_demo._origins`, `api_demo._rep_rows`, `api_demo._rollup`, `api_demo._strip`, `api_demo.game_status`, `api_demo.member_profile`, `api_demo.rep_detail`, `api_demo.visible_rep_ids`, `game.GameError`, `imports.list_imports`, `imports.stage_import`, `imports.summarize`, `kiloos_demo.overlap_workbook_bytes`, `kiloos_demo.sample_workbook_bytes`, `perf.latest_period`, `perf.org_points`, `perf.periods`, `perf.sales_by_user_brand`, `perf.targets_by_user_brand`, `ranking.build`, `repo.process_sales_import`, `repo.sales_import`, `security.CurrentUser`, `security.clear_session`, `security.csrf_for`, `security.csrf_token`, `security.make_token`, `security.set_session` | `main.create_app` |
+| `register` | function | — | `branches`, `employee_positions`, `sales_imports`, `users` | — | `api_demo._brand_rollup`, `api_demo._entry`, `api_demo._names`, `api_demo._origins`, `api_demo._rep_rows`, `api_demo._rollup`, `api_demo._strip`, `api_demo.game_status`, `api_demo.member_profile`, `api_demo.rep_detail`, `api_demo.visible_rep_ids`, `command_center.build`, `game.GameError`, `imports.list_imports`, `imports.stage_import`, `imports.summarize`, `kiloos_demo.overlap_workbook_bytes`, `kiloos_demo.sample_workbook_bytes`, `perf.latest_period`, `perf.org_points`, `perf.periods`, `perf.sales_by_user_brand`, `perf.targets_by_user_brand`, `ranking.build`, `repo.process_sales_import`, `repo.sales_import`, `security.CurrentUser`, `security.clear_session`, `security.csrf_for`, `security.csrf_token`, `security.make_token`, `security.set_session` | `main.create_app` |
 | `rep_detail` | function | — | `sales_records`, `score_events`, `scoring_rule_versions` | — | `api_demo._entry`, `api_demo._names`, `api_demo._origins`, `api_demo._rep_rows`, `api_demo._strip`, `api_demo.game_status`, `api_demo.leaderboard_rows`, `perf.dec`, `perf.latest_period`, `perf.org_points`, `perf.sales_by_user_brand`, `perf.sales_gate`, `perf.targets_by_user_brand`, `repo.active_competition` | `api_demo.register` |
 | `visible_rep_ids` | function | Server-side visibility: the management hierarchy decides who a user may see. | `employee_positions`, `users` | — | — | `api_demo.register` |
+
+### `app/command_center.py`
+
+| Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
+|---|---|---|---|---|---|---|
+| `build` | function | — | `game_completions`, `game_progress`, `game_quest_claims` | — | `game._level`, `game.catalog`, `game_quests.quest_definition` | `api_demo.register` |
 
 ### `app/config.py`
 
@@ -886,7 +896,7 @@ graph LR
 | `_history` | function | — | `game_completions` | — | — | `game.complete_mission` |
 | `_initial_progress` | function | — | — | — | `game._now` | `game._initialize`, `kiloos_demo._seed_game_profile` |
 | `_initialize` | function | — | `game_progress` | — | `game._attach_sales`, `game._initial_progress`, `game._save` | 9 callers |
-| `_level` | function | — | — | — | `game.catalog` | `api_demo.game_status`, `game._lock_reason`, `game._new_achievements`, `game.claim_quest`, `game.complete_mission`, `ranking._season_game_state` |
+| `_level` | function | — | — | — | `game.catalog` | `api_demo.game_status`, `command_center.build`, `game._lock_reason`, `game._new_achievements`, `game.claim_quest`, `game.complete_mission`, `ranking._season_game_state` |
 | `_load_daily_before` | function | — | `game_progress` | — | — | `game.bootstrap` |
 | `_lock_reason` | function | — | — | — | `game._level`, `game._mission_map` | `game._daily_mission`, `game._mission_views`, `game.complete_mission`, `game.save_draft` |
 | `_mission_map` | function | — | — | — | `game._all_missions` | `game._category_of`, `game._ensure_daily`, `game._lock_reason`, `game.complete_mission`, `game.discard_draft`, `game.get_store`, `game.save_draft` |
@@ -897,7 +907,7 @@ graph LR
 | `_save` | function | — | — | `game_progress` | `db.now_iso` | 10 callers |
 | `_special_mission_views` | function | — | — | — | `game._mission_views` | `game.bootstrap`, `game.claim_quest`, `game.complete_mission`, `game.discard_draft`, `game.get_progress`, `game.save_draft` |
 | `bootstrap` | function | — | — | — | `game._day_key`, `game._ensure_daily`, `game._initialize`, `game._load_daily_before`, `game._mission_views`, `game._now`, `game._public_progress`, `game._save`, `game._special_mission_views`, `game.catalog`, `game.store_catalog`, `game_quests.weekly_quests` | `main.game_bootstrap` |
-| `catalog` | function | — | — | — | — | `api_demo.game_status`, `game._all_missions`, `game._daily_mission`, `game._level`, `game._mission_views`, `game._new_achievements`, `game.bootstrap`, `game.complete_mission` |
+| `catalog` | function | — | — | — | — | 9 callers |
 | `claim_quest` | function | Claim a completed weekly quest (DEMO). Rewards are GAME XP only, never organizational points. | `game_quest_claims` | `game_quest_claims` | `game.GameError`, `game._day_key`, `game._initialize`, `game._level`, `game._mission_views`, `game._new_achievements`, `game._now`, `game._public_progress`, `game._save`, `game._special_mission_views`, `game_quests.quest_definition`, `game_quests.weekly_quests`, `game_quests.with_claim` | `main.game_claim_quest` |
 | `complete_mission` | function | — | `game_completions` | `game_completions` | `game.GameError`, `game._award_org_points`, `game._clean_answers`, `game._collect_flags`, `game._date_diff`, `game._day_key`, `game._ensure_daily`, `game._history`, `game._initialize`, `game._level`, `game._lock_reason`, `game._mission_map`, `game._mission_views`, `game._new_achievements`, `game._now`, `game._public_progress`, `game._save`, `game._special_mission_views`, `game.catalog`, `game_quests.weekly_quests` | `main.game_complete_mission` |
 | `discard_draft` | function | — | — | — | `game.GameError`, `game._day_key`, `game._initialize`, `game._mission_map`, `game._mission_views`, `game._now`, `game._public_progress`, `game._save`, `game._special_mission_views` | `main.game_discard_draft` |
@@ -916,7 +926,7 @@ graph LR
 |---|---|---|---|---|---|---|
 | `_claims_for_week` | function | — | — | — | — | `game_quests.weekly_quests`, `game_quests.with_claim` |
 | `_objective_progress` | function | — | — | — | — | `game_quests.weekly_quests` |
-| `quest_definition` | function | — | — | — | `game_quests.quests_catalog` | `game.claim_quest` |
+| `quest_definition` | function | — | — | — | `game_quests.quests_catalog` | `command_center.build`, `game.claim_quest` |
 | `quests_catalog` | function | — | — | — | — | `game_quests.quest_definition`, `game_quests.weekly_quests` |
 | `week_bounds` | function | Monday and Sunday (UTC date keys) of the ISO week that contains ``day_key``. | — | — | — | `game_quests.weekly_quests`, `test_game_quests::test_week_key_and_bounds_follow_iso_weeks_in_utc` |
 | `week_key` | function | ISO week of a UTC date key, for example ``2026-W46``. | — | — | — | `game_quests.weekly_quests`, `game_quests.with_claim`, `test_game_quests::test_week_key_and_bounds_follow_iso_weeks_in_utc`, `test_game_quests::test_weekly_quests_are_demo_labelled_and_start_in_progress` |
@@ -1097,7 +1107,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Table constraints: UNIQUE (user_id, idempotency_key)
 - Indexes: `ix_game_completions_user_time` (user_id, completed_at DESC, id DESC) — db/migrations/0004_game_progress.sql
 - References: `users`
-- Read by: `game._history`, `game.complete_mission`, `game.list_history`, `ranking._window_game_xp`
+- Read by: `command_center.build`, `game._history`, `game.complete_mission`, `game.list_history`, `ranking._window_game_xp`
 - INSERT by: `game.complete_mission`
 
 ### `game_progress`
@@ -1105,7 +1115,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Defined in: `db/migrations/0004_game_progress.sql`
 - Columns: `user_id` TEXT PRIMARY KEY REFERENCES users(id); `state_json` TEXT NOT NULL; `updated_at` TEXT NOT NULL
 - References: `users`
-- Read by: `api_demo.game_status`, `game._initialize`, `game._load_daily_before`, `kiloos_demo._seed_game_profile`, `ranking._season_game_state`
+- Read by: `api_demo.game_status`, `command_center.build`, `game._initialize`, `game._load_daily_before`, `kiloos_demo._seed_game_profile`, `ranking._season_game_state`
 - INSERT by: `game._save`
 
 ### `game_quest_claims`
@@ -1115,7 +1125,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Table constraints: UNIQUE (user_id, idempotency_key); UNIQUE (user_id, week_key, quest_id)
 - Indexes: `ix_game_quest_claims_user_time` (user_id, claimed_at DESC, id DESC) — db/migrations/0008_game_weekly_quests.sql
 - References: `users`
-- Read by: `game.claim_quest`, `ranking._window_game_xp`
+- Read by: `command_center.build`, `game.claim_quest`, `ranking._window_game_xp`
 - INSERT by: `game.claim_quest`
 
 ### `game_store_purchases`
@@ -1329,6 +1339,13 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 
 ## 7. Tests
 
+### `tests/test_command_center.py` (2 tests)
+
+| Test | Routes exercised | Direct domain calls | IDs |
+|---|---|---|---|
+| `test_management_command_center_counts_engagement_across_visible_reps` | `GET /api/v1/game/bootstrap`, `POST /api/v1/game/missions/{mission_id}/completions` | `kiloos_demo.sample_workbook_bytes` | — |
+| `test_supervisor_command_center_counts_only_their_own_team` | `GET /api/v1/game/bootstrap`, `POST /api/v1/game/missions/{mission_id}/completions` | `kiloos_demo.sample_workbook_bytes` | — |
+
 ### `tests/test_corrections.py` (9 tests)
 
 | Test | Routes exercised | Direct domain calls | IDs |
@@ -1512,8 +1529,8 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_org_tree_and_membership_are_generic_and_tenant_scoped` | — | — | — |
 | `test_org_membership_cannot_cross_organization_boundary` | — | — | — |
 
-103 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
-Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::row_id`, `conftest::settings`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_game_quests::bootstrap`, `test_game_quests::claim`, `test_game_quests::complete`, `test_game_quests::csrf`, `test_game_quests::quests_by_id`, `test_game_store::csrf_header`, `test_game_store::set_game_coins`, `test_hardening::token_csrf`, `test_kiloos_demo::db_rows`, `test_kiloos_demo::demo`, `test_kiloos_demo::demo_settings`, `test_kiloos_demo::game_missions`, `test_kiloos_demo::import_and_process`, `test_kiloos_demo::login`, `test_kiloos_demo::upload`, `test_kiloos_demo::user_id`, `test_ranking::board`, `test_ranking::csrf`, `test_ranking::demo`, `test_ranking::demo_settings`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`.
+105 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
+Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::row_id`, `conftest::settings`, `test_command_center::demo`, `test_command_center::demo_settings`, `test_command_center::play_one_mission_as_amir`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_game_quests::bootstrap`, `test_game_quests::claim`, `test_game_quests::complete`, `test_game_quests::csrf`, `test_game_quests::quests_by_id`, `test_game_store::csrf_header`, `test_game_store::set_game_coins`, `test_hardening::token_csrf`, `test_kiloos_demo::db_rows`, `test_kiloos_demo::demo`, `test_kiloos_demo::demo_settings`, `test_kiloos_demo::game_missions`, `test_kiloos_demo::import_and_process`, `test_kiloos_demo::login`, `test_kiloos_demo::upload`, `test_kiloos_demo::user_id`, `test_ranking::board`, `test_ranking::csrf`, `test_ranking::demo`, `test_ranking::demo_settings`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`.
 
 ## 8. Error codes
 
@@ -1647,6 +1664,8 @@ Read in `app/config.py::Settings.from_env`. Meaning of each variable:
 Paths written in templates or tests that match no route. An entry is expected when a
 test asks for an unknown page on purpose; anything else is a broken link.
 
+- tests/test_command_center.py::test_management_command_center_counts_engagement_across_visible_reps: GET /api/v1/mgmt/overview matches no route
+- tests/test_command_center.py::test_supervisor_command_center_counts_only_their_own_team: GET /api/v1/mgmt/overview matches no route
 - tests/test_hardening.py::test_unknown_route_renders_persian_404: GET /no-such-page matches no route
 - tests/test_kiloos_demo.py::import_and_process: POST /api/v1/mgmt/imports/{}/process matches no route
 - tests/test_kiloos_demo.py::login: POST /api/v1/auth/demo-login matches no route
