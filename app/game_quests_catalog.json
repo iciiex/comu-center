@@ -10,7 +10,7 @@
       "description": "Complete 5 missions this week.",
       "objective": { "type": "completions", "target": 5 },
       "rewardXp": 150,
-      "icon": "bolt"
+      "icon": "target"
     },
     {
       "id": "product-champion",
@@ -26,7 +26,7 @@
       "description": "Complete missions from 3 different categories this week.",
       "objective": { "type": "distinct_categories", "target": 3 },
       "rewardXp": 120,
-      "icon": "map"
+      "icon": "store"
     },
     {
       "id": "consistency-streak",
