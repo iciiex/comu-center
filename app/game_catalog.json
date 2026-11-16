@@ -16,31 +16,31 @@
     "levels": [
       {
         "level": 1,
-        "title": "Rookie",
+        "title": "تازه‌کار",
         "minXp": 0,
         "color": "#8b93b8"
       },
       {
         "level": 2,
-        "title": "Explorer",
+        "title": "کاوشگر",
         "minXp": 150,
         "color": "#2ea8ff"
       },
       {
         "level": 3,
-        "title": "Challenger",
+        "title": "رقابت‌جو",
         "minXp": 400,
         "color": "#2fbf71"
       },
       {
         "level": 4,
-        "title": "Performer",
+        "title": "حرفه‌ای",
         "minXp": 800,
         "color": "#ff8a3d"
       },
       {
         "level": 5,
-        "title": "Champion",
+        "title": "قهرمان",
         "minXp": 1400,
         "color": "#ffb020"
       }
@@ -51,37 +51,37 @@
   },
   "categories": {
     "customer_visit": {
-      "label": "Customer Visit",
+      "label": "ویزیت مشتری",
       "color": "#2ea8ff",
       "dark": "#1581d6",
       "soft": "#e1f3ff"
     },
     "product_intro": {
-      "label": "Product Introduction",
+      "label": "معرفی محصول",
       "color": "#9366ff",
       "dark": "#6f41e0",
       "soft": "#efe7ff"
     },
     "follow_up": {
-      "label": "Customer Follow-up",
+      "label": "پیگیری مشتری",
       "color": "#19c9b2",
       "dark": "#0e9f8c",
       "soft": "#dcf8f3"
     },
     "new_customer": {
-      "label": "New Customer Acquisition",
+      "label": "جذب مشتری جدید",
       "color": "#ff6b8e",
       "dark": "#dd446b",
       "soft": "#ffe5ec"
     },
     "market_research": {
-      "label": "Market Research",
+      "label": "پژوهش بازار",
       "color": "#ff8f3d",
       "dark": "#de6a17",
       "soft": "#ffeddd"
     },
     "sales_achievement": {
-      "label": "Sales Achievement",
+      "label": "دستاورد فروش",
       "color": "#ffb81f",
       "dark": "#e09200",
       "soft": "#fff3d1"
@@ -89,15 +89,15 @@
   },
   "difficulty": {
     "easy": {
-      "label": "Easy",
+      "label": "آسان",
       "dots": 1
     },
     "medium": {
-      "label": "Medium",
+      "label": "متوسط",
       "dots": 2
     },
     "hard": {
-      "label": "Hard",
+      "label": "دشوار",
       "dots": 3
     }
   },
@@ -105,9 +105,9 @@
     {
       "id": "customer-visit-challenge",
       "order": 1,
-      "title": "Customer Visit Challenge",
-      "shortTitle": "Customer Visit",
-      "description": "Visit a customer and record the result.",
+      "title": "چالش ویزیت مشتری",
+      "shortTitle": "ویزیت مشتری",
+      "description": "یک مشتری را ویزیت کنید و نتیجه را ثبت کنید.",
       "category": "customer_visit",
       "difficulty": "easy",
       "estimatedMinutes": 1,
@@ -125,98 +125,98 @@
         {
           "id": "customer_type",
           "type": "choice",
-          "label": "Customer",
-          "question": "Who did you visit?",
-          "helper": "Pick the one that fits best.",
+          "label": "مشتری",
+          "question": "چه کسی را ویزیت کردید؟",
+          "helper": "مناسب‌ترین گزینه را انتخاب کنید.",
           "options": [
             {
               "id": "existing",
-              "label": "Existing Customer",
+              "label": "مشتری فعلی",
               "emoji": "🤝",
-              "hint": "Someone you already work with"
+              "hint": "کسی که از قبل با او کار می‌کنید"
             },
             {
               "id": "new",
-              "label": "New Customer",
+              "label": "مشتری جدید",
               "emoji": "✨",
-              "hint": "Just started buying from you"
+              "hint": "تازه شروع به خرید کرده است"
             },
             {
               "id": "potential",
-              "label": "Potential Customer",
+              "label": "مشتری بالقوه",
               "emoji": "🎯",
-              "hint": "Not a customer… yet"
+              "hint": "هنوز مشتری نیست"
             }
           ]
         },
         {
           "id": "outcome",
           "type": "choice",
-          "label": "Outcome",
-          "question": "What happened during the visit?",
-          "helper": "Choose the main result.",
+          "label": "نتیجه",
+          "question": "در ویزیت چه اتفاقی افتاد؟",
+          "helper": "نتیجهٔ اصلی را انتخاب کنید.",
           "options": [
             {
               "id": "successful_meeting",
-              "label": "Successful Meeting",
+              "label": "جلسهٔ موفق",
               "emoji": "😊",
-              "hint": "A good conversation"
+              "hint": "گفتگوی خوب"
             },
             {
               "id": "product_presentation",
-              "label": "Product Presentation",
+              "label": "معرفی محصول",
               "emoji": "📦",
-              "hint": "You showed what you offer"
+              "hint": "محصولات خود را نشان دادید"
             },
             {
               "id": "order_received",
-              "label": "Order Received",
+              "label": "سفارش دریافت شد",
               "emoji": "🛒",
-              "hint": "Bonus XP!",
+              "hint": "امتیاز تجربهٔ اضافه!",
               "flags": [
                 "order_received"
               ]
             },
             {
               "id": "follow_up_required",
-              "label": "Follow-up Required",
+              "label": "نیاز به پیگیری",
               "emoji": "📅",
-              "hint": "More steps needed"
+              "hint": "گام‌های بیشتری لازم است"
             },
             {
               "id": "customer_unavailable",
-              "label": "Customer Unavailable",
+              "label": "مشتری در دسترس نبود",
               "emoji": "🚪",
-              "hint": "Nobody to talk to"
+              "hint": "کسی برای گفتگو نبود"
             }
           ]
         },
         {
           "id": "rating",
           "type": "rating",
-          "label": "Rating",
-          "question": "How did the visit go?",
-          "helper": "Tap a star.",
+          "label": "امتیاز",
+          "question": "ویزیت چطور پیش رفت؟",
+          "helper": "یک ستاره را انتخاب کنید.",
           "scale": [
-            "Rough one",
-            "Could be better",
-            "It was okay",
-            "Went well",
-            "Nailed it!"
+            "ضعیف",
+            "می‌شد بهتر باشد",
+            "قابل قبول",
+            "خوب پیش رفت",
+            "عالی بود!"
           ]
         },
         {
           "id": "note",
           "type": "note",
-          "label": "Note",
-          "question": "Add a short visit note",
-          "helper": "One line is plenty.",
-          "placeholder": "e.g. Wants a quote for 20 units by Friday",
+          "label": "یادداشت",
+          "question": "یادداشت کوتاهی از ویزیت بنویسید",
+          "helper": "یک خط کافی است.",
+          "placeholder": "مثلاً: تا جمعه قیمت ۲۰ کارتن را می‌خواهد",
           "maxLength": 240,
           "suggestions": [
-            "Asked for a price list",
-            "Call back next week",
-            "Met the decision maker"
+            "درخواست لیست قیمت",
+            "هفتهٔ آینده دوباره تماس بگیرید",
+            "با تصمیم‌گیرنده ملاقات شد"
           ]
         }
       ]
@@ -224,9 +224,9 @@
     {
       "id": "product-spotlight",
       "order": 2,
-      "title": "Product Spotlight",
-      "shortTitle": "Product Spotlight",
-      "description": "Introduce a product to a customer and capture their reaction.",
+      "title": "معرفی محصول",
+      "shortTitle": "معرفی محصول",
+      "description": "یک محصول را به مشتری معرفی کنید و واکنش او را ثبت کنید.",
       "category": "product_intro",
       "difficulty": "easy",
       "estimatedMinutes": 1,
@@ -246,96 +246,96 @@
         {
           "id": "showcase",
           "type": "choice",
-          "label": "Showcased",
-          "question": "What did you put in the spotlight?",
+          "label": "محصول معرفی‌شده",
+          "question": "چه چیزی را معرفی کردید؟",
           "options": [
             {
               "id": "new_product",
-              "label": "New Product",
+              "label": "محصول جدید",
               "emoji": "🆕",
-              "hint": "Fresh in the catalog"
+              "hint": "تازه به کاتالوگ اضافه شده"
             },
             {
               "id": "best_seller",
-              "label": "Best Seller",
+              "label": "پرفروش‌ترین",
               "emoji": "🏅",
-              "hint": "A proven favorite"
+              "hint": "محبوب و آزمون‌شده"
             },
             {
               "id": "special_offer",
-              "label": "Special Offer",
+              "label": "پیشنهاد ویژه",
               "emoji": "🏷️",
-              "hint": "Discount or promotion"
+              "hint": "تخفیف یا تبلیغات"
             },
             {
               "id": "bundle",
-              "label": "Product Bundle",
+              "label": "بستهٔ محصولات",
               "emoji": "🎁",
-              "hint": "Several items together"
+              "hint": "چند محصول با هم"
             }
           ]
         },
         {
           "id": "reaction",
           "type": "choice",
-          "label": "Reaction",
-          "question": "How did the customer react?",
+          "label": "واکنش",
+          "question": "مشتری چه واکنشی نشان داد؟",
           "options": [
             {
               "id": "ordered",
-              "label": "Ordered on the Spot",
+              "label": "همان لحظه سفارش داد",
               "emoji": "🛒",
-              "hint": "Bonus XP!",
+              "hint": "امتیاز تجربهٔ اضافه!",
               "flags": [
                 "order_received"
               ]
             },
             {
               "id": "loved_it",
-              "label": "Loved It",
+              "label": "پسندید",
               "emoji": "😍",
-              "hint": "Clearly interested"
+              "hint": "به‌وضوح علاقه‌مند بود"
             },
             {
               "id": "curious",
-              "label": "Curious",
+              "label": "کنجکاو بود",
               "emoji": "🤔",
-              "hint": "Asked questions"
+              "hint": "سؤال پرسید"
             },
             {
               "id": "needs_time",
-              "label": "Needs Time",
+              "label": "به زمان نیاز دارد",
               "emoji": "⏳",
-              "hint": "Will think about it"
+              "hint": "فکر می‌کند"
             },
             {
               "id": "not_interested",
-              "label": "Not Interested",
+              "label": "علاقه‌ای ندارد",
               "emoji": "🙅",
-              "hint": "Not a fit right now"
+              "hint": "فعلاً مناسب نیست"
             }
           ]
         },
         {
           "id": "rating",
           "type": "rating",
-          "label": "Rating",
-          "question": "How strong was your pitch?",
+          "label": "امتیاز",
+          "question": "ارائهٔ شما چقدر قوی بود؟",
           "scale": [
-            "Stumbled",
-            "A bit shaky",
-            "Solid",
-            "Convincing",
-            "Showstopper!"
+            "لکنت داشت",
+            "کمی متزلزل",
+            "محکم",
+            "متقاعدکننده",
+            "خیره‌کننده!"
           ]
         },
         {
           "id": "note",
           "type": "note",
-          "label": "Note",
-          "question": "Add a short note",
-          "helper": "One line is plenty.",
-          "placeholder": "e.g. Liked the new size, asked about delivery time",
+          "label": "یادداشت",
+          "question": "یادداشت کوتاهی بنویسید",
+          "helper": "یک خط کافی است.",
+          "placeholder": "مثلاً: بسته‌بندی جدید را پسندید و زمان تحویل را پرسید",
           "maxLength": 240
         }
       ]
@@ -343,9 +343,9 @@
     {
       "id": "follow-up-sprint",
       "order": 3,
-      "title": "Follow-up Sprint",
-      "shortTitle": "Follow-up Sprint",
-      "description": "Reconnect with a customer you spoke to before and log what moved.",
+      "title": "پیگیری مشتری",
+      "shortTitle": "پیگیری مشتری",
+      "description": "با مشتری قبلی دوباره تماس بگیرید و پیشرفت کار را ثبت کنید.",
       "category": "follow_up",
       "difficulty": "easy",
       "estimatedMinutes": 1,
@@ -365,27 +365,27 @@
         {
           "id": "channel",
           "type": "choice",
-          "label": "Channel",
-          "question": "How did you follow up?",
+          "label": "کانال",
+          "question": "چطور پیگیری کردید؟",
           "options": [
             {
               "id": "call",
-              "label": "Phone Call",
+              "label": "تماس تلفنی",
               "emoji": "📞"
             },
             {
               "id": "message",
-              "label": "Message",
+              "label": "پیام",
               "emoji": "💬"
             },
             {
               "id": "email",
-              "label": "Email",
+              "label": "ایمیل",
               "emoji": "✉️"
             },
             {
               "id": "in_person",
-              "label": "In Person",
+              "label": "حضوری",
               "emoji": "🚶"
             }
           ]
@@ -393,64 +393,64 @@
         {
           "id": "result",
           "type": "choice",
-          "label": "Result",
-          "question": "What came out of it?",
+          "label": "نتیجه",
+          "question": "نتیجه چه شد؟",
           "options": [
             {
               "id": "order",
-              "label": "Order Received",
+              "label": "سفارش دریافت شد",
               "emoji": "🛒",
-              "hint": "Bonus XP!",
+              "hint": "امتیاز تجربهٔ اضافه!",
               "flags": [
                 "order_received"
               ]
             },
             {
               "id": "meeting_booked",
-              "label": "Meeting Booked",
+              "label": "جلسه تنظیم شد",
               "emoji": "📅",
-              "hint": "Next step is set"
+              "hint": "گام بعدی مشخص شد"
             },
             {
               "id": "still_deciding",
-              "label": "Still Deciding",
+              "label": "هنوز تصمیم نگرفته",
               "emoji": "🤔",
-              "hint": "Keep it warm"
+              "hint": "ارتباط را گرم نگه دارید"
             },
             {
               "id": "no_answer",
-              "label": "No Answer",
+              "label": "پاسخ نداد",
               "emoji": "📵",
-              "hint": "Try again later"
+              "hint": "بعداً دوباره تلاش کنید"
             },
             {
               "id": "not_interested",
-              "label": "Not Interested",
+              "label": "علاقه‌ای ندارد",
               "emoji": "🙅",
-              "hint": "Closed for now"
+              "hint": "فعلاً بسته شد"
             }
           ]
         },
         {
           "id": "rating",
           "type": "rating",
-          "label": "Lead warmth",
-          "question": "How warm is this lead now?",
+          "label": "گرمی مشتری",
+          "question": "این مشتری اکنون چقدر مشتاق است؟",
           "scale": [
-            "Ice cold",
-            "Cool",
-            "Lukewarm",
-            "Warm",
-            "On fire!"
+            "کاملاً سرد",
+            "خنک",
+            "ولرم",
+            "گرم",
+            "داغ!"
           ]
         },
         {
           "id": "note",
           "type": "note",
-          "label": "Note",
-          "question": "Add a short note",
-          "helper": "One line is plenty.",
-          "placeholder": "e.g. Decision next Tuesday, send updated offer",
+          "label": "یادداشت",
+          "question": "یادداشت کوتاهی بنویسید",
+          "helper": "یک خط کافی است.",
+          "placeholder": "مثلاً: سه‌شنبه تصمیم می‌گیرد، پیشنهاد جدید ارسال شود",
           "maxLength": 240
         }
       ]
@@ -458,9 +458,9 @@
     {
       "id": "new-customer-hunt",
       "order": 4,
-      "title": "New Customer Hunt",
-      "shortTitle": "New Customer Hunt",
-      "description": "Find a brand-new prospect and log how far you got.",
+      "title": "جذب مشتری جدید",
+      "shortTitle": "جذب مشتری جدید",
+      "description": "یک مشتری بالقوهٔ کاملاً جدید پیدا کنید و میزان پیشرفت را ثبت کنید.",
       "category": "new_customer",
       "difficulty": "medium",
       "estimatedMinutes": 2,
@@ -481,64 +481,64 @@
         {
           "id": "source",
           "type": "choice",
-          "label": "Source",
-          "question": "How did you find them?",
+          "label": "منبع",
+          "question": "چطور پیدایش کردید؟",
           "options": [
             {
               "id": "referral",
-              "label": "Referral",
+              "label": "معرفی",
               "emoji": "🗣️",
-              "hint": "Someone recommended you"
+              "hint": "کسی شما را معرفی کرد"
             },
             {
               "id": "walk_in",
-              "label": "Cold Visit",
+              "label": "مراجعهٔ مستقیم",
               "emoji": "🚶",
-              "hint": "You knocked on the door"
+              "hint": "خودتان مراجعه کردید"
             },
             {
               "id": "event",
-              "label": "Event",
+              "label": "رویداد",
               "emoji": "🎪",
-              "hint": "Fair, meetup or exhibition"
+              "hint": "نمایشگاه یا گردهمایی"
             },
             {
               "id": "online",
-              "label": "Online",
+              "label": "آنلاین",
               "emoji": "🌐",
-              "hint": "Web or social media"
+              "hint": "وب یا شبکه‌های اجتماعی"
             }
           ]
         },
         {
           "id": "stage",
           "type": "choice",
-          "label": "Stage",
-          "question": "How far did you get?",
+          "label": "مرحله",
+          "question": "تا کجا پیش رفتید؟",
           "options": [
             {
               "id": "first_contact",
-              "label": "First Contact",
+              "label": "اولین تماس",
               "emoji": "👋",
-              "hint": "Introduced yourself"
+              "hint": "خودتان را معرفی کردید"
             },
             {
               "id": "meeting_booked",
-              "label": "Meeting Booked",
+              "label": "جلسه تنظیم شد",
               "emoji": "📅",
-              "hint": "They want to hear more"
+              "hint": "می‌خواهند بیشتر بشنوند"
             },
             {
               "id": "offer_sent",
-              "label": "Offer Sent",
+              "label": "پیشنهاد ارسال شد",
               "emoji": "📨",
-              "hint": "Numbers are on the table"
+              "hint": "قیمت‌ها روی میز است"
             },
             {
               "id": "first_order",
-              "label": "First Order",
+              "label": "اولین سفارش",
               "emoji": "🛒",
-              "hint": "Bonus XP!",
+              "hint": "امتیاز تجربهٔ اضافه!",
               "flags": [
                 "order_received"
               ]
@@ -548,23 +548,23 @@
         {
           "id": "rating",
           "type": "rating",
-          "label": "Potential",
-          "question": "How promising is this customer?",
+          "label": "پتانسیل",
+          "question": "این مشتری چقدر امیدوارکننده است؟",
           "scale": [
-            "Long shot",
-            "Maybe",
-            "Decent",
-            "Promising",
-            "Golden!"
+            "بعید",
+            "شاید",
+            "قابل قبول",
+            "امیدوارکننده",
+            "طلایی!"
           ]
         },
         {
           "id": "note",
           "type": "note",
-          "label": "Note",
-          "question": "Add a short note",
-          "helper": "One line is plenty.",
-          "placeholder": "e.g. Owner is Sara, buys monthly, prefers WhatsApp",
+          "label": "یادداشت",
+          "question": "یادداشت کوتاهی بنویسید",
+          "helper": "یک خط کافی است.",
+          "placeholder": "مثلاً: مالک خانم محمدی است، ماهانه خرید می‌کند و پیام‌رسان را ترجیح می‌دهد",
           "maxLength": 240
         }
       ]
@@ -572,9 +572,9 @@
     {
       "id": "market-scout",
       "order": 5,
-      "title": "Market Scout",
-      "shortTitle": "Market Scout",
-      "description": "Scout your territory and report one useful market insight.",
+      "title": "پایش بازار",
+      "shortTitle": "پایش بازار",
+      "description": "منطقهٔ خود را بررسی کنید و یک نکتهٔ مفید از بازار گزارش دهید.",
       "category": "market_research",
       "difficulty": "medium",
       "estimatedMinutes": 2,
@@ -594,27 +594,27 @@
         {
           "id": "topic",
           "type": "choice",
-          "label": "Topic",
-          "question": "What did you scout?",
+          "label": "موضوع",
+          "question": "چه چیزی را بررسی کردید؟",
           "options": [
             {
               "id": "competitor_prices",
-              "label": "Competitor Prices",
+              "label": "قیمت رقبا",
               "emoji": "💲"
             },
             {
               "id": "shelf_display",
-              "label": "Shelf & Display",
+              "label": "قفسه و چیدمان",
               "emoji": "🗄️"
             },
             {
               "id": "customer_needs",
-              "label": "Customer Needs",
+              "label": "نیاز مشتری",
               "emoji": "💡"
             },
             {
               "id": "new_trends",
-              "label": "New Trends",
+              "label": "روندهای جدید",
               "emoji": "📈"
             }
           ]
@@ -622,55 +622,55 @@
         {
           "id": "finding",
           "type": "choice",
-          "label": "Finding",
-          "question": "What did you find?",
+          "label": "یافته",
+          "question": "چه یافتید؟",
           "options": [
             {
               "id": "opportunity",
-              "label": "An Opportunity",
+              "label": "یک فرصت",
               "emoji": "🚀",
-              "hint": "Room to grow"
+              "hint": "جای رشد دارد"
             },
             {
               "id": "threat",
-              "label": "A Threat",
+              "label": "یک تهدید",
               "emoji": "⚠️",
-              "hint": "Competition is moving"
+              "hint": "رقبا فعال شده‌اند"
             },
             {
               "id": "needs_deeper_look",
-              "label": "Needs a Deeper Look",
+              "label": "نیاز به بررسی بیشتر",
               "emoji": "🔬",
-              "hint": "Worth another visit"
+              "hint": "ارزش یک ویزیت دیگر را دارد"
             },
             {
               "id": "nothing_new",
-              "label": "Nothing New",
+              "label": "نکتهٔ تازه‌ای نبود",
               "emoji": "😌",
-              "hint": "All quiet out there"
+              "hint": "بازار آرام است"
             }
           ]
         },
         {
           "id": "rating",
           "type": "rating",
-          "label": "Insight value",
-          "question": "How valuable is this insight?",
+          "label": "ارزش نکته",
+          "question": "این نکته چقدر ارزشمند است؟",
           "scale": [
-            "Trivia",
-            "Minor",
-            "Useful",
-            "Valuable",
-            "Game changer!"
+            "بی‌اهمیت",
+            "جزئی",
+            "مفید",
+            "ارزشمند",
+            "تعیین‌کننده!"
           ]
         },
         {
           "id": "note",
           "type": "note",
-          "label": "Note",
-          "question": "Describe what you saw",
-          "helper": "One line is plenty.",
-          "placeholder": "e.g. Competitor dropped prices 10% on two items",
+          "label": "یادداشت",
+          "question": "آنچه دیدید را توضیح دهید",
+          "helper": "یک خط کافی است.",
+          "placeholder": "مثلاً: رقیب قیمت دو کالا را ۱۰٪ کاهش داده است",
           "maxLength": 240
         }
       ]
@@ -678,9 +678,9 @@
     {
       "id": "sales-summit",
       "order": 6,
-      "title": "Sales Summit",
-      "shortTitle": "Sales Summit",
-      "description": "Celebrate a real sales win and claim your place at the summit.",
+      "title": "قلهٔ فروش",
+      "shortTitle": "قلهٔ فروش",
+      "description": "یک موفقیت واقعی فروش را ثبت کنید و جایگاه خود را در قله بگیرید.",
       "category": "sales_achievement",
       "difficulty": "hard",
       "estimatedMinutes": 2,
@@ -701,62 +701,62 @@
         {
           "id": "win",
           "type": "choice",
-          "label": "Win",
-          "question": "What did you achieve?",
+          "label": "موفقیت",
+          "question": "چه دستاوردی داشتید؟",
           "options": [
             {
               "id": "closed_deal",
-              "label": "Closed a Deal",
+              "label": "قرارداد بستم",
               "emoji": "🛒",
-              "hint": "Bonus XP!",
+              "hint": "امتیاز تجربهٔ اضافه!",
               "flags": [
                 "order_received"
               ]
             },
             {
               "id": "hit_target",
-              "label": "Hit My Target",
+              "label": "به هدفم رسیدم",
               "emoji": "🎯",
-              "hint": "Daily or weekly goal"
+              "hint": "هدف روزانه یا هفتگی"
             },
             {
               "id": "upsell",
-              "label": "Upsell",
+              "label": "فروش بیشتر",
               "emoji": "⬆️",
-              "hint": "Customer bought more"
+              "hint": "مشتری بیشتر خرید"
             },
             {
               "id": "renewal",
-              "label": "Renewal",
+              "label": "تمدید",
               "emoji": "🔁",
-              "hint": "Customer stayed with you"
+              "hint": "مشتری ماند"
             }
           ]
         },
         {
           "id": "size",
           "type": "choice",
-          "label": "Size",
-          "question": "How big was the win?",
+          "label": "اندازه",
+          "question": "این موفقیت چقدر بزرگ بود؟",
           "options": [
             {
               "id": "small",
-              "label": "Small but Sweet",
+              "label": "کوچک ولی شیرین",
               "emoji": "🍬"
             },
             {
               "id": "medium",
-              "label": "Solid",
+              "label": "محکم",
               "emoji": "💪"
             },
             {
               "id": "big",
-              "label": "Big",
+              "label": "بزرگ",
               "emoji": "🏆"
             },
             {
               "id": "record",
-              "label": "Record Breaking",
+              "label": "رکوردشکن",
               "emoji": "🚀"
             }
           ]
@@ -764,23 +764,23 @@
         {
           "id": "rating",
           "type": "rating",
-          "label": "Pride",
-          "question": "How proud are you?",
+          "label": "افتخار",
+          "question": "چقدر احساس غرور می‌کنید؟",
           "scale": [
-            "Just a day",
-            "A little",
-            "Pleased",
-            "Proud",
-            "Legendary!"
+            "یک روز معمولی",
+            "کمی",
+            "راضی",
+            "سربلند",
+            "افسانه‌ای!"
           ]
         },
         {
           "id": "note",
           "type": "note",
-          "label": "Note",
-          "question": "What made it work?",
-          "helper": "One line is plenty.",
-          "placeholder": "e.g. Bundled delivery with the order",
+          "label": "یادداشت",
+          "question": "چه چیزی باعث موفقیت شد؟",
+          "helper": "یک خط کافی است.",
+          "placeholder": "مثلاً: تحویل را همراه سفارش هماهنگ کردم",
           "maxLength": 240
         }
       ]
@@ -789,8 +789,8 @@
   "achievements": [
     {
       "id": "first_steps",
-      "title": "First Steps",
-      "description": "Complete your first mission.",
+      "title": "اولین قدم‌ها",
+      "description": "اولین مأموریت خود را کامل کنید.",
       "emoji": "👟",
       "colors": [
         "#7ad7ff",
@@ -799,8 +799,8 @@
     },
     {
       "id": "deal_maker",
-      "title": "Deal Maker",
-      "description": "Log a mission where you received an order.",
+      "title": "عقدکنندهٔ قرارداد",
+      "description": "مأموریتی ثبت کنید که در آن سفارش گرفته‌اید.",
       "emoji": "🛒",
       "colors": [
         "#7ee6a8",
@@ -809,8 +809,8 @@
     },
     {
       "id": "five_star",
-      "title": "Five-Star Rep",
-      "description": "Rate a mission a full 5 stars.",
+      "title": "ویزیتور پنج‌ستاره",
+      "description": "به یک مأموریت امتیاز کامل ۵ ستاره بدهید.",
       "emoji": "⭐",
       "colors": [
         "#ffe07a",
@@ -819,8 +819,8 @@
     },
     {
       "id": "daily_hero",
-      "title": "Daily Hero",
-      "description": "Complete a daily challenge.",
+      "title": "قهرمان روزانه",
+      "description": "یک چالش روزانه را کامل کنید.",
       "emoji": "☀️",
       "colors": [
         "#ffc98a",
@@ -829,8 +829,8 @@
     },
     {
       "id": "storyteller",
-      "title": "Storyteller",
-      "description": "Add a note to 3 missions.",
+      "title": "قصه‌گو",
+      "description": "به ۳ مأموریت یادداشت اضافه کنید.",
       "emoji": "📝",
       "colors": [
         "#c9b3ff",
@@ -839,8 +839,8 @@
     },
     {
       "id": "high_five",
-      "title": "High Five",
-      "description": "Complete 5 missions.",
+      "title": "پنج‌تایی",
+      "description": "۵ مأموریت را کامل کنید.",
       "emoji": "🖐️",
       "colors": [
         "#ffb3c4",
@@ -849,8 +849,8 @@
     },
     {
       "id": "on_fire",
-      "title": "On Fire",
-      "description": "Reach a 3-day streak.",
+      "title": "در اوج",
+      "description": "به ۳ روز فعالیت پیاپی برسید.",
       "emoji": "🔥",
       "colors": [
         "#ffb08a",
@@ -859,8 +859,8 @@
     },
     {
       "id": "explorer",
-      "title": "Rising Explorer",
-      "description": "Reach Level 2.",
+      "title": "کاوشگر در حال رشد",
+      "description": "به سطح ۲ برسید.",
       "emoji": "🧭",
       "colors": [
         "#8fe3d6",
@@ -869,8 +869,8 @@
     },
     {
       "id": "trailblazer",
-      "title": "Trailblazer",
-      "description": "Complete every mission on the map.",
+      "title": "راه‌گشا",
+      "description": "همهٔ مأموریت‌های نقشه را کامل کنید.",
       "emoji": "🗺️",
       "colors": [
         "#a9b8ff",
@@ -879,8 +879,8 @@
     },
     {
       "id": "champion",
-      "title": "Champion",
-      "description": "Reach Level 5.",
+      "title": "قهرمان",
+      "description": "به سطح ۵ برسید.",
       "emoji": "👑",
       "colors": [
         "#ffe07a",

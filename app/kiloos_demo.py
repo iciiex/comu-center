@@ -335,10 +335,73 @@ def load_sample(settings=None, *, overlap: bool = False) -> dict:
         conn.close()
 
 
+# ----------------------------------------------------------------------------- scenario
+# Deterministic game state for the live demo: visitors at different levels, with different
+# mission states. Everything goes through the real game functions (server-computed XP, levels,
+# achievements, idempotent completions); nothing is written to progress directly.
+SCENARIO_ANSWERS: dict[str, dict] = {
+    "customer-visit-challenge": {"customer_type": "new", "outcome": "order_received", "rating": 5},
+    "product-spotlight": {"showcase": "new_product", "reaction": "loved_it", "rating": 4},
+    "follow-up-sprint": {"channel": "call", "result": "order", "rating": 4},
+    "new-customer-hunt": {"source": "referral", "stage": "first_contact", "rating": 4},
+    "market-scout": {"topic": "competitor_prices", "finding": "opportunity", "rating": 4},
+}
+SCENARIO_ORDER = list(SCENARIO_ANSWERS)
+# employee code -> (base missions completed in order, quests to claim, completes Target Sprint)
+SCENARIO_PLAN: dict[str, tuple[int, tuple[str, ...], bool]] = {
+    "VIS-001": (5, ("weekly-momentum", "customer-coverage"), True),
+    "VIS-006": (4, (), False),
+    "VIS-008": (3, (), False),
+    "VIS-004": (2, (), False),
+    "VIS-002": (1, (), False),
+    "VIS-005": (1, (), False),
+}
+
+
+def seed_scenario(settings=None) -> dict:
+    """Play the scripted demo history (call after load_sample)."""
+    from app import db, game
+    from app.security import CurrentUser
+
+    settings = settings or _settings()
+    conn = db.connect(settings.db_path)
+    played: dict[str, int] = {}
+    try:
+        for code, (count, quests, sprint) in SCENARIO_PLAN.items():
+            row = conn.execute(
+                """SELECT u.id, u.organization_id, u.full_name, u.role FROM users u
+                   JOIN employee_positions p ON p.user_id = u.id WHERE p.employee_code = ?""",
+                (code,),
+            ).fetchone()
+            if row is None:
+                continue
+            user = CurrentUser(row["id"], row["organization_id"], row["full_name"], row["role"], True)
+            steps = [(m, SCENARIO_ANSWERS[m]) for m in SCENARIO_ORDER[:count]]
+            if sprint:
+                steps.append(("target-sprint", {"driver": "efes_push", "confidence": 4}))
+            for mission_id, answers in steps:
+                game.complete_mission(conn, user, mission_id, answers, f"scenario-{code}-{mission_id}")
+            for quest_id in quests:
+                game.claim_quest(conn, user, quest_id, f"scenario-{code}-{quest_id}")
+            played[code] = len(steps)
+    finally:
+        conn.close()
+    return played
+
+
+def reset_scenario(settings=None) -> dict:
+    """Wipe the demo database, re-seed it, load the SAMPLE workbook and play the scenario."""
+    settings = settings or _settings()
+    reset(settings)
+    loaded = load_sample(settings)
+    return {"import": loaded, "visitors": seed_scenario(settings)}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.kiloos_demo")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("reset", help="wipe and re-seed the demo database")
+    resetter = sub.add_parser("reset", help="wipe and re-seed the demo database")
+    resetter.add_argument("--scenario", action="store_true", help="also load the SAMPLE workbook and play the demo scenario")
     loader = sub.add_parser("load-sample", help="upload + process the SAMPLE workbook")
     loader.add_argument("--overlap", action="store_true", help="use the overlap SAMPLE workbook")
     wb = sub.add_parser("workbook", help="write the SAMPLE workbook(s) to disk")
@@ -346,7 +409,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.cmd == "reset":
-        print(f"demo database rebuilt: {reset()}")
+        if args.scenario:
+            print(f"demo scenario rebuilt: {reset_scenario()}")
+        else:
+            print(f"demo database rebuilt: {reset()}")
     elif args.cmd == "load-sample":
         print(load_sample(overlap=args.overlap))
     else:

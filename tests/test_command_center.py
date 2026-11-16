@@ -64,7 +64,7 @@ def test_management_command_center_counts_engagement_across_visible_reps(
     assert sum(level["reps"] for level in center["xp_distribution"]) == center["reps"]
 
     amir_id = user_id(demo_settings, AMIR)
-    first_steps = [a for a in center["recent_achievements"] if a["achievement"] == "First Steps"]
+    first_steps = [a for a in center["recent_achievements"] if a["achievement"] == "اولین قدم‌ها"]
     assert any(a["user_id"] == amir_id for a in first_steps)
 
 

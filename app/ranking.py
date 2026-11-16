@@ -336,13 +336,12 @@ def build(
 
     me = next((row for row in rows if row["is_me"] or row["in_my_group"]), None)
     note = (
-        "Season = the active competition. Ranked by organizational points (append-only ledger); "
-        "game XP is the total earned so far and is shown separately."
+        "فصل = رقابت فعال. رتبه بر پایهٔ امتیاز سازمانی (دفتر ثبت غیرقابل ویرایش) است؛ "
+        "امتیاز تجربهٔ بازی مجموع تاکنون است و جداگانه نمایش داده می‌شود."
         if window == "season"
-        else "Window = what was recorded inside it (UTC). Organizational points are timestamped "
-        "when a sales row is processed; game XP when a mission or quest is completed. "
-        "Movement compares with the "
-        "previous window of the same length; “new” means no ranked activity there."
+        else "بازه = آنچه در همین بازه (به وقت UTC) ثبت شده است. امتیاز سازمانی هنگام پردازش "
+        "ردیف فروش و امتیاز تجربه هنگام انجام مأموریت یا چالش زمان‌گذاری می‌شود. جابه‌جایی "
+        "با بازهٔ قبلی هم‌طول مقایسه می‌شود؛ «جدید» یعنی در بازهٔ قبل فعالیتی نبوده است."
     )
     return {
         "is_demo": True,

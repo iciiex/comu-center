@@ -18,7 +18,7 @@ from typing import Any
 from fastapi import Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 
-from app import command_center, game, imports, kiloos_demo, perf, ranking, repo
+from app import admin_missions, command_center, db, game, imports, kiloos_demo, perf, ranking, repo
 from app.repo import DomainError
 from app.security import (
     CurrentUser,
@@ -30,8 +30,8 @@ from app.security import (
 )
 
 DEMO_NOTICE = (
-    "DEMO — sample data and PROPOSED rules. Not real Kiloos sales, not approved KPIs, "
-    "and no financial reward is paid."
+    "نمایشی — داده‌های نمونه و قواعد پیشنهادی. این ارقام فروش واقعی کیلوس یا شاخص مصوب نیستند "
+    "و هیچ پاداش مالی پرداخت نمی‌شود."
 )
 MGMT_POSITIONS = {"admin", "management", "branch_manager", "supervisor"}
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -617,6 +617,85 @@ def register(app, *, settings, conn_dep, require_user, require_admin, csrf_guard
         return JSONResponse(
             ranking.build(conn, user.organization_id, user.id, scope=scope, window=window, branch=branch)
         )
+
+    # ---- activity log (scoped to the viewer's visible representatives)
+    @app.get("/api/v1/mgmt/activity")
+    def activity_log(
+        limit: int = Query(60, ge=1, le=200),
+        user: CurrentUser = Depends(require_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        profile, visible = mgmt_context(user, conn)
+        names = _names(conn, user.organization_id)
+        return JSONResponse(
+            {
+                "is_demo": True,
+                "items": command_center.activity(conn, visible, names, limit),
+                "imports": imports.list_imports(conn, user.organization_id)[:5]
+                if profile["position"] == "admin"
+                else [],
+            }
+        )
+
+    # ---- mission administration (administrator only)
+    @app.get("/api/v1/mgmt/missions")
+    def missions_admin(
+        user: CurrentUser = Depends(require_admin), conn: sqlite3.Connection = Depends(conn_dep)
+    ) -> JSONResponse:
+        return JSONResponse(admin_missions.overview(conn, user.organization_id))
+
+    @app.post("/api/v1/mgmt/missions", dependencies=[Depends(csrf_guard)])
+    async def missions_create(
+        request: Request,
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        payload = await request.json()
+        if not isinstance(payload, dict):
+            return err(422, "INVALID_BODY", "درخواست نامعتبر است.")
+        try:
+            created = admin_missions.create(conn, user, payload)
+        except admin_missions.AdminMissionError as exc:
+            return err(exc.status, exc.code, exc.message)
+        return JSONResponse(created, status_code=201)
+
+    @app.patch("/api/v1/mgmt/missions/{mission_id}", dependencies=[Depends(csrf_guard)])
+    async def missions_update(
+        mission_id: str,
+        request: Request,
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        payload = await request.json()
+        if not isinstance(payload, dict):
+            return err(422, "INVALID_BODY", "درخواست نامعتبر است.")
+        try:
+            return JSONResponse(admin_missions.update(conn, user, mission_id, payload))
+        except admin_missions.AdminMissionError as exc:
+            return err(exc.status, exc.code, exc.message)
+
+    # ---- demo reset (administrator, demo environment only)
+    @app.post("/api/v1/demo/reset", dependencies=[Depends(csrf_guard)])
+    def demo_reset(user: CurrentUser = Depends(require_admin)) -> JSONResponse:
+        demo_only()
+        result = kiloos_demo.reset_scenario(settings)
+        # The rebuild replaces the base-seed user rows, so sign the administrator straight back in
+        # as the rebuilt account: a reset during a presentation must not log anyone out.
+        fresh = db.connect(settings.db_path)
+        try:
+            row = fresh.execute(
+                "SELECT id FROM users WHERE role = 'admin' AND full_name = ? LIMIT 1",
+                (user.full_name,),
+            ).fetchone() or fresh.execute("SELECT id FROM users WHERE role = 'admin' LIMIT 1").fetchone()
+        finally:
+            fresh.close()
+        out = JSONResponse({"is_demo": True, "reset": True, "visitors": result["visitors"]})
+        if row is not None:
+            token = make_token(row["id"], settings.secret)
+            set_session(out, row["id"], settings.secret, token)
+            out.headers["X-CSRF-Token"] = csrf_for(token, settings.secret)
+        out.headers["Cache-Control"] = "no-store"
+        return out
 
     # ---- imports (admin only)
     @app.get("/api/v1/mgmt/imports")

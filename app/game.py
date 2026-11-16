@@ -132,22 +132,24 @@ def _ensure_daily(progress: dict[str, Any], day_key: str) -> dict[str, Any]:
 
 
 def _lock_reason(mission: dict[str, Any], progress: dict[str, Any]) -> str | None:
+    if mission["id"] in progress.get("_admin", {}).get("hidden", []):
+        return "این مأموریت در حال حاضر برای شما فعال نیست."
     unlock = mission.get("unlock", {})
     store_offer = unlock.get("storeOfferId")
     if store_offer and store_offer not in progress.get("storeUnlocks", []):
-        return f"Unlock in the demo store for {int(mission.get('storePriceCoins', 0))} coins"
+        return perf.fa_digits(f"با {int(mission.get('storePriceCoins', 0))} سکه در فروشگاه نمایشی باز می‌شود")
     after = unlock.get("afterMission")
     if after and int(progress.get("missions", {}).get(after, {}).get("completions", 0)) < 1:
         prerequisite = _mission_map().get(after)
         title = prerequisite["title"] if prerequisite else after
-        return f"Complete “{title}” to unlock"
+        return f"برای باز شدن ابتدا «{title}» را کامل کنید"
     min_level = unlock.get("minLevel")
     if min_level and _level(int(progress.get("xp", 0))) < int(min_level):
-        return f"Reach Level {min_level} to unlock"
+        return perf.fa_digits(f"برای باز شدن به سطح {min_level} برسید")
     if unlock.get("salesGate"):
         gate = progress.get("_sales", {}).get(mission["id"])
         if gate is None:
-            return "Available to sales representatives with processed sales data"
+            return "فقط برای ویزیتورهای دارای داده فروش پردازش‌شده"
         if gate["reason"]:
             return gate["reason"]
     return None
@@ -164,7 +166,10 @@ def _mission_views(
         definitions = [
             *catalog()["missions"],
             *[m for m in sales_catalog()["missions"] if m["id"] in enabled],
+            *progress.get("_admin", {}).get("custom", []),
         ]
+        hidden = progress.get("_admin", {}).get("hidden", [])
+        definitions = [m for m in definitions if m["id"] not in hidden]
     for definition in sorted(definitions, key=lambda m: m["order"]):
         record = progress.get("missions", {}).get(definition["id"], {})
         draft = progress.get("drafts", {}).get(definition["id"])
@@ -237,10 +242,33 @@ def _attach_sales(conn, user_id: str, state: dict[str, Any]) -> dict[str, Any]:
                 "SELECT 1 FROM score_events WHERE idempotency_key = ?", (key,)
             ).fetchone():
                 done = True
-                reason = f"Completed for {gate['period']} - next mission opens with new sales data"
+                reason = perf.fa_digits(f"برای دورهٔ {gate['period']} انجام شد؛ مأموریت بعدی با فروش جدید باز می‌شود")
         entries[mission["id"]] = {"reason": reason, "done": done, "info": gate}
     state["_sales"] = entries
     return state
+
+
+def _attach_admin(conn, user_id: str, state: dict[str, Any]) -> dict[str, Any]:
+    """Transient, server-computed administrator settings for this user (never persisted)."""
+    from app import admin_missions
+
+    state = dict(state)
+    state.pop("_admin", None)
+    row = conn.execute("SELECT organization_id FROM users WHERE id = ?", (user_id,)).fetchone()
+    if row is None:
+        return state
+    org_id = row["organization_id"]
+    state["_admin"] = {
+        "hidden": admin_missions.hidden_for_user(conn, org_id, user_id),
+        "custom": admin_missions.custom_for_user(conn, org_id, user_id),
+    }
+    return state
+
+
+def _custom_mission(conn, user, mission_id: str) -> dict[str, Any] | None:
+    from app import admin_missions
+
+    return admin_missions.get_custom(conn, user.organization_id, user.id, mission_id)
 
 
 def _initialize(conn, user_id: str, full_name: str) -> dict[str, Any]:
@@ -250,16 +278,17 @@ def _initialize(conn, user_id: str, full_name: str) -> dict[str, Any]:
     if row is None:
         state = _initial_progress(full_name)
         _save(conn, user_id, state)
-        return _attach_sales(conn, user_id, state)
+        return _attach_admin(conn, user_id, _attach_sales(conn, user_id, state))
     state = json.loads(row["state_json"])
     state.pop("_accountName", None)
-    return _attach_sales(conn, user_id, state)
+    return _attach_admin(conn, user_id, _attach_sales(conn, user_id, state))
 
 
 def _save(conn, user_id: str, progress: dict[str, Any]) -> None:
     stored = dict(progress)
     stored.pop("_accountName", None)
     stored.pop("_sales", None)
+    stored.pop("_admin", None)
     conn.execute(
         """INSERT INTO game_progress (user_id, state_json, updated_at) VALUES (?, ?, ?)
            ON CONFLICT(user_id) DO UPDATE SET state_json = excluded.state_json,
@@ -272,6 +301,7 @@ def _public_progress(progress: dict[str, Any]) -> dict[str, Any]:
     clean = dict(progress)
     clean.pop("_accountName", None)
     clean.pop("_sales", None)
+    clean.pop("_admin", None)
     return clean
 
 
@@ -300,7 +330,7 @@ def bootstrap(conn, user, csrf_value: str) -> dict[str, Any]:
             "currency": "game_coins",
         },
         "achievements_catalog": catalog()["achievements"],
-        "quests": game_quests.weekly_quests(progress, day_key, _category_of),
+        "quests": _quests(conn, user.id, progress, day_key),
         "progress": _public_progress(progress),
     }
 
@@ -325,7 +355,7 @@ def get_progress(conn, user):
         "date_key": day_key,
         "missions": _mission_views(progress, day_key),
         "special_missions": _special_mission_views(progress, day_key),
-        "quests": game_quests.weekly_quests(progress, day_key, _category_of),
+        "quests": _quests(conn, user.id, progress, day_key),
         "progress": _public_progress(progress),
     }
 
@@ -575,7 +605,7 @@ def complete_mission(
             "Idempotency-Key must contain printable ASCII characters.",
         )
     definitions = _mission_map()
-    mission = definitions.get(mission_id)
+    mission = definitions.get(mission_id) or _custom_mission(conn, user, mission_id)
     if mission is None:
         raise GameError(404, "MISSION_NOT_FOUND", "Mission was not found.")
     clean = _clean_answers(mission, answers, allow_incomplete=False)
@@ -718,7 +748,7 @@ def complete_mission(
             "progress": _public_progress(progress),
             "missions": _mission_views(progress, day_key),
             "special_missions": _special_mission_views(progress, day_key),
-            "quests": game_quests.weekly_quests(progress, day_key, _category_of),
+            "quests": _quests(conn, user.id, progress, day_key, pending_completions=1),
             "date_key": day_key,
         }
         completion_id = str(uuid.uuid4())
@@ -748,6 +778,33 @@ def complete_mission(
 def _category_of(mission_id: str) -> str | None:
     mission = _mission_map().get(mission_id)
     return mission.get("category") if mission else None
+
+
+def _team_completions(conn, user_id: str, day_key: str) -> int | None:
+    """Missions completed this ISO week by everyone under the same supervisor (the team challenge)."""
+    row = conn.execute(
+        "SELECT supervisor_id FROM employee_positions WHERE user_id = ?", (user_id,)
+    ).fetchone()
+    if row is None or not row["supervisor_id"]:
+        return None  # no team
+    start, end = game_quests.week_bounds(day_key)
+    return int(
+        conn.execute(
+            """SELECT COUNT(*) FROM game_completions gc
+               JOIN employee_positions p ON p.user_id = gc.user_id
+               WHERE p.supervisor_id = ? AND substr(gc.completed_at, 1, 10) BETWEEN ? AND ?""",
+            (row["supervisor_id"], start, end),
+        ).fetchone()[0]
+    )
+
+
+def _quests(
+    conn, user_id: str, progress: dict[str, Any], day_key: str, *, pending_completions: int = 0
+) -> dict[str, Any]:
+    # pending_completions: a completion inside the open transaction that is not stored yet.
+    base = _team_completions(conn, user_id, day_key)
+    team = 0 if base is None else base + pending_completions
+    return game_quests.weekly_quests(progress, day_key, _category_of, team)
 
 
 def claim_quest(conn, user, quest_id: str, idempotency_key: str) -> tuple[dict[str, Any], bool]:
@@ -787,7 +844,7 @@ def claim_quest(conn, user, quest_id: str, idempotency_key: str) -> tuple[dict[s
             return json.loads(existing["response_json"]), True
 
         progress = _initialize(conn, user.id, user.full_name)
-        view = game_quests.weekly_quests(progress, day_key, _category_of)
+        view = _quests(conn, user.id, progress, day_key)
         quest = next(item for item in view["quests"] if item["id"] == quest_id)
         if quest["claimed"]:
             raise GameError(
@@ -809,7 +866,7 @@ def claim_quest(conn, user, quest_id: str, idempotency_key: str) -> tuple[dict[s
         unlocked = _new_achievements(progress, progress.get("history", []))
         for achievement_id in unlocked:
             progress.setdefault("achievements", {})[achievement_id] = claimed_at
-        view = game_quests.weekly_quests(progress, day_key, _category_of)
+        view = _quests(conn, user.id, progress, day_key)
         response = {
             "claim": {
                 "quest_id": quest_id,
@@ -923,7 +980,7 @@ def _award_org_points(
 
 
 def save_draft(conn, user, mission_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-    mission = _mission_map().get(mission_id)
+    mission = _mission_map().get(mission_id) or _custom_mission(conn, user, mission_id)
     if mission is None:
         raise GameError(404, "MISSION_NOT_FOUND", "Mission was not found.")
     if not isinstance(payload, dict) or set(payload) - {"step_index", "answers"}:
@@ -956,7 +1013,7 @@ def save_draft(conn, user, mission_id: str, payload: dict[str, Any]) -> dict[str
 
 
 def discard_draft(conn, user, mission_id: str) -> dict[str, Any]:
-    if mission_id not in _mission_map():
+    if mission_id not in _mission_map() and _custom_mission(conn, user, mission_id) is None:
         raise GameError(404, "MISSION_NOT_FOUND", "Mission was not found.")
     progress = _initialize(conn, user.id, user.full_name)
     progress.setdefault("drafts", {}).pop(mission_id, None)

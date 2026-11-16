@@ -44,7 +44,10 @@ def week_bounds(day_key: str) -> tuple[str, str]:
 
 
 def _objective_progress(
-    quest: dict[str, Any], entries: list[dict[str, Any]], category_of: CategoryOf
+    quest: dict[str, Any],
+    entries: list[dict[str, Any]],
+    category_of: CategoryOf,
+    team_completions: int,
 ) -> int:
     objective = quest["objective"]
     kind = objective["type"]
@@ -57,6 +60,8 @@ def _objective_progress(
         categories = {category_of(entry["missionId"]) for entry in entries}
         categories.discard(None)
         return len(categories)
+    if kind == "team_completions":
+        return team_completions
     if kind == "active_days":
         return len({str(entry["completedAt"])[:10] for entry in entries})
     raise ValueError(f"Unknown quest objective type: {kind}")
@@ -70,7 +75,10 @@ def _claims_for_week(progress: dict[str, Any], wk: str) -> dict[str, dict[str, A
 
 
 def weekly_quests(
-    progress: dict[str, Any], day_key: str, category_of: CategoryOf
+    progress: dict[str, Any],
+    day_key: str,
+    category_of: CategoryOf,
+    team_completions: int = 0,
 ) -> dict[str, Any]:
     """View model for the current ISO week: progress, claim status and reward per quest."""
     wk = week_key(day_key)
@@ -84,7 +92,7 @@ def weekly_quests(
     views: list[dict[str, Any]] = []
     for quest in quests_catalog()["quests"]:
         target = int(quest["objective"]["target"])
-        raw = _objective_progress(quest, entries, category_of)
+        raw = _objective_progress(quest, entries, category_of, team_completions)
         claim = claimed.get(quest["id"])
         complete = raw >= target
         views.append(

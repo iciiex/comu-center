@@ -196,7 +196,7 @@ def test_sales_mission_is_gated_by_processed_sales_and_awards_once(demo, demo_se
 
     login(demo, demo_settings, ELHAM)  # 55% of target
     locked = game_missions(demo)["target-sprint"]
-    assert locked["status"] == "locked" and "80%" in locked["lockReason"]
+    assert locked["status"] == "locked" and "۸۰٪" in locked["lockReason"]
     answers = {"driver": "efes_push", "confidence": 4}
     denied = demo.post(
         "/api/v1/game/missions/target-sprint/completions",

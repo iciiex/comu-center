@@ -5,48 +5,84 @@
     {
       "id": "target-sprint",
       "order": 7,
-      "title": "Target Sprint",
-      "shortTitle": "Target Sprint",
-      "description": "Your processed sales reached 80% of this period's target. Reflect on what drove it to claim DEMO rewards.",
+      "title": "هدف‌گیری فروش",
+      "shortTitle": "هدف‌گیری فروش",
+      "description": "فروش پردازش‌شدهٔ شما به ۸۰٪ هدف این دوره رسیده است. عامل موفقیت را ثبت کنید تا پاداش نمایشی را بگیرید.",
       "category": "sales_achievement",
       "difficulty": "medium",
       "estimatedMinutes": 2,
       "xpReward": 120,
       "coinReward": 25,
-      "unlock": { "salesGate": { "type": "target_attainment", "minPct": 80 } },
+      "unlock": {
+        "salesGate": {
+          "type": "target_attainment",
+          "minPct": 80
+        }
+      },
       "orgAward": {
         "ruleCode": "GAME_SALES_TARGET_80_PROPOSED",
         "approvalStatus": "PROPOSED",
         "oncePerPeriod": true
       },
-      "completion": { "requiredSteps": ["driver", "confidence"] },
+      "completion": {
+        "requiredSteps": [
+          "driver",
+          "confidence"
+        ]
+      },
       "steps": [
         {
           "id": "driver",
           "type": "choice",
-          "label": "Driver",
-          "question": "What drove your result this period?",
+          "label": "عامل موفقیت",
+          "question": "چه چیزی باعث نتیجهٔ شما در این دوره شد؟",
           "options": [
-            { "id": "efes_push", "label": "EFES Focus", "emoji": "🍺", "hint": "Strong EFES numbers" },
-            { "id": "matador_push", "label": "Matador Focus", "emoji": "🥤", "hint": "Strong Matador numbers" },
-            { "id": "both_brands", "label": "Both Brands", "emoji": "⚖️", "hint": "Balanced portfolio" },
-            { "id": "new_outlets", "label": "New Outlets", "emoji": "🏪", "hint": "Expanded coverage" }
+            {
+              "id": "efes_push",
+              "label": "تمرکز بر افس",
+              "emoji": "🍺",
+              "hint": "ارقام قوی افس"
+            },
+            {
+              "id": "matador_push",
+              "label": "تمرکز بر ماتادور",
+              "emoji": "🥤",
+              "hint": "ارقام قوی ماتادور"
+            },
+            {
+              "id": "both_brands",
+              "label": "هر دو برند",
+              "emoji": "⚖️",
+              "hint": "سبد متعادل"
+            },
+            {
+              "id": "new_outlets",
+              "label": "مراکز فروش جدید",
+              "emoji": "🏪",
+              "hint": "پوشش گسترده‌تر"
+            }
           ]
         },
         {
           "id": "confidence",
           "type": "rating",
-          "label": "Confidence",
-          "question": "How confident are you about closing the period strongly?",
-          "scale": ["Shaky", "Unsure", "Okay", "Confident", "Unstoppable!"]
+          "label": "اطمینان",
+          "question": "چقدر مطمئن هستید که دوره را قوی تمام می‌کنید؟",
+          "scale": [
+            "متزلزل",
+            "نامطمئن",
+            "قابل قبول",
+            "مطمئن",
+            "توقف‌ناپذیر!"
+          ]
         },
         {
           "id": "note",
           "type": "note",
-          "label": "Note",
-          "question": "Anything the team should know?",
-          "helper": "Optional — one line is plenty.",
-          "placeholder": "e.g. Focus next week on Matador in the north zone",
+          "label": "یادداشت",
+          "question": "نکته‌ای هست که تیم باید بداند؟",
+          "helper": "اختیاری؛ یک خط کافی است.",
+          "placeholder": "مثلاً: هفتهٔ آینده روی ماتادور در منطقهٔ شمال تمرکز کنیم",
           "maxLength": 240
         }
       ]

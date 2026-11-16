@@ -6,35 +6,56 @@
   "quests": [
     {
       "id": "weekly-momentum",
-      "title": "Weekly Momentum",
-      "description": "Complete 5 missions this week.",
-      "objective": { "type": "completions", "target": 5 },
+      "title": "مأموریت هفتگی: شتاب هفتگی",
+      "description": "این هفته ۵ مأموریت را کامل کنید.",
+      "objective": {
+        "type": "completions",
+        "target": 5
+      },
       "rewardXp": 150,
       "icon": "target"
     },
     {
       "id": "product-champion",
-      "title": "Product Champion",
-      "description": "Complete 2 Product Introduction missions this week.",
-      "objective": { "type": "category", "category": "product_intro", "target": 2 },
+      "title": "چالش معرفی محصول",
+      "description": "این هفته ۲ مأموریت معرفی محصول را کامل کنید.",
+      "objective": {
+        "type": "category",
+        "category": "product_intro",
+        "target": 2
+      },
       "rewardXp": 100,
       "icon": "box"
     },
     {
       "id": "customer-coverage",
-      "title": "Customer Coverage",
-      "description": "Complete missions from 3 different categories this week.",
-      "objective": { "type": "distinct_categories", "target": 3 },
+      "title": "چالش پوشش مشتری",
+      "description": "این هفته از ۳ دستهٔ مختلف مأموریت انجام دهید.",
+      "objective": {
+        "type": "distinct_categories",
+        "target": 3
+      },
       "rewardXp": 120,
       "icon": "store"
     },
     {
       "id": "consistency-streak",
-      "title": "Consistency Streak",
-      "description": "Complete at least one mission on 3 different days this week.",
-      "objective": { "type": "active_days", "target": 3 },
+      "title": "چالش استمرار فعالیت",
+      "description": "این هفته در ۳ روز مختلف دست‌کم یک مأموریت انجام دهید.",
+      "objective": {
+        "type": "active_days",
+        "target": 3
+      },
       "rewardXp": 120,
       "icon": "flame"
+    },
+    {
+      "id": "team-challenge",
+      "title": "چالش تیمی",
+      "description": "تیم شما این هفته در مجموع ۸ مأموریت انجام دهد.",
+      "objective": { "type": "team_completions", "target": 8 },
+      "rewardXp": 150,
+      "icon": "shield"
     }
   ]
 }

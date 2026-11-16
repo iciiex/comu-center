@@ -20,6 +20,11 @@ from typing import Any
 POSITION_ORDER = {"management": 0, "branch_manager": 1, "supervisor": 2, "rep": 3}
 
 
+def fa_digits(text: str) -> str:
+    """Western digits to Persian digits, for user-visible server messages."""
+    return text.translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+
+
 def dec(value: Any) -> Decimal:
     return Decimal(str(value)) if value is not None else Decimal(0)
 
@@ -187,7 +192,7 @@ def sales_gate(conn: sqlite3.Connection, org_id: str, user_id: str) -> dict[str,
     period = latest_period(conn, org_id)
     base = {"minPct": float(SALES_GATE_MIN_PCT), "status": "PROPOSED"}
     if period is None:
-        return {**base, "eligible": False, "period": None, "reason": "No processed sales yet"}
+        return {**base, "eligible": False, "period": None, "reason": "هنوز فروش پردازش‌شده‌ای وجود ندارد"}
     sales = sales_by_user_brand(conn, org_id, period, [user_id])
     targets = targets_by_user_brand(conn, org_id, period, [user_id])
     summary = rep_summary(sales, targets, user_id)
@@ -201,14 +206,14 @@ def sales_gate(conn: sqlite3.Connection, org_id: str, user_id: str) -> dict[str,
         "attainmentPct": attainment,
     }
     if target <= 0:
-        return {**info, "eligible": False, "reason": f"No sales target for {period}"}
+        return {**info, "eligible": False, "reason": fa_digits(f"برای دورهٔ {period} هدف فروشی ثبت نشده است")}
     if achieved * 100 < target * SALES_GATE_MIN_PCT:
         return {
             **info,
             "eligible": False,
-            "reason": (
-                f"Reach {SALES_GATE_MIN_PCT:g}% of your {period} target "
-                f"(now {attainment}%) to unlock"
+            "reason": fa_digits(
+                f"برای باز شدن به {SALES_GATE_MIN_PCT:g}٪ هدف دورهٔ {period} برسید "
+                f"(اکنون {attainment}٪)"
             ),
         }
     return {**info, "eligible": True, "reason": None}

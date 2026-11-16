@@ -12,7 +12,13 @@ CUSTOMER_VISIT = {"customer_type": "new", "outcome": "order_received", "rating":
 PRODUCT_SPOTLIGHT = {"showcase": "new_product", "reaction": "loved_it", "rating": 4}
 FOLLOW_UP = {"channel": "call", "result": "order", "rating": 4}
 CLAIM = "/api/v1/game/quests/{quest_id}/claim"
-ALL_QUESTS = {"weekly-momentum", "product-champion", "customer-coverage", "consistency-streak"}
+ALL_QUESTS = {
+    "weekly-momentum",
+    "product-champion",
+    "customer-coverage",
+    "consistency-streak",
+    "team-challenge",
+}
 
 
 def bootstrap(client: TestClient) -> dict:
