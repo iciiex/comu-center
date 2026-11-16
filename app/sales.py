@@ -220,7 +220,7 @@ def parse_workbook(raw: bytes, max_rows: int = 5000) -> list[dict[str, Any]]:
     headers = [HEADER_ALIASES.get(_text(cell).lower(), _text(cell).lower()) for cell in header]
     missing = [column for column in REQUIRED_COLUMNS if column not in headers]
     if missing:
-        raise SalesFileError("ستون‌های الزامی موجود نیست: " + "، ".join(missing))
+        raise SalesFileError("ستون‌های الزامی در فایل پیدا نشد: " + "، ".join(missing))
 
     index = {name: position for position, name in enumerate(headers) if name in KNOWN_COLUMNS}
     parsed: list[dict[str, Any]] = []
