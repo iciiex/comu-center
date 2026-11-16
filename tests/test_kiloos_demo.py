@@ -91,7 +91,10 @@ def test_seed_has_required_demo_accounts_and_hierarchy(demo, demo_settings) -> N
 
 def test_import_workflow_validates_dedupes_and_processes_once(demo, demo_settings) -> None:
     admin = login(demo, demo_settings, ADMIN)
-    staged = upload(demo, admin, kiloos_demo.sample_workbook_bytes())
+    # One set of bytes for both uploads: openpyxl stamps wall-clock times into the file, so two
+    # separate generations can differ and would not be the "same file" at all.
+    raw = kiloos_demo.sample_workbook_bytes()
+    staged = upload(demo, admin, raw)
     assert staged.status_code == 201
     preview = staged.json()
     assert preview["status"] == "validated" and preview["is_sample"] is True
@@ -108,7 +111,7 @@ def test_import_workflow_validates_dedupes_and_processes_once(demo, demo_setting
     assert db_rows(demo_settings, "SELECT COUNT(*) n FROM score_events WHERE source_type='sales_record'")[0]["n"] == 0
 
     # Same file again is refused: no duplicate import.
-    again = upload(demo, admin, kiloos_demo.sample_workbook_bytes())
+    again = upload(demo, admin, raw)
     assert again.status_code == 409 and again.json()["error"]["code"] == "DUPLICATE_FILE"
 
     done = demo.post(f"/api/v1/mgmt/imports/{preview['id']}/process", headers=admin).json()

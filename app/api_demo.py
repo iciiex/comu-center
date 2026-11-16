@@ -18,7 +18,7 @@ from typing import Any
 from fastapi import Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 
-from app import game, imports, kiloos_demo, perf, repo
+from app import game, imports, kiloos_demo, perf, ranking, repo
 from app.repo import DomainError
 from app.security import (
     CurrentUser,
@@ -607,11 +607,15 @@ def register(app, *, settings, conn_dep, require_user, require_admin, csrf_guard
 
     @app.get("/api/v1/leaderboard")
     def leaderboard(
+        scope: str = Query("individual", pattern="^(individual|branch|team)$"),
+        window: str = Query("season", pattern="^(season|daily|weekly|monthly)$"),
         branch: str | None = Query(None, max_length=40),
         user: CurrentUser = Depends(require_user),
         conn: sqlite3.Connection = Depends(conn_dep),
     ) -> JSONResponse:
-        return JSONResponse(leaderboard_rows(conn, user.organization_id, user.id, branch))
+        return JSONResponse(
+            ranking.build(conn, user.organization_id, user.id, scope=scope, window=window, branch=branch)
+        )
 
     # ---- imports (admin only)
     @app.get("/api/v1/mgmt/imports")
