@@ -45,6 +45,7 @@ ignore = ["S101", "S106", "S107"]
 "tests/**" = ["S101"]
 "tests/test_kiloos_demo.py" = ["E501", "S101"]
 "tests/test_realimport.py" = ["E501", "S101"]
+"tests/test_realimport_real_workbook.py" = ["E501", "S101"]
 "app/main.py" = ["B008"]  # FastAPI dependency-injection idiom
 "app/api_demo.py" = ["B008", "E501"]  # same idiom; dense read-model dicts
 "app/kiloos_demo.py" = ["E501", "S311"]  # SAMPLE roster tables; seeded RNG is intentional

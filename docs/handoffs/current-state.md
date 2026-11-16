@@ -70,6 +70,24 @@
   contains SAMPLE is tagged `sample`; everything else is tagged `imported`.
 - Not done: Team/BranchGroup/CustomerGroup/BoxConversion sheet import, real calculations of EFES/Matador, SSO/OTP.
 
+## Real-workbook import spike (added 2026-11-16, MODE: P, branch `real-import-spike`)
+- **What:** isolated vertical slice Workbook, Import, Validation, Mapping, Calculation, Reconciliation, Dashboard
+  (`app/realimport/`, migration `0008_real_import_spike.sql`, routes `/api/v1/ri/*`, UI tab "Real import (spike)").
+  Feature-flagged (`KILOOS_REAL_IMPORT=1`); own compose project on port 8091 (`spike/` next to the demo).
+- **Docs:** `docs/real-import/architecture.md` (AD-1 to AD-9), `setup.md`, `decision-register.md` (BD-01 to BD-14).
+- **Verified on the real workbook (read-only):** 27,946 rows, 27,941 keys, 5 duplicate-key rows; base net 112,244.583 vs
+  derived 112,189 (difference 55.583 = 294 keys, every one verified as half-to-even integer rounding); 1,006 roster rows,
+  76 employees with several visitor codes; 47 branch-manager + 2 general-manager rows whose indicative rewards
+  (2.28 B + 0.28 B Rials, PROPOSED rule) equal the workbook-reported amounts; input sales equal the workbook's definitive
+  sales on 32 of 49 rows (the rest are reported as reconciliation warnings, not forced).
+- **Mocked / unconfirmed:** every rule PROPOSED; targets, branch groups, customer-group and line mappings UNCONFIRMED;
+  no seller, supervisor, head, HQ or league calculation; no coverage metric; no Rial amounts; no payment or settlement code.
+- **Tests:** backend 126 passed (95 baseline + 31 new) plus 7 opt-in real-workbook tests; frontend 19 passed (17 + 2);
+  real-browser acceptance `spike/e2e/ri-acceptance.mjs`: all checks passed (synthetic and real).
+- **Contract:** new tables `ri_*` only; demo tables and API unchanged. `kiloos_demo.sample_workbook_bytes()` is now
+  byte-deterministic (fixes a latent timestamp flake in the duplicate-upload test).
+- **NEXT:** `app/realimport/calc.py`: add seller, supervisor and head rule types (needs BD-02, BD-04, BD-06, BD-08).
+
 ## Mocked / Demo-only
 - **Auth:** demo user picker instead of OTP/SMS (OD-01). Exit: approved login method + provider.
 - **Tenant:** one organization; multi-company not exposed (OD-02). Exit: approved org model.

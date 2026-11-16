@@ -256,3 +256,7 @@ separate game economy; nothing here is a financial entitlement.
 - [ ] Company/org access levels
 - [ ] Scoring rule versioning and correction policy
 - [ ] Reporting and analytics requirements
+
+## Real-workbook import spike
+Business questions raised by the real-workbook audit are tracked in `docs/real-import/decision-register.md`
+(BD-01 to BD-14, each with assumption, impact, status and required approver). None is APPROVED.
