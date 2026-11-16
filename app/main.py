@@ -1291,4 +1291,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         login_rate_limited=login_rate_limited,
     )
 
+    if settings.real_import_enabled:  # real-import spike: routes exist only behind the flag
+        from app.realimport import api as realimport_api
+
+        realimport_api.register(
+            app,
+            settings=settings,
+            conn_dep=conn_dep,
+            require_admin=require_admin,
+            csrf_guard=csrf_guard,
+        )
+
     return app

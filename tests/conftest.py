@@ -90,3 +90,31 @@ VISITOR = "09120000001"  # سارا محمدی
 OTHER_VISITOR = "09120000002"  # امیر رضایی
 OPERATOR = "09120000004"
 ADMIN = "09120000005"
+
+
+# ----------------------------------------------------------- real-import spike fixtures
+@pytest.fixture
+def ri_settings(tmp_path: Path) -> Settings:
+    return Settings(
+        env="test",
+        db_path=tmp_path / "ri.db",
+        evidence_dir=tmp_path / "evidence",
+        secret="test-secret-that-is-long-enough-1234567890",
+        real_import_enabled=True,
+        real_import_dir=tmp_path / "workbooks",
+        pseudonym_key="test-pseudonym-key-1234567890",
+    )
+
+
+@pytest.fixture
+def ri(ri_settings: Settings) -> Iterator[tuple[TestClient, dict[str, str]]]:
+    """Admin-authenticated client of an app with the real-import spike enabled."""
+    with TestClient(create_app(ri_settings)) as test_client:
+        conn = sqlite3.connect(ri_settings.db_path)
+        try:
+            uid = conn.execute("SELECT id FROM users WHERE mobile = ?", (ADMIN,)).fetchone()[0]
+        finally:
+            conn.close()
+        response = test_client.post("/api/v1/auth/demo-login", json={"user_id": uid})
+        assert response.status_code == 200, response.text
+        yield test_client, {"X-CSRF-Token": response.json()["csrf_token"]}

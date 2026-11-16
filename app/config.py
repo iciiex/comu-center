@@ -39,6 +39,11 @@ class Settings:
     tribal_gamification_enabled: bool = False
     # Built React app (Vite ``dist``). When set, ``/`` serves the unified single-page app.
     spa_dir: Path | None = None
+    # Real-workbook import spike (branch real-import-spike). Off by default: routes do not exist.
+    real_import_enabled: bool = False
+    real_import_dir: Path | None = None
+    real_import_max_bytes: int = 25 * 1024 * 1024
+    pseudonym_key: str = "spike-dev-pseudonym-key-change-me"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -55,6 +60,15 @@ class Settings:
             sales_max_bytes=_int_env("KILOOS_SALES_MAX_BYTES", 5 * 1024 * 1024),
             sales_max_rows=_int_env("KILOOS_SALES_MAX_ROWS", 5000),
             spa_dir=Path(os.environ["KILOOS_SPA_DIR"]) if os.getenv("KILOOS_SPA_DIR") else None,
+            real_import_enabled=os.getenv("KILOOS_REAL_IMPORT", "").strip().lower()
+            in {"1", "true", "yes", "on"},
+            real_import_dir=(
+                Path(os.environ["KILOOS_REAL_IMPORT_DIR"])
+                if os.getenv("KILOOS_REAL_IMPORT_DIR")
+                else None
+            ),
+            real_import_max_bytes=_int_env("KILOOS_REAL_IMPORT_MAX_BYTES", 25 * 1024 * 1024),
+            pseudonym_key=os.getenv("KILOOS_PSEUDONYM_KEY", "spike-dev-pseudonym-key-change-me"),
             tribal_gamification_enabled=(
                 os.getenv("KILOOS_TRIBAL_GAMIFICATION_ENABLED", "false").strip().lower()
                 in {"1", "true", "yes", "on"}

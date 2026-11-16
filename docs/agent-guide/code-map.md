@@ -37,7 +37,7 @@ Contents: [1 Modules](#1-modules) · [2 Routes](#2-routes) · [3 Route details](
 | `app/imports.py` | 5 | `repo`, `sales` |
 | `app/jalali.py` | 3 | — |
 | `app/kiloos_demo.py` | 13 | `config`, `db`, `game`, `imports`, `repo`, `security` |
-| `app/main.py` | 66 | `api_demo`, `config`, `db`, `game`, `jalali`, `repo`, `sales`, `sample_sales`, `security`, `tribal` |
+| `app/main.py` | 66 | `api`, `api_demo`, `config`, `db`, `game`, `jalali`, `repo`, `sales`, `sample_sales`, `security`, `tribal` |
 | `app/maintenance.py` | 3 | `config`, `db` |
 | `app/perf.py` | 11 | `repo` |
 | `app/repo.py` | 44 | `scoring` |
@@ -75,6 +75,7 @@ graph LR
     main --> db
     main --> game
     main --> jalali
+    main --> api
     main --> repo
     main --> sales
     main --> sample_sales
@@ -700,7 +701,7 @@ graph LR
 | `_login_required` | exception-handler | — | — | — | — | — |
 | `_starlette_error` | exception-handler | — | — | — | `main.page` | — |
 | `conn_dep` | closure | — | — | — | `db.connect` | 43 callers |
-| `create_app` | function | — | — | — | `api_demo.register`, `config.Settings`, `db.init_db`, `jalali.format_jalali` | `conftest::client`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`, `test_hardening::test_admin_queue_paginates`, `test_kiloos_demo::demo`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated` |
+| `create_app` | function | — | — | — | `api_demo.register`, `config.Settings`, `db.init_db`, `jalali.format_jalali` | `conftest::client`, `conftest::ri`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`, `test_hardening::test_admin_queue_paginates`, `test_kiloos_demo::demo`, `test_realimport::test_endpoints_require_admin`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated` |
 | `csrf_guard` | closure | Reject form posts whose CSRF value does not match the session token. | — | — | `main.LoginRequired`, `security.csrf_for`, `security.session_token` | 16 callers |
 | `go` | closure | — | — | — | `main.url_session`, `main.with_token` | 10 callers |
 | `hardening` | middleware | — | — | — | `main.login_rate_limited`, `main.page` | — |
@@ -837,7 +838,7 @@ graph LR
 
 | Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
 |---|---|---|---|---|---|---|
-| `Settings` | class | — | — | — | `config._int_env` | `conftest::settings`, `kiloos_demo._settings`, `main.create_app`, `maintenance.main`, `seed.main`, `test_hardening::test_admin_queue_paginates` |
+| `Settings` | class | — | — | — | `config._int_env` | `conftest::ri_settings`, `conftest::settings`, `kiloos_demo._settings`, `main.create_app`, `maintenance.main`, `seed.main`, `test_hardening::test_admin_queue_paginates` |
 | `_int_env` | function | — | — | — | — | `config.Settings` |
 
 ### `app/db.py`
@@ -1146,6 +1147,204 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Read by: `repo.wallet_balance`
 - INSERT by: `scoring._persist_award`, `scoring.reverse_event`
 
+### `ri_branch_group_members`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `scheme_id` INTEGER NOT NULL REFERENCES ri_branch_group_schemes(id); `branch_id` INTEGER NOT NULL REFERENCES ri_branches(id); `group_code` TEXT NOT NULL
+- Table constraints: PRIMARY KEY (scheme_id, branch_id)
+- References: `ri_branch_group_schemes`, `ri_branches`
+- Read by: —
+- Written by: —
+
+### `ri_branch_group_schemes`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `code` TEXT NOT NULL UNIQUE; `title` TEXT NOT NULL; `source` TEXT NOT NULL; `status` TEXT NOT NULL DEFAULT 'UNCONFIRMED' CHECK (status IN ('UNCONFIRMED', 'PROPOSED'))
+- References: —
+- Read by: —
+- Written by: —
+
+### `ri_branches`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `norm_key` TEXT NOT NULL UNIQUE; `source_value` TEXT NOT NULL; `variants_json` TEXT NOT NULL DEFAULT '[]'
+- References: —
+- Read by: —
+- Written by: —
+
+### `ri_brands`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `norm_key` TEXT NOT NULL UNIQUE; `source_value` TEXT NOT NULL
+- References: —
+- Read by: —
+- Written by: —
+
+### `ri_business_decisions`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` TEXT PRIMARY KEY, -- BD-01 ...; `question` TEXT NOT NULL; `assumption` TEXT; `impact` TEXT NOT NULL; `status` TEXT NOT NULL CHECK (status IN ('OPEN', 'ASSUMPTION', 'PROPOSED', 'CONFIRMED')); `approver` TEXT NOT NULL; `updated_at` TEXT NOT NULL
+- References: —
+- Read by: —
+- Written by: —
+
+### `ri_calc_result_inputs`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `result_id` INTEGER NOT NULL REFERENCES ri_calc_results(id); `fact_id` INTEGER NOT NULL REFERENCES ri_sales_facts(id)
+- Table constraints: PRIMARY KEY (result_id, fact_id)
+- References: `ri_calc_results`, `ri_sales_facts`
+- Read by: —
+- Written by: —
+
+### `ri_calc_results`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `run_id` TEXT NOT NULL REFERENCES ri_calc_runs(id); `batch_id` TEXT NOT NULL REFERENCES ri_import_batches(id); `rule_set_id` INTEGER NOT NULL REFERENCES ri_rule_sets(id); `rule_version` INTEGER NOT NULL; `brand_id` INTEGER NOT NULL REFERENCES ri_brands(id); `period_year` INTEGER NOT NULL; `period_month` INTEGER NOT NULL; `org_level` TEXT NOT NULL; `entity_key` TEXT NOT NULL; `entity_label` TEXT NOT NULL; `input_quantity` TEXT NOT NULL; `target` TEXT; `achievement` TEXT; `reward_rials` TEXT, -- INDICATIVE, PROPOSED; never a payment instruction; `rule_status` TEXT NOT NULL CHECK (rule_status IN ('PROPOSED', 'UNCONFIRMED')); `result_status` TEXT NOT NULL CHECK (result_status IN ('ok', 'error')); `error_message` TEXT; `explain_json` TEXT NOT NULL; `calculated_at` TEXT NOT NULL
+- Table constraints: UNIQUE (run_id, entity_key)
+- References: `ri_brands`, `ri_calc_runs`, `ri_import_batches`, `ri_rule_sets`
+- Read by: —
+- Written by: —
+
+### `ri_calc_runs`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` TEXT PRIMARY KEY; `batch_id` TEXT NOT NULL REFERENCES ri_import_batches(id); `rule_set_id` INTEGER NOT NULL REFERENCES ri_rule_sets(id); `brand_id` INTEGER NOT NULL REFERENCES ri_brands(id); `org_level` TEXT NOT NULL; `input_basis` TEXT NOT NULL; `input_hash` TEXT NOT NULL; `status` TEXT NOT NULL CHECK (status IN ('completed', 'error')); `result_count` INTEGER NOT NULL DEFAULT 0; `error_count` INTEGER NOT NULL DEFAULT 0; `created_at` TEXT NOT NULL
+- Table constraints: UNIQUE (batch_id, rule_set_id, brand_id, org_level, input_hash)
+- References: `ri_brands`, `ri_import_batches`, `ri_rule_sets`
+- Read by: —
+- Written by: —
+
+### `ri_customer_groups`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `norm_key` TEXT NOT NULL UNIQUE; `source_value` TEXT NOT NULL; `main_group` TEXT, -- retail | wholesale | horeca | NULL (unmapped); `mapping_status` TEXT NOT NULL DEFAULT 'UNCONFIRMED' CHECK (mapping_status IN ('UNCONFIRMED', 'PROPOSED'))
+- References: —
+- Read by: —
+- Written by: —
+
+### `ri_customers`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `norm_key` TEXT NOT NULL UNIQUE; `source_value` TEXT NOT NULL; `pseudonym` TEXT NOT NULL
+- References: —
+- Read by: —
+- Written by: —
+
+### `ri_employees`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `person_key` TEXT NOT NULL UNIQUE, -- normalised personnel code + branch (NOT a visitor key); `personnel_code` TEXT NOT NULL; `display_source` TEXT; `pseudonym` TEXT NOT NULL
+- References: —
+- Read by: —
+- Written by: —
+
+### `ri_import_batches`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` TEXT PRIMARY KEY; `workbook_id` TEXT NOT NULL REFERENCES ri_workbooks(id); `period_calendar` TEXT NOT NULL DEFAULT 'jalali' CHECK (period_calendar = 'jalali'); `period_year` INTEGER NOT NULL; `period_month` INTEGER NOT NULL CHECK (period_month BETWEEN 1 AND 12); `config_json` TEXT NOT NULL; `config_hash` TEXT NOT NULL; `status` TEXT NOT NULL CHECK (status IN ('inspected', 'validated', 'confirmed', 'failed')); `counts_json` TEXT NOT NULL DEFAULT '{}'; `data_origin` TEXT NOT NULL CHECK (data_origin IN ('synthetic', 'real')); `created_at` TEXT NOT NULL; `validated_at` TEXT; `confirmed_at` TEXT
+- Table constraints: UNIQUE (workbook_id, config_hash)
+- References: `ri_workbooks`
+- Read by: —
+- Written by: —
+
+### `ri_mapping_issues`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `batch_id` TEXT NOT NULL REFERENCES ri_import_batches(id); `issue_type` TEXT NOT NULL; `severity` TEXT NOT NULL CHECK (severity IN ('info', 'warning', 'error')); `entity_ref` TEXT NOT NULL, -- pseudonym or non-personal code, never a raw name; `detail_json` TEXT NOT NULL DEFAULT '{}'; `status` TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved'))
+- Table constraints: UNIQUE (batch_id, issue_type, entity_ref)
+- References: `ri_import_batches`
+- Read by: —
+- Written by: —
+
+### `ri_raw_rows`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `batch_id` TEXT NOT NULL REFERENCES ri_import_batches(id); `sheet` TEXT NOT NULL; `row_number` INTEGER NOT NULL; `row_hash` TEXT NOT NULL; `raw_json` TEXT NOT NULL
+- Table constraints: UNIQUE (batch_id, sheet, row_number)
+- References: `ri_import_batches`
+- Read by: —
+- Written by: —
+
+### `ri_reconciliation_checks`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `batch_id` TEXT NOT NULL REFERENCES ri_import_batches(id); `run_id` TEXT REFERENCES ri_calc_runs(id); `check_code` TEXT NOT NULL; `title` TEXT NOT NULL; `reference_value` TEXT; `prototype_value` TEXT; `abs_variance` TEXT; `pct_variance` TEXT; `matched` INTEGER; `missing` INTEGER; `duplicates` INTEGER; `unresolved` INTEGER; `status` TEXT NOT NULL CHECK (status IN ('match', 'explained', 'warning', 'error')); `explanation` TEXT NOT NULL DEFAULT ''; `detail_json` TEXT NOT NULL DEFAULT '{}'; `created_at` TEXT NOT NULL
+- References: `ri_calc_runs`, `ri_import_batches`
+- Read by: —
+- Written by: —
+
+### `ri_rule_sets`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `code` TEXT NOT NULL; `version` INTEGER NOT NULL; `rule_type` TEXT NOT NULL; `org_level` TEXT NOT NULL; `brand_code` TEXT NOT NULL; `params_json` TEXT NOT NULL, -- immutable once referenced by a run; `status` TEXT NOT NULL CHECK (status IN ('PROPOSED', 'UNCONFIRMED')); `notes` TEXT; `created_at` TEXT NOT NULL
+- Table constraints: UNIQUE (code, version)
+- References: —
+- Read by: —
+- Written by: —
+
+### `ri_sales_facts`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `batch_id` TEXT NOT NULL REFERENCES ri_import_batches(id); `source_sheet` TEXT NOT NULL; `raw_row_id` INTEGER NOT NULL REFERENCES ri_raw_rows(id); `business_key_hash` TEXT NOT NULL; `dup_ordinal` INTEGER NOT NULL DEFAULT 0; `period_year` INTEGER NOT NULL; `period_month` INTEGER NOT NULL; `branch_id` INTEGER REFERENCES ri_branches(id); `visitor_assignment_id` INTEGER REFERENCES ri_visitor_assignments(id); `visitor_key_norm` TEXT; `customer_group_id` INTEGER REFERENCES ri_customer_groups(id); `sales_line_id` INTEGER REFERENCES ri_sales_lines(id); `customer_id` INTEGER REFERENCES ri_customers(id); `brand_id` INTEGER REFERENCES ri_brands(id); `sku_id` INTEGER REFERENCES ri_skus(id); `gross_cartons` TEXT; `net_cartons` TEXT; `invoice_count` INTEGER; `status` TEXT NOT NULL CHECK (status IN ('valid', 'rejected')); `issues_json` TEXT NOT NULL DEFAULT '[]'
+- Table constraints: UNIQUE (batch_id, source_sheet, business_key_hash, dup_ordinal)
+- Indexes: `ix_ri_facts_agg` (batch_id, source_sheet, status, brand_id, branch_id) — db/migrations/0008_real_import_spike.sql
+- References: `ri_branches`, `ri_brands`, `ri_customer_groups`, `ri_customers`, `ri_import_batches`, `ri_raw_rows`, `ri_sales_lines`, `ri_skus`, `ri_visitor_assignments`
+- Read by: —
+- Written by: —
+
+### `ri_sales_lines`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `norm_key` TEXT NOT NULL UNIQUE; `source_value` TEXT NOT NULL; `variants_json` TEXT NOT NULL DEFAULT '[]'
+- References: —
+- Read by: —
+- Written by: —
+
+### `ri_skus`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `code` TEXT NOT NULL UNIQUE; `name_source` TEXT; `brand_id` INTEGER REFERENCES ri_brands(id); `carton_factor` TEXT; `factor_status` TEXT NOT NULL DEFAULT 'UNCONFIRMED' CHECK (factor_status IN ('UNCONFIRMED', 'PROPOSED'))
+- References: `ri_brands`
+- Read by: —
+- Written by: —
+
+### `ri_targets`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `batch_id` TEXT NOT NULL REFERENCES ri_import_batches(id); `brand_id` INTEGER NOT NULL REFERENCES ri_brands(id); `org_level` TEXT NOT NULL; `entity_key` TEXT NOT NULL, -- e.g. "<branch norm>|<line norm>" for branch managers; `target_cartons` TEXT NOT NULL; `source` TEXT NOT NULL, -- workbook_hardcoded:<sheet> | manual; `status` TEXT NOT NULL DEFAULT 'UNCONFIRMED' CHECK (status IN ('UNCONFIRMED', 'PROPOSED')); `extra_json` TEXT NOT NULL DEFAULT '{}', -- per-entity parameters read from the workbook (e.g. ladder amounts)
+- Table constraints: UNIQUE (batch_id, brand_id, org_level, entity_key)
+- References: `ri_brands`, `ri_import_batches`
+- Read by: —
+- Written by: —
+
+### `ri_visitor_assignments`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `batch_id` TEXT NOT NULL REFERENCES ri_import_batches(id); `visitor_key_source` TEXT NOT NULL; `visitor_key_norm` TEXT NOT NULL; `pseudonym` TEXT NOT NULL; `employee_id` INTEGER REFERENCES ri_employees(id); `branch_id` INTEGER REFERENCES ri_branches(id); `sales_line_id` INTEGER REFERENCES ri_sales_lines(id); `seller_type_source` TEXT; `seller_type_norm` TEXT; `supervisor_code` TEXT; `head_code` TEXT; `is_active` INTEGER; `hire_date_source` TEXT
+- Table constraints: UNIQUE (batch_id, visitor_key_norm)
+- Indexes: `ix_ri_va_employee` (employee_id) — db/migrations/0008_real_import_spike.sql
+- References: `ri_branches`, `ri_employees`, `ri_import_batches`, `ri_sales_lines`
+- Read by: —
+- Written by: —
+
+### `ri_workbook_references`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` INTEGER PRIMARY KEY AUTOINCREMENT; `batch_id` TEXT NOT NULL REFERENCES ri_import_batches(id); `ref_code` TEXT NOT NULL; `description` TEXT NOT NULL; `brand_code` TEXT; `org_level` TEXT; `value` TEXT NOT NULL; `unit` TEXT NOT NULL; `source_sheet` TEXT
+- Table constraints: UNIQUE (batch_id, ref_code)
+- References: `ri_import_batches`
+- Read by: —
+- Written by: —
+
+### `ri_workbooks`
+
+- Defined in: `db/migrations/0008_real_import_spike.sql`
+- Columns: `id` TEXT PRIMARY KEY; `sha256` TEXT NOT NULL UNIQUE; `file_name` TEXT NOT NULL; `size_bytes` INTEGER NOT NULL; `storage_path` TEXT NOT NULL; `inspection_json` TEXT NOT NULL; `data_origin` TEXT NOT NULL CHECK (data_origin IN ('synthetic', 'real')); `uploaded_by` TEXT REFERENCES users(id); `created_at` TEXT NOT NULL
+- References: `users`
+- Read by: —
+- Written by: —
+
 ### `sales_imports`
 
 - Defined in: `db/migrations/0003_sales_import.sql`
@@ -1384,6 +1583,40 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_sales_mission_is_gated_by_processed_sales_and_awards_once` | `GET /api/v1/game/bootstrap`, `POST /api/v1/game/missions/{mission_id}/completions` | `kiloos_demo.sample_workbook_bytes` | — |
 | `test_reset_and_load_sample_cli_are_deterministic` | — | `kiloos_demo.load_sample`, `kiloos_demo.reset` | — |
 
+### `tests/test_realimport.py` (29 tests)
+
+| Test | Routes exercised | Direct domain calls | IDs |
+|---|---|---|---|
+| `test_folding_matches_arabic_and_persian_letters` | — | — | — |
+| `test_decimals_keep_fractions_and_negatives` | — | — | — |
+| `test_line_codes_and_manager_line_groups` | — | — | — |
+| `test_pseudonyms_are_deterministic_keyed_and_leak_guarded` | — | — | — |
+| `test_calculation_error_for_invalid_target` | — | — | — |
+| `test_feature_flag_off_means_no_routes` | — | — | — |
+| `test_migration_only_adds_prefixed_tables` | — | — | — |
+| `test_demo_tables_untouched_by_full_flow` | — | — | — |
+| `test_original_workbook_is_stored_by_hash_and_never_changed` | — | — | — |
+| `test_upload_inspects_workbook_and_flags_synthetic_origin` | — | — | — |
+| `test_rejects_non_xlsx_and_corrupt_files` | — | — | — |
+| `test_validation_counts_rejections_duplicates_and_mappings` | — | — | — |
+| `test_fractional_and_negative_cartons_are_preserved` | — | — | — |
+| `test_original_source_values_survive_next_to_normalised_keys` | — | — | — |
+| `test_preview_shows_normalised_pseudonymised_rows` | — | — | — |
+| `test_confirm_requires_validation` | — | — | — |
+| `test_repeating_the_import_creates_no_duplicates` | — | — | — |
+| `test_different_period_config_is_a_separate_editable_batch` | — | — | — |
+| `test_no_raw_personal_value_in_any_api_response` | — | — | — |
+| `test_endpoints_require_admin` | — | — | — |
+| `test_run_requires_confirmed_batch` | — | — | — |
+| `test_calculation_is_traceable_and_labelled_proposed` | — | — | — |
+| `test_rule_sets_can_never_be_approved_through_the_api` | — | — | — |
+| `test_schema_refuses_an_approved_rule_set` | — | — | — |
+| `test_changed_rule_params_create_a_distinct_run` | — | — | — |
+| `test_reconciliation_explains_the_rounding_gap_instead_of_hiding_it` | — | — | — |
+| `test_run_reconciliation_flags_the_hand_adjusted_figure` | — | — | — |
+| `test_decision_register_is_complete_and_never_claims_approval` | — | — | — |
+| `test_workbook_error_type_is_exposed_for_api_clients` | — | — | — |
+
 ### `tests/test_sales.py` (13 tests)
 
 | Test | Routes exercised | Direct domain calls | IDs |
@@ -1433,8 +1666,8 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_org_tree_and_membership_are_generic_and_tenant_scoped` | — | — | — |
 | `test_org_membership_cannot_cross_organization_boundary` | — | — | — |
 
-95 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
-Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::row_id`, `conftest::settings`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_game_store::csrf_header`, `test_game_store::set_game_coins`, `test_hardening::token_csrf`, `test_kiloos_demo::db_rows`, `test_kiloos_demo::demo`, `test_kiloos_demo::demo_settings`, `test_kiloos_demo::game_missions`, `test_kiloos_demo::import_and_process`, `test_kiloos_demo::login`, `test_kiloos_demo::upload`, `test_kiloos_demo::user_id`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`.
+124 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
+Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::ri`, `conftest::ri_settings`, `conftest::row_id`, `conftest::settings`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_game_store::csrf_header`, `test_game_store::set_game_coins`, `test_hardening::token_csrf`, `test_kiloos_demo::db_rows`, `test_kiloos_demo::demo`, `test_kiloos_demo::demo_settings`, `test_kiloos_demo::game_missions`, `test_kiloos_demo::import_and_process`, `test_kiloos_demo::login`, `test_kiloos_demo::upload`, `test_kiloos_demo::user_id`, `test_realimport::_pretty`, `test_realimport::pipeline_to_confirmed`, `test_realimport::post`, `test_realimport::synthetic`, `test_realimport::table_counts`, `test_realimport::upload`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`.
 
 ## 8. Error codes
 
@@ -1529,7 +1762,11 @@ Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db
 | `KILOOS_EVIDENCE_RETENTION_DAYS` | `90` | `evidence_retention_days` |
 | `KILOOS_LOGIN_RATE_LIMIT` | `10` | `login_rate_limit` |
 | `KILOOS_LOGIN_RATE_WINDOW` | `60` | `login_rate_window` |
+| `KILOOS_PSEUDONYM_KEY` | `'spike-dev-pseudonym-key-change-me'` | `pseudonym_key` |
 | `KILOOS_QUEUE_PAGE_SIZE` | `20` | `queue_page_size` |
+| `KILOOS_REAL_IMPORT` | `''` | `real_import_enabled` |
+| `KILOOS_REAL_IMPORT_DIR` | `—` | `real_import_dir` |
+| `KILOOS_REAL_IMPORT_MAX_BYTES` | `25 * 1024 * 1024` | `real_import_max_bytes` |
 | `KILOOS_SALES_MAX_BYTES` | `5 * 1024 * 1024` | `sales_max_bytes` |
 | `KILOOS_SALES_MAX_ROWS` | `5000` | `sales_max_rows` |
 | `KILOOS_SECRET` | `DEV_FALLBACK_KEY` | `secret` |
@@ -1568,6 +1805,7 @@ Read in `app/config.py::Settings.from_env`. Meaning of each variable:
 Paths written in templates or tests that match no route. An entry is expected when a
 test asks for an unknown page on purpose; anything else is a broken link.
 
+- tests/conftest.py::ri: POST /api/v1/auth/demo-login matches no route
 - tests/test_hardening.py::test_unknown_route_renders_persian_404: GET /no-such-page matches no route
 - tests/test_kiloos_demo.py::import_and_process: POST /api/v1/mgmt/imports/{}/process matches no route
 - tests/test_kiloos_demo.py::login: POST /api/v1/auth/demo-login matches no route
@@ -1583,3 +1821,44 @@ test asks for an unknown page on purpose; anything else is a broken link.
 - tests/test_kiloos_demo.py::test_sales_mission_is_gated_by_processed_sales_and_awards_once: GET /api/v1/mgmt/reps/{} matches no route
 - tests/test_kiloos_demo.py::test_seed_has_required_demo_accounts_and_hierarchy: GET /api/v1/auth/demo-users matches no route
 - tests/test_kiloos_demo.py::upload: POST /api/v1/mgmt/imports matches no route
+- tests/test_realimport.py::pipeline_to_confirmed: POST /batches/{}/confirm matches no route
+- tests/test_realimport.py::pipeline_to_confirmed: POST /batches/{}/validate matches no route
+- tests/test_realimport.py::post: POST {}{} matches no route
+- tests/test_realimport.py::test_calculation_is_traceable_and_labelled_proposed: GET {}/results/{}/inputs?limit=500 matches no route
+- tests/test_realimport.py::test_calculation_is_traceable_and_labelled_proposed: GET {}/rules matches no route
+- tests/test_realimport.py::test_calculation_is_traceable_and_labelled_proposed: GET {}/runs/{} matches no route
+- tests/test_realimport.py::test_calculation_is_traceable_and_labelled_proposed: POST /batches/{}/runs matches no route
+- tests/test_realimport.py::test_changed_rule_params_create_a_distinct_run: GET {}/rules matches no route
+- tests/test_realimport.py::test_changed_rule_params_create_a_distinct_run: POST /batches/{}/runs matches no route
+- tests/test_realimport.py::test_changed_rule_params_create_a_distinct_run: POST /rules matches no route
+- tests/test_realimport.py::test_confirm_requires_validation: POST /batches/{}/confirm matches no route
+- tests/test_realimport.py::test_decision_register_is_complete_and_never_claims_approval: GET {}/decisions matches no route
+- tests/test_realimport.py::test_demo_tables_untouched_by_full_flow: GET {}/rules matches no route
+- tests/test_realimport.py::test_demo_tables_untouched_by_full_flow: POST /batches/{}/runs matches no route
+- tests/test_realimport.py::test_different_period_config_is_a_separate_editable_batch: POST /batches matches no route
+- tests/test_realimport.py::test_different_period_config_is_a_separate_editable_batch: POST /batches/{}/validate matches no route
+- tests/test_realimport.py::test_endpoints_require_admin: GET {}/meta matches no route
+- tests/test_realimport.py::test_endpoints_require_admin: POST {}/workbooks matches no route
+- tests/test_realimport.py::test_feature_flag_off_means_no_routes: GET {}/meta matches no route
+- tests/test_realimport.py::test_no_raw_personal_value_in_any_api_response: GET {}/batches/{}/mappings matches no route
+- tests/test_realimport.py::test_no_raw_personal_value_in_any_api_response: GET {}/rules matches no route
+- tests/test_realimport.py::test_no_raw_personal_value_in_any_api_response: GET {}/runs/{} matches no route
+- tests/test_realimport.py::test_no_raw_personal_value_in_any_api_response: GET {}{} matches no route
+- tests/test_realimport.py::test_no_raw_personal_value_in_any_api_response: POST /batches/{}/runs matches no route
+- tests/test_realimport.py::test_preview_shows_normalised_pseudonymised_rows: GET {}/batches/{}/preview matches no route
+- tests/test_realimport.py::test_preview_shows_normalised_pseudonymised_rows: POST /batches/{}/validate matches no route
+- tests/test_realimport.py::test_reconciliation_explains_the_rounding_gap_instead_of_hiding_it: GET {}/batches/{}/reconciliation matches no route
+- tests/test_realimport.py::test_repeating_the_import_creates_no_duplicates: GET {}/rules matches no route
+- tests/test_realimport.py::test_repeating_the_import_creates_no_duplicates: POST /batches/{}/confirm matches no route
+- tests/test_realimport.py::test_repeating_the_import_creates_no_duplicates: POST /batches/{}/runs matches no route
+- tests/test_realimport.py::test_repeating_the_import_creates_no_duplicates: POST /batches/{}/validate matches no route
+- tests/test_realimport.py::test_rule_sets_can_never_be_approved_through_the_api: POST /rules matches no route
+- tests/test_realimport.py::test_run_reconciliation_flags_the_hand_adjusted_figure: GET {}/batches/{}/summary matches no route
+- tests/test_realimport.py::test_run_reconciliation_flags_the_hand_adjusted_figure: GET {}/rules matches no route
+- tests/test_realimport.py::test_run_reconciliation_flags_the_hand_adjusted_figure: GET {}/runs/{} matches no route
+- tests/test_realimport.py::test_run_reconciliation_flags_the_hand_adjusted_figure: POST /batches/{}/runs matches no route
+- tests/test_realimport.py::test_run_requires_confirmed_batch: GET {}/rules matches no route
+- tests/test_realimport.py::test_run_requires_confirmed_batch: POST /batches/{}/runs matches no route
+- tests/test_realimport.py::test_run_requires_confirmed_batch: POST /batches/{}/validate matches no route
+- tests/test_realimport.py::test_validation_counts_rejections_duplicates_and_mappings: POST /batches/{}/validate matches no route
+- tests/test_realimport.py::upload: POST {}/workbooks matches no route
