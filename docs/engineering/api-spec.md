@@ -185,6 +185,31 @@ Mission form fields: `title`, `description`, `points` (0–10000), `max_per_user
   Success redirects to `/submissions/{id}?reversed=1` for missions and `/admin/sales/{import_id}?reversed=1`
   for sales records.
 
+## Kiloos demo API (single origin, DEMO)
+
+Implemented in `app/api_demo.py`; all JSON errors use `{"error": {"code", "message"}}`. Cookie session
+(`kiloos_session`), CSRF via `X-CSRF-Token` on every write, rate-limited demo login (dev/test only).
+Data is SAMPLE/PROPOSED; responses carry `is_demo: true`.
+
+| Method + route | Who | Purpose |
+|---|---|---|
+| `GET /api/v1/auth/demo-users` | public (dev/test) | account picker: name, position, title, branch (no mobile numbers) |
+| `POST /api/v1/auth/demo-login` | public (dev/test) | `{user_id}` → cookie, `csrf_token` in body and `X-CSRF-Token` header |
+| `GET /api/v1/auth/me` / `POST /api/v1/auth/logout` | any session | current user + CSRF; logout |
+| `GET /api/v1/mgmt/overview?period=&brand=&branch=` | admin, management, branch manager, supervisor | totals, brand split, branches, supervisors, reps, gamification, data origin (server-scoped) |
+| `GET /api/v1/mgmt/branches/{code}` | same, within scope | supervisors with their representatives |
+| `GET /api/v1/mgmt/reps/{id}` | same, within scope (404 outside) | representative dashboard |
+| `GET /api/v1/me/performance` | representative | own dashboard |
+| `GET /api/v1/leaderboard?branch=` | any session | ranking by organizational points; game XP shown, not ranked |
+| `GET/POST /api/v1/mgmt/imports`, `GET /api/v1/mgmt/imports/{id}` | admin | list / upload+validate / preview |
+| `POST /api/v1/mgmt/imports/{id}/process` | admin | explicit confirmation; idempotent |
+| `GET /api/v1/mgmt/sample-workbook?variant=main\|overlap` | admin | download the SAMPLE workbook |
+
+Game additions (`/api/v1/game/*`): the mission `target-sprint` (catalog `game_sales_catalog.json`) appears only
+for representatives (`employee_positions.position = 'rep'`). Its lock reason and `salesGateInfo` are computed
+on the server from processed sales; completion adds `entry.orgPoints` (rule status `PROPOSED`) and writes the
+ledger event atomically. A repeat in the same period returns `409 MISSION_LOCKED`.
+
 ## Known gaps
 
 - No general mobile REST API yet. `/api/v1/game` is a prototype-specific BFF for Sales Quest Arena, not the full planned mobile API.

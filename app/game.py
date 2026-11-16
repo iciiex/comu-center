@@ -14,10 +14,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from app import db
+from app import db, perf, scoring
 
 CATALOG_PATH = Path(__file__).with_name("game_catalog.json")
 STORE_CATALOG_PATH = Path(__file__).with_name("game_store_catalog.json")
+SALES_CATALOG_PATH = Path(__file__).with_name("game_sales_catalog.json")
 AVATARS = {"fox", "bear", "cat", "bunny", "panda", "frog"}
 
 
@@ -39,8 +40,13 @@ def store_catalog() -> dict[str, Any]:
     return json.loads(STORE_CATALOG_PATH.read_text(encoding="utf-8"))
 
 
+@lru_cache(maxsize=1)
+def sales_catalog() -> dict[str, Any]:
+    return json.loads(SALES_CATALOG_PATH.read_text(encoding="utf-8"))
+
+
 def _all_missions() -> list[dict[str, Any]]:
-    missions = list(catalog()["missions"])
+    missions = [*catalog()["missions"], *sales_catalog()["missions"]]
     base_by_id = {mission["id"]: mission for mission in missions}
     for offer in store_catalog()["offers"]:
         template = base_by_id.get(offer["template_mission_id"])
@@ -138,6 +144,12 @@ def _lock_reason(mission: dict[str, Any], progress: dict[str, Any]) -> str | Non
     min_level = unlock.get("minLevel")
     if min_level and _level(int(progress.get("xp", 0))) < int(min_level):
         return f"Reach Level {min_level} to unlock"
+    if unlock.get("salesGate"):
+        gate = progress.get("_sales", {}).get(mission["id"])
+        if gate is None:
+            return "Available to sales representatives with processed sales data"
+        if gate["reason"]:
+            return gate["reason"]
     return None
 
 
@@ -145,12 +157,22 @@ def _mission_views(
     progress: dict[str, Any], day_key: str, *, include_special: bool = False
 ) -> list[dict[str, Any]]:
     views: list[dict[str, Any]] = []
-    definitions = _all_missions() if include_special else catalog()["missions"]
+    if include_special:
+        definitions = _all_missions()
+    else:
+        enabled = progress.get("_sales", {})
+        definitions = [
+            *catalog()["missions"],
+            *[m for m in sales_catalog()["missions"] if m["id"] in enabled],
+        ]
     for definition in sorted(definitions, key=lambda m: m["order"]):
         record = progress.get("missions", {}).get(definition["id"], {})
         draft = progress.get("drafts", {}).get(definition["id"])
         lock_reason = _lock_reason(definition, progress)
-        if lock_reason:
+        gate = progress.get("_sales", {}).get(definition["id"])
+        if lock_reason and gate and gate.get("done"):
+            status = "completed"
+        elif lock_reason:
             status = "locked"
         elif draft:
             status = "in_progress"
@@ -173,6 +195,8 @@ def _mission_views(
                 and bool(daily.get("completed"))
             ),
         )
+        if gate:
+            view["salesGateInfo"] = gate["info"]
         views.append(view)
     return views
 
@@ -185,6 +209,40 @@ def _special_mission_views(progress: dict[str, Any], day_key: str) -> list[dict[
     ]
 
 
+def _attach_sales(conn, user_id: str, state: dict[str, Any]) -> dict[str, Any]:
+    """Transient server-computed sales gate for sales representatives (never persisted).
+
+    Only users with an employee position of 'rep' see sales missions; eligibility is derived
+    from processed sales and targets, so the client cannot influence it.
+    """
+    row = conn.execute(
+        """SELECT p.organization_id FROM employee_positions p
+           WHERE p.user_id = ? AND p.position = 'rep'""",
+        (user_id,),
+    ).fetchone()
+    state = dict(state)
+    state.pop("_sales", None)
+    if row is None:
+        return state
+    org_id = row["organization_id"]
+    gate = perf.sales_gate(conn, org_id, user_id)
+    entries: dict[str, Any] = {}
+    for mission in sales_catalog()["missions"]:
+        done = False
+        reason = None if gate["eligible"] else gate["reason"]
+        award = mission.get("orgAward")
+        if gate["eligible"] and award and award.get("oncePerPeriod"):
+            key = f"game.sales_mission:{user_id}:{mission['id']}:{gate['period']}"
+            if conn.execute(
+                "SELECT 1 FROM score_events WHERE idempotency_key = ?", (key,)
+            ).fetchone():
+                done = True
+                reason = f"Completed for {gate['period']} - next mission opens with new sales data"
+        entries[mission["id"]] = {"reason": reason, "done": done, "info": gate}
+    state["_sales"] = entries
+    return state
+
+
 def _initialize(conn, user_id: str, full_name: str) -> dict[str, Any]:
     row = conn.execute(
         "SELECT state_json FROM game_progress WHERE user_id = ?", (user_id,)
@@ -192,15 +250,16 @@ def _initialize(conn, user_id: str, full_name: str) -> dict[str, Any]:
     if row is None:
         state = _initial_progress(full_name)
         _save(conn, user_id, state)
-        return state
+        return _attach_sales(conn, user_id, state)
     state = json.loads(row["state_json"])
     state.pop("_accountName", None)
-    return state
+    return _attach_sales(conn, user_id, state)
 
 
 def _save(conn, user_id: str, progress: dict[str, Any]) -> None:
     stored = dict(progress)
     stored.pop("_accountName", None)
+    stored.pop("_sales", None)
     conn.execute(
         """INSERT INTO game_progress (user_id, state_json, updated_at) VALUES (?, ?, ?)
            ON CONFLICT(user_id) DO UPDATE SET state_json = excluded.state_json,
@@ -212,6 +271,7 @@ def _save(conn, user_id: str, progress: dict[str, Any]) -> None:
 def _public_progress(progress: dict[str, Any]) -> dict[str, Any]:
     clean = dict(progress)
     clean.pop("_accountName", None)
+    clean.pop("_sales", None)
     return clean
 
 
@@ -647,6 +707,10 @@ def complete_mission(
         for achievement_id in unlocked:
             progress.setdefault("achievements", {})[achievement_id] = completed_at
 
+        if mission.get("orgAward"):
+            gate = progress["_sales"][mission_id]["info"]
+            entry["orgPoints"] = _award_org_points(conn, user, mission, gate, completed_at, entry)
+
         response = {
             "entry": entry,
             "progress": _public_progress(progress),
@@ -676,6 +740,75 @@ def complete_mission(
     except Exception:
         conn.rollback()
         raise
+
+
+def _award_org_points(
+    conn, user, mission: dict[str, Any], gate: dict[str, Any], completed_at: str, entry: dict
+) -> dict[str, Any]:
+    """Append an organizational score event for a verified sales-gated mission.
+
+    Kept separate from game XP/coins: it goes through the append-only score ledger with an
+    idempotency key (once per user/mission/period). Rule status is PROPOSED, not approved.
+    """
+    award = mission["orgAward"]
+    period = gate["period"]
+    rule = scoring.find_rule_version(conn, award["ruleCode"])
+    if rule is None:
+        raise GameError(409, "NO_ACTIVE_RULE_VERSION", "Organizational rule is not published.")
+    key = f"game.sales_mission:{user.id}:{mission['id']}:{period}"
+    existing = conn.execute(
+        "SELECT id, points FROM score_events WHERE idempotency_key = ?", (key,)
+    ).fetchone()
+    base = {
+        "ruleCode": award["ruleCode"],
+        "ruleVersion": rule["version"],
+        "approvalStatus": award["approvalStatus"],
+        "period": period,
+        "isDemo": True,
+    }
+    if existing is not None:
+        return {
+            **base,
+            "points": int(existing["points"]),
+            "eventId": existing["id"],
+            "created": False,
+        }
+    points = int(rule["points"])
+    event_id = str(uuid.uuid4())
+    explain = {
+        "rule_code": award["ruleCode"],
+        "rule_version": rule["version"],
+        "calculation_type": rule["calculation_type"],
+        "approval_status": award["approvalStatus"],
+        "conditions": {
+            "event": "game.sales_mission.completed",
+            "min_attainment_pct": gate["minPct"],
+        },
+        "input": {
+            "mission_id": mission["id"],
+            "period": period,
+            "achieved": gate["achieved"],
+            "target": gate["target"],
+            "attainment_pct": gate["attainmentPct"],
+            "game_entry_id": entry["id"],
+        },
+        "output": {"points": points},
+        "is_sample": bool(rule["is_sample"]),
+    }
+    scoring._persist_award(
+        conn,
+        event_id=event_id,
+        user_id=user.id,
+        source_type="game_sales_mission",
+        source_id=f"{user.id}:{mission['id']}:{period}",
+        rule_code=award["ruleCode"],
+        rule_version_id=rule["id"],
+        points=points,
+        occurred_at=completed_at,
+        key=key,
+        explain=explain,
+    )
+    return {**base, "points": points, "eventId": event_id, "created": True}
 
 
 def save_draft(conn, user, mission_id: str, payload: dict[str, Any]) -> dict[str, Any]:

@@ -1,0 +1,55 @@
+{
+  "version": "kiloos-demo-sales-missions-1",
+  "status": "PROPOSED",
+  "missions": [
+    {
+      "id": "target-sprint",
+      "order": 7,
+      "title": "Target Sprint",
+      "shortTitle": "Target Sprint",
+      "description": "Your processed sales reached 80% of this period's target. Reflect on what drove it to claim DEMO rewards.",
+      "category": "sales_achievement",
+      "difficulty": "medium",
+      "estimatedMinutes": 2,
+      "xpReward": 120,
+      "coinReward": 25,
+      "unlock": { "salesGate": { "type": "target_attainment", "minPct": 80 } },
+      "orgAward": {
+        "ruleCode": "GAME_SALES_TARGET_80_PROPOSED",
+        "approvalStatus": "PROPOSED",
+        "oncePerPeriod": true
+      },
+      "completion": { "requiredSteps": ["driver", "confidence"] },
+      "steps": [
+        {
+          "id": "driver",
+          "type": "choice",
+          "label": "Driver",
+          "question": "What drove your result this period?",
+          "options": [
+            { "id": "efes_push", "label": "EFES Focus", "emoji": "🍺", "hint": "Strong EFES numbers" },
+            { "id": "matador_push", "label": "Matador Focus", "emoji": "🥤", "hint": "Strong Matador numbers" },
+            { "id": "both_brands", "label": "Both Brands", "emoji": "⚖️", "hint": "Balanced portfolio" },
+            { "id": "new_outlets", "label": "New Outlets", "emoji": "🏪", "hint": "Expanded coverage" }
+          ]
+        },
+        {
+          "id": "confidence",
+          "type": "rating",
+          "label": "Confidence",
+          "question": "How confident are you about closing the period strongly?",
+          "scale": ["Shaky", "Unsure", "Okay", "Confident", "Unstoppable!"]
+        },
+        {
+          "id": "note",
+          "type": "note",
+          "label": "Note",
+          "question": "Anything the team should know?",
+          "helper": "Optional — one line is plenty.",
+          "placeholder": "e.g. Focus next week on Matador in the north zone",
+          "maxLength": 240
+        }
+      ]
+    }
+  ]
+}

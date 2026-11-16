@@ -185,6 +185,63 @@
 
 ---
 
+## OD-13 — Kiloos demo org hierarchy, brands and targets
+
+- Status: ASSUMPTION (demo only)
+- Owner: کارفرما
+- Needed by: before real data
+- Impact: Access, Reporting, Import
+
+**Question:** how are Organization → Brand → Branch → Manager → Head → Supervisor → Representative,
+brand ownership and monthly targets defined in the real operational workbook (Team, Base,
+BranchGroup, CustomerGroup, target sheets)?
+
+**Current assumption:** migration `0007` adds `brands`, `branches`, `employee_positions` and
+`sales_targets`; the SAMPLE seed (`app/kiloos_demo.py`) fills them with fictional people. Targets come
+from an optional `Targets` sheet of the imported workbook. Visibility is derived on the server from
+`employee_positions` (management/admin: all; branch manager: branch; supervisor: own reps; rep: self).
+Header aliases (`sales.HEADER_ALIASES`) are the single place to map the real workbook's columns.
+
+**Final decision:** —
+
+---
+
+## OD-14 — Sales-driven mission eligibility (Target Sprint)
+
+- Status: PROPOSED (demo only, NOT approved)
+- Owner: کارفرما
+- Needed by: before any real reward use
+- Impact: Scoring, Fairness
+
+**Question:** which verified sales condition should unlock a sales-driven game mission?
+
+**Current proposal:** processed (imported, validated and explicitly confirmed) sales of the latest data
+period reach **80%** of the representative's own target for the same period (`app/perf.py`,
+`sales_gate`). Evaluated only on the server; the client cannot claim eligibility. No official EFES or
+Matador business formula is implied.
+
+**Final decision:** —
+
+---
+
+## OD-15 — Organizational points for the sales-driven mission
+
+- Status: PROPOSED (demo only, NOT approved)
+- Owner: کارفرما
+- Needed by: before any real reward use
+- Impact: Scoring, Ledger, Reward policy
+
+**Question:** how many organizational points (if any) does completing the mission award?
+
+**Current proposal:** rule `GAME_SALES_TARGET_80_PROPOSED` v1 = fixed **100** points, once per user,
+mission and period, written to the append-only `score_events` ledger in the same transaction as the game
+completion (idempotency key `game.sales_mission:<user>:<mission>:<period>`). Game XP/coins stay in the
+separate game economy; nothing here is a financial entitlement.
+
+**Final decision:** —
+
+---
+
 ## تصمیم‌های باز معماری
 
 - [ ] Backend framework

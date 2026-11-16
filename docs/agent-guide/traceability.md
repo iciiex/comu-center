@@ -91,6 +91,9 @@ Two sources feed this file:
 | **OD-10** | سرپرست فروش | OPEN | — | B3 |
 | **OD-11** | یکپارچگی | OPEN | — | — |
 | **OD-12** | ظرفیت | OPEN | — | D1, D6 |
+| **OD-13** | Kiloos demo org hierarchy, brands and targets | ASSUMPTION (demo only) | `db/migrations/0007_kiloos_demo_hierarchy.sql` | — |
+| **OD-14** | Sales-driven mission eligibility (Target Sprint) | PROPOSED (demo only, NOT approved) | `app/perf.py` | — |
+| **OD-15** | Organizational points for the sales-driven mission | PROPOSED (demo only, NOT approved) | — | — |
 
 Full text, options and impact: `docs/decisions/open-decisions.md`. The "coded in" column
 lists the files to revisit when the decision is made.
@@ -218,6 +221,9 @@ Use this list when a decision changes: these are the files to re-read and update
 | **OD-10** | `docs/decisions/open-decisions.md` | 5 | `.agent/CONTEXT.md`, `docs/decisions/open-decisions.md`, `docs/delivery/backlog.md`, `docs/delivery/demo-script.md`, `docs/product/admin-panel-spec.md` |
 | **OD-11** | `docs/decisions/open-decisions.md` | 5 | `.agent/CONTEXT.md`, `docs/decisions/decision-log.md`, `docs/decisions/open-decisions.md`, `docs/engineering/sales-import.md`, `docs/handoffs/handover.md` |
 | **OD-12** | `docs/decisions/open-decisions.md` | 10 | `.agent/CONTEXT.md`, `docs/agent-guide/01-start.md`, `docs/architecture/decisions/0001-fastapi-sqlite-prototype.md`, `docs/architecture/deployment-architecture.md`, `docs/decisions/decision-log.md`, `docs/decisions/open-decisions.md`, `docs/delivery/backlog.md`, `docs/handoffs/current-state.md`, `docs/handoffs/handover.md`, `docs/product/prd.md` |
+| **OD-13** | `docs/decisions/open-decisions.md` | 4 | `CHANGELOG.md`, `db/migrations/0007_kiloos_demo_hierarchy.sql`, `docs/decisions/open-decisions.md`, `docs/handoffs/current-state.md` |
+| **OD-14** | `docs/decisions/open-decisions.md` | 2 | `app/perf.py`, `docs/decisions/open-decisions.md` |
+| **OD-15** | `docs/decisions/open-decisions.md` | 2 | `CHANGELOG.md`, `docs/decisions/open-decisions.md` |
 | **D-001** | `docs/decisions/decision-log.md` | 9 | `CHANGELOG.md`, `docs/README.md`, `docs/agent-guide/01-start.md`, `docs/architecture/decisions/0001-fastapi-sqlite-prototype.md`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md`, `docs/delivery/demo-script.md`, `docs/handoffs/current-state.md`, `docs/handoffs/handover.md` |
 | **D-002** | `docs/decisions/decision-log.md` | 11 | `CHANGELOG.md`, `README.md`, `app/security.py`, `docs/agent-guide/01-start.md`, `docs/architecture/deployment-architecture.md`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md`, `docs/engineering/api-spec.md`, `docs/handoffs/current-state.md`, `docs/handoffs/handover.md`, `docs/operations/runbook.md` |
 | **D-003** | `docs/decisions/decision-log.md` | 8 | `CHANGELOG.md`, `README.md`, `app/maintenance.py`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md`, `docs/delivery/demo-script.md`, `docs/handoffs/current-state.md`, `docs/operations/runbook.md` |

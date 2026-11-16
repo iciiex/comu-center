@@ -59,6 +59,17 @@
 - Reports (EP-10) and notifications (EP-11): not started.
 - Partial corrections (correcting part of an award) are not implemented.
 
+## Kiloos unified demo (added 2026-11-16, MODE: P)
+- One origin: FastAPI serves the React app (`KILOOS_SPA_DIR`) and `/api/v1/*`; Docker Compose lives one level
+  up (`../docker-compose.yml`, `../demo.ps1`). Entry points: `python -m app.kiloos_demo reset|load-sample|workbook`.
+- New: org hierarchy + brands + targets (migration 0007), Excel import as JSON API with preview/confirm,
+  management dashboards scoped by hierarchy, employee dashboard, leaderboard JSON, sales-gated mission
+  `target-sprint` (server-verified, PROPOSED rule, +100 org points once per period).
+- The workbook contract is the SAMPLE contract + optional `Targets` sheet. The real 30-sheet workbook has not
+  been received (OD-03/OD-13); mapping goes through `sales.HEADER_ALIASES`. A workbook with a sheet whose name
+  contains SAMPLE is tagged `sample`; everything else is tagged `imported`.
+- Not done: Team/BranchGroup/CustomerGroup/BoxConversion sheet import, real calculations of EFES/Matador, SSO/OTP.
+
 ## Mocked / Demo-only
 - **Auth:** demo user picker instead of OTP/SMS (OD-01). Exit: approved login method + provider.
 - **Tenant:** one organization; multi-company not exposed (OD-02). Exit: approved org model.

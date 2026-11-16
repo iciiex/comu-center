@@ -6,6 +6,7 @@ post-prototype decision (see docs/architecture/decisions/0001-*.md).
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
@@ -75,6 +76,10 @@ def init_db(db_path: Path, evidence_dir: Path) -> None:
             from app.seed import seed_demo
 
             seed_demo(conn, evidence_dir=evidence_dir)
+            if os.getenv("KILOOS_DEMO_PROFILE") == "kiloos":
+                from app.kiloos_demo import seed_kiloos
+
+                seed_kiloos(conn)
             conn.commit()
     finally:
         conn.close()

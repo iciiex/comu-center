@@ -23,7 +23,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app import db, game, repo, sales, tribal
+from app import api_demo, db, game, repo, sales, tribal
 from app.config import Settings
 from app.jalali import format_jalali, to_persian_digits
 from app.repo import DomainError
@@ -551,8 +551,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         return JSONResponse(result, headers={"Idempotent-Replay": "true" if replayed else "false"})
 
+    spa_index = settings.spa_dir / "index.html" if settings.spa_dir else None
+    if spa_index is not None and spa_index.is_file():
+        app.mount("/assets", StaticFiles(directory=settings.spa_dir / "assets"), name="spa-assets")
+
     @app.get("/", response_class=HTMLResponse)
     def root(request: Request, conn: sqlite3.Connection = Depends(conn_dep)):
+        if spa_index is not None and spa_index.is_file():
+            # Unified application: the React app owns "/". The server-rendered prototype pages
+            # (/login, /home, /admin/*) stay available as the operator back office.
+            return FileResponse(spa_index, headers={"Cache-Control": "no-store"})
         user = current_user(request, conn)
         return go("/home" if user else "/login", request)
 
@@ -1272,5 +1280,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="مأموریت یافت نشد.")
         repo.archive_mission(conn, mission, user)
         return go(f"/admin/missions/{mission_id}?archived=1", request)
+
+    api_demo.register(
+        app,
+        settings=settings,
+        conn_dep=conn_dep,
+        require_user=require_user,
+        require_admin=require_admin,
+        csrf_guard=csrf_guard,
+        login_rate_limited=login_rate_limited,
+    )
 
     return app

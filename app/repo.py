@@ -650,6 +650,10 @@ def create_sales_import(
     file_name: str,
     sha256: str,
     rows: list[dict[str, Any]],
+    *,
+    origin: str = "imported",
+    targets: list[dict[str, Any]] | None = None,
+    source_sheet: str | None = None,
 ) -> sqlite3.Row:
     """Store the upload and its rows; never scores anything."""
     import_id = str(uuid.uuid4())
@@ -663,8 +667,8 @@ def create_sales_import(
             """INSERT INTO sales_imports
                (id, organization_id, uploaded_by, file_name, file_sha256, status,
                 row_count, valid_count, invalid_count, duplicate_count, created_count,
-                points_sum, created_at, finished_at)
-               VALUES (?, ?, ?, ?, ?, 'validated', ?, ?, ?, ?, 0, 0, ?, NULL)""",
+                points_sum, created_at, finished_at, data_origin, targets_json, source_sheet)
+               VALUES (?, ?, ?, ?, ?, 'validated', ?, ?, ?, ?, 0, 0, ?, NULL, ?, ?, ?)""",
             (
                 import_id,
                 org_id,
@@ -676,6 +680,9 @@ def create_sales_import(
                 counts["invalid"],
                 counts["duplicate"],
                 created_at,
+                origin,
+                json.dumps(targets, ensure_ascii=False) if targets else None,
+                source_sheet,
             ),
         )
         for row in rows:
@@ -684,8 +691,8 @@ def create_sales_import(
                    (id, import_id, organization_id, row_number, external_id,
                     user_external_id, user_id, sale_date, sku_code, quantity, amount,
                     customer_external_id, branch_code, raw_json, status,
-                    error_code, error_message, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    error_code, error_message, created_at, brand_code, data_origin)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     str(uuid.uuid4()),
                     import_id,
@@ -705,6 +712,8 @@ def create_sales_import(
                     row["error_code"],
                     row["error_message"],
                     created_at,
+                    row.get("brand_code"),
+                    origin,
                 ),
             )
     result = conn.execute("SELECT * FROM sales_imports WHERE id = ?", (import_id,)).fetchone()
@@ -802,6 +811,9 @@ def process_sales_import(
                 created += 1
                 points += int(event["points"])
             conn.execute("UPDATE sales_records SET status = 'scored' WHERE id = ?", (record["id"],))
+        targets_applied = _apply_import_targets(
+            conn, import_row["id"], import_row["organization_id"]
+        )
         conn.execute(
             """UPDATE sales_imports SET status = 'completed', error_message = NULL,
                    created_count = created_count + ?, points_sum = points_sum + ?, finished_at = ?
@@ -813,7 +825,8 @@ def process_sales_import(
                (id, actor_id, action, entity_type, entity_id, detail_json, created_at)
                VALUES (?, ?, 'sales.import.processed', 'sales_import', ?, ?, ?)""",
             (str(uuid.uuid4()), actor.id, import_row["id"],
-             json.dumps({"created_events": created, "points": points, "rows": len(pending)},
+             json.dumps({"created_events": created, "points": points, "rows": len(pending),
+                        "targets_applied": targets_applied},
                         ensure_ascii=False), now_iso()),
         )
         conn.commit()
@@ -834,4 +847,36 @@ def process_sales_import(
         "created": created,
         "points": points,
         "skipped": len(pending) - created,
+        "targets_applied": targets_applied,
     }
+
+
+def organization_brands(conn: sqlite3.Connection, org_id: str) -> set[str]:
+    rows = conn.execute("SELECT code FROM brands WHERE organization_id = ?", (org_id,)).fetchall()
+    return {row["code"] for row in rows}
+
+
+def _apply_import_targets(conn: sqlite3.Connection, import_id: str, org_id: str) -> int:
+    """Upsert validated Targets-sheet rows (idempotent: same key replaces the amount)."""
+    row = conn.execute(
+        "SELECT targets_json, data_origin FROM sales_imports WHERE id = ?", (import_id,)
+    ).fetchone()
+    if row is None or not row["targets_json"]:
+        return 0
+    applied = 0
+    for target in json.loads(row["targets_json"]):
+        if target.get("status") != "valid":
+            continue
+        conn.execute(
+            """INSERT INTO sales_targets
+                 (id, organization_id, user_id, brand_code, period, amount, import_id,
+                  data_origin, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(organization_id, user_id, brand_code, period) DO UPDATE SET
+                 amount = excluded.amount, import_id = excluded.import_id,
+                 data_origin = excluded.data_origin, updated_at = excluded.updated_at""",
+            (_new_id(), org_id, target["user_id"], target["brand_code"], target["period"],
+             target["amount"], import_id, row["data_origin"], now_iso()),
+        )
+        applied += 1
+    return applied

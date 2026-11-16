@@ -17,6 +17,13 @@ exists, move them under a dated heading with its number
 
 ## [Unreleased]
 
+Kiloos management demo integration (MODE: P, 2026-11-16): migration `0007_kiloos_demo_hierarchy.sql`
+(brands, branches, employee_positions, sales_targets, brand/origin columns, PROPOSED rule
+`GAME_SALES_TARGET_80_PROPOSED`), JSON API for auth/dashboards/imports/leaderboard (`app/api_demo.py`),
+shared read model (`app/perf.py`), import service (`app/imports.py`), sales-gated game mission with
+server-side org points, deterministic SAMPLE seed/workbook/reset CLI (`app/kiloos_demo.py`), optional SPA
+serving (`KILOOS_SPA_DIR`). Open decisions OD-13..OD-15 (all PROPOSED/ASSUMPTION, nothing approved).
+
 Sales Quest demo store: two sample coin-priced special missions with idempotent purchases; game coin economy remains separate from organizational/Tribal points.
 
 Tribal Gamification architecture/API proposal, fail-closed default-off bootstrap gate, tenant-scoped read-only org-unit APIs, and additive generic organization/membership schema foundation added; no scoring, RBAC, report workflow or product decision status changed.

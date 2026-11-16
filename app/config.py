@@ -37,6 +37,8 @@ class Settings:
     sales_max_bytes: int = 5 * 1024 * 1024
     sales_max_rows: int = 5000
     tribal_gamification_enabled: bool = False
+    # Built React app (Vite ``dist``). When set, ``/`` serves the unified single-page app.
+    spa_dir: Path | None = None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -52,6 +54,7 @@ class Settings:
             queue_page_size=_int_env("KILOOS_QUEUE_PAGE_SIZE", 20),
             sales_max_bytes=_int_env("KILOOS_SALES_MAX_BYTES", 5 * 1024 * 1024),
             sales_max_rows=_int_env("KILOOS_SALES_MAX_ROWS", 5000),
+            spa_dir=Path(os.environ["KILOOS_SPA_DIR"]) if os.getenv("KILOOS_SPA_DIR") else None,
             tribal_gamification_enabled=(
                 os.getenv("KILOOS_TRIBAL_GAMIFICATION_ENABLED", "false").strip().lower()
                 in {"1", "true", "yes", "on"}

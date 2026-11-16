@@ -26,8 +26,28 @@ REQUIRED_COLUMNS = (
     "quantity",
     "amount",
 )
-OPTIONAL_COLUMNS = ("customer_external_id", "branch_code")
+OPTIONAL_COLUMNS = ("customer_external_id", "branch_code", "brand_code")
 KNOWN_COLUMNS = REQUIRED_COLUMNS + OPTIONAL_COLUMNS
+
+# Header aliases: the single place to adapt the importer to the real operational workbook
+# (OD-03) without touching the pipeline. Keys are lower-cased, trimmed headers.
+# SAMPLE: only English synonyms are listed; Persian headers of the real workbook go here.
+HEADER_ALIASES: dict[str, str] = {
+    "brand": "brand_code",
+    "branch": "branch_code",
+    "rep_id": "user_external_id",
+    "rep_code": "user_external_id",
+    "invoice_id": "external_id",
+    "date": "sale_date",
+    "sku": "sku_code",
+    "qty": "quantity",
+}
+
+# Sheet names the importer prefers; falls back to the workbook's active sheet.
+SALES_SHEET_NAMES = ("salesdata", "sales", "sales-sample", "فروش")
+TARGET_SHEET_NAMES = ("targets", "target", "اهداف", "تارگت")
+TARGET_COLUMNS = ("user_external_id", "brand_code", "period", "target_amount")
+
 
 class SalesFileError(Exception):
     """File-level problem: the whole upload is rejected."""
@@ -82,6 +102,101 @@ def _raw(value: Any) -> Any:
     return value
 
 
+def _pick_sheet(workbook, preferred: tuple[str, ...]):
+    for sheet in workbook.worksheets:
+        if sheet.title.strip().lower() in preferred:
+            return sheet
+    return workbook.active if preferred is SALES_SHEET_NAMES else None
+
+
+def detect_origin(raw: bytes) -> str:
+    """'sample' when any sheet name contains SAMPLE (the synthetic workbook declares itself).
+
+    A real operational workbook has no such sheet and is tagged 'imported'. This keeps sample
+    and real data distinguishable end to end (demo rule: never present sample data as real).
+    """
+    from openpyxl import load_workbook
+
+    try:
+        workbook = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+    except Exception:
+        return "imported"
+    return "sample" if any("sample" in s.title.lower() for s in workbook.worksheets) else "imported"
+
+
+def parse_targets(raw: bytes, max_rows: int = 5000) -> list[dict[str, Any]]:
+    """Read the optional ``Targets`` sheet (SAMPLE contract; real Team/Targets mapping is OD-03)."""
+    from openpyxl import load_workbook
+
+    try:
+        workbook = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+    except Exception:
+        return []
+    sheet = _pick_sheet(workbook, TARGET_SHEET_NAMES)
+    if sheet is None:
+        return []
+    rows = sheet.iter_rows(values_only=True)
+    header = next(rows, None)
+    if header is None:
+        return []
+    headers = [_text(cell).lower() for cell in header]
+    if any(column not in headers for column in TARGET_COLUMNS):
+        raise SalesFileError("ستون‌های شیت Targets: " + "، ".join(TARGET_COLUMNS))
+    out: list[dict[str, Any]] = []
+    for number, values in enumerate(rows, start=2):
+        if values is None or all(c is None or _text(c) == "" for c in values):
+            continue
+        record = {
+            name: (values[headers.index(name)] if headers.index(name) < len(values) else None)
+            for name in TARGET_COLUMNS
+        }
+        record["row_number"] = number
+        out.append(record)
+        if len(out) > max_rows:
+            raise SalesFileError(f"شیت Targets بیش از {max_rows} ردیف دارد.")
+    return out
+
+
+def validate_targets(
+    rows: list[dict[str, Any]], user_map: dict[str, str], brands: set[str]
+) -> list[dict[str, Any]]:
+    """Pure validation of target rows; a bad row is reported, never fatal."""
+    import re
+
+    seen: set[tuple[str, str, str]] = set()
+    checked: list[dict[str, Any]] = []
+    for row in rows:
+        ext = _text(row.get("user_external_id"))
+        brand = _text(row.get("brand_code")).upper()
+        period = _text(row.get("period"))
+        amount = _decimal(row.get("target_amount"))
+        error: str | None = None
+        if ext not in user_map:
+            error = "Sales representative code not found in organization"
+        elif brands and brand not in brands:
+            error = "Unknown brand"
+        elif not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", period):
+            error = "Period must look like YYYY-MM"
+        elif amount is None or amount < 0:
+            error = "Invalid target amount"
+        elif (ext, brand, period) in seen:
+            error = "Duplicate target in this file"
+        seen.add((ext, brand, period))
+        checked.append(
+            {
+                "row_number": row["row_number"],
+                "user_external_id": ext,
+                "user_id": user_map.get(ext),
+                "brand_code": brand,
+                "period": period,
+                "amount": str(amount) if amount is not None else None,
+                "status": "invalid" if error else "valid",
+                "error_message": error,
+            }
+        )
+    return checked
+
+
 def parse_workbook(raw: bytes, max_rows: int = 5000) -> list[dict[str, Any]]:
     """Read the first sheet into row dicts; raise ``SalesFileError`` on file problems."""
     from openpyxl import load_workbook
@@ -93,7 +208,7 @@ def parse_workbook(raw: bytes, max_rows: int = 5000) -> list[dict[str, Any]]:
             "فایل اکسل قابل خواندن نیست؛ مطمئن شوید یک فایل xlsx سالم است."
         ) from exc
 
-    sheet = workbook.active
+    sheet = _pick_sheet(workbook, SALES_SHEET_NAMES)
     if sheet is None:
         raise SalesFileError("فایل هیچ شیتی ندارد.")
 
@@ -102,7 +217,7 @@ def parse_workbook(raw: bytes, max_rows: int = 5000) -> list[dict[str, Any]]:
     if header is None:
         raise SalesFileError("فایل خالی است.")
 
-    headers = [_text(cell).lower() for cell in header]
+    headers = [HEADER_ALIASES.get(_text(cell).lower(), _text(cell).lower()) for cell in header]
     missing = [column for column in REQUIRED_COLUMNS if column not in headers]
     if missing:
         raise SalesFileError("ستون‌های الزامی موجود نیست: " + "، ".join(missing))
@@ -136,9 +251,15 @@ def validate_rows(
     *,
     existing_ids: set[str] | None = None,
     today: date | None = None,
+    brands: set[str] | None = None,
 ) -> list[dict[str, Any]]:
-    """Attach status/error/user to every parsed row (pure function, no writes)."""
+    """Attach status/error/user to every parsed row (pure function, no writes).
+
+    ``brands``: when the organization defines brands (kilos demo profile), every row must carry
+    a known brand code (E_BRAND). With no brands configured the column stays optional.
+    """
     existing_ids = existing_ids or set()
+    brands = brands or set()
     today = today or datetime.now(tz=UTC).date()
     seen: set[str] = set()
     checked: list[dict[str, Any]] = []
@@ -150,6 +271,22 @@ def validate_rows(
         quantity = _decimal(row.get("quantity"))
         amount = _decimal(row.get("amount"))
         sku = _text(row.get("sku_code"))
+        brand = _text(row.get("brand_code")).upper()
+
+        status = _row_status(
+            external_id=external_id,
+            user_external_id=user_external_id,
+            mapped=user_external_id in user_map,
+            sale_day=sale_day,
+            today=today,
+            quantity=quantity,
+            amount=amount,
+            sku=sku,
+            already_seen=external_id in seen,
+            exists=external_id in existing_ids,
+        )
+        if status["status"] == "valid" and brands and brand not in brands:
+            status = _invalid("E_BRAND", "برند خالی یا ناشناخته است.")
 
         checked.append(
             {
@@ -163,19 +300,9 @@ def validate_rows(
                 "amount": str(amount) if amount is not None else None,
                 "customer_external_id": _text(row.get("customer_external_id")) or None,
                 "branch_code": _text(row.get("branch_code")) or None,
+                "brand_code": brand or None,
                 "raw": row.get("raw", {}),
-                **_row_status(
-                    external_id=external_id,
-                    user_external_id=user_external_id,
-                    mapped=user_external_id in user_map,
-                    sale_day=sale_day,
-                    today=today,
-                    quantity=quantity,
-                    amount=amount,
-                    sku=sku,
-                    already_seen=external_id in seen,
-                    exists=external_id in existing_ids,
-                ),
+                **status,
             }
         )
         if external_id:
