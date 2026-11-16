@@ -839,7 +839,7 @@ graph LR
 
 | Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
 |---|---|---|---|---|---|---|
-| `Settings` | class | — | — | — | `config._int_env` | `conftest::ri_settings`, `conftest::settings`, `kiloos_demo._settings`, `main.create_app`, `maintenance.main`, `seed.main`, `test_hardening::test_admin_queue_paginates` |
+| `Settings` | class | — | — | — | `config._int_env` | 9 callers |
 | `_int_env` | function | — | — | — | — | `config.Settings` |
 
 ### `app/db.py`
@@ -1620,6 +1620,18 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_decision_register_is_complete_and_never_claims_approval` | — | — | — |
 | `test_workbook_error_type_is_exposed_for_api_clients` | — | — | — |
 
+### `tests/test_realimport_real_workbook.py` (7 tests)
+
+| Test | Routes exercised | Direct domain calls | IDs |
+|---|---|---|---|
+| `test_workbook_identity_is_the_audited_file` | — | — | — |
+| `test_row_counts_keys_and_totals_match_the_audit` | — | — | — |
+| `test_roster_keeps_employee_and_visitor_assignment_separate` | — | — | — |
+| `test_the_55_583_carton_gap_is_shown_and_verified_as_rounding` | — | — | — |
+| `test_calculation_runs_cover_all_manager_rows_and_reproduce_reported_rewards` | — | — | — |
+| `test_input_sales_do_not_fully_reproduce_and_say_so` | — | — | — |
+| `test_rerunning_the_import_is_a_no_op` | — | — | — |
+
 ### `tests/test_sales.py` (13 tests)
 
 | Test | Routes exercised | Direct domain calls | IDs |
@@ -1669,8 +1681,8 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_org_tree_and_membership_are_generic_and_tenant_scoped` | — | — | — |
 | `test_org_membership_cannot_cross_organization_boundary` | — | — | — |
 
-126 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
-Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::ri`, `conftest::ri_settings`, `conftest::row_id`, `conftest::settings`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_game_store::csrf_header`, `test_game_store::set_game_coins`, `test_hardening::token_csrf`, `test_kiloos_demo::db_rows`, `test_kiloos_demo::demo`, `test_kiloos_demo::demo_settings`, `test_kiloos_demo::game_missions`, `test_kiloos_demo::import_and_process`, `test_kiloos_demo::login`, `test_kiloos_demo::upload`, `test_kiloos_demo::user_id`, `test_realimport::_pretty`, `test_realimport::pipeline_to_confirmed`, `test_realimport::post`, `test_realimport::synthetic`, `test_realimport::table_counts`, `test_realimport::upload`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`.
+133 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
+Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::ri`, `conftest::ri_settings`, `conftest::row_id`, `conftest::settings`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_game_store::csrf_header`, `test_game_store::set_game_coins`, `test_hardening::token_csrf`, `test_kiloos_demo::db_rows`, `test_kiloos_demo::demo`, `test_kiloos_demo::demo_settings`, `test_kiloos_demo::game_missions`, `test_kiloos_demo::import_and_process`, `test_kiloos_demo::login`, `test_kiloos_demo::upload`, `test_kiloos_demo::user_id`, `test_realimport::_pretty`, `test_realimport::pipeline_to_confirmed`, `test_realimport::post`, `test_realimport::synthetic`, `test_realimport::table_counts`, `test_realimport::upload`, `test_realimport_real_workbook::checks`, `test_realimport_real_workbook::result`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`.
 
 ## 8. Error codes
 
