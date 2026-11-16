@@ -43,7 +43,7 @@ def run_import(path: Path, settings: Settings) -> dict:
             "batch": {"id": batch["id"], "status": batch["status"], "replayed": all([b_replayed, v_replayed, c_replayed]),
                       "counts": json.loads(batch["counts_json"])},
             "runs": runs,
-            "reconciliation": [{k: c[k] for k in ("check_code", "status", "reference_value", "prototype_value", "abs_variance", "pct_variance")}
+            "reconciliation": [{k: c[k] for k in ("check_code", "status", "reference_value", "prototype_value", "abs_variance", "pct_variance", "matched", "missing", "detail")}
                                for c in reconcile.list_checks(conn, batch["id"])],
         }
     finally:

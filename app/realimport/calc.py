@@ -43,6 +43,16 @@ SEED_RULE = {
     "notes": ("PROPOSED: thresholds read from the audit (§E.3: ladder 0.97/1.12/1.22/1.32); step amounts are the "
               "hard-coded per-row values of the manager sheet. Not approved by the business owner."),
 }
+# «مدیرکل» rows of the same sheet (general manager over lines G-P-A). The workbook uses the same
+# ladder shape; whether it is the same rule for this level is unconfirmed, hence its own rule set.
+SEED_RULE_GENERAL = {
+    **SEED_RULE,
+    "code": "MGR_GENERAL_EFES_LADDER_PROPOSED",
+    "org_level": "general_manager",
+    "notes": ("PROPOSED: same ladder shape as the branch-manager rule applied to the «مدیرکل» rows (lines G-P-A); "
+              "thresholds copied, not confirmed for this level. Not approved by the business owner."),
+}
+SEED_RULES = (SEED_RULE, SEED_RULE_GENERAL)
 
 
 def rule_type(name: str):
@@ -91,11 +101,12 @@ def validate_params(rule_type_name: str, params: dict[str, Any]) -> None:
 
 
 def seed_rule_sets(conn: sqlite3.Connection) -> None:
-    conn.execute(
-        """INSERT OR IGNORE INTO ri_rule_sets (code, version, rule_type, org_level, brand_code, params_json, status, notes, created_at)
-           VALUES (?, 1, ?, ?, ?, ?, 'PROPOSED', ?, ?)""",
-        (SEED_RULE["code"], SEED_RULE["rule_type"], SEED_RULE["org_level"], SEED_RULE["brand_code"],
-         json.dumps(SEED_RULE["params"], sort_keys=True), SEED_RULE["notes"], now_iso()))
+    for rule in SEED_RULES:
+        conn.execute(
+            """INSERT OR IGNORE INTO ri_rule_sets (code, version, rule_type, org_level, brand_code, params_json, status, notes, created_at)
+               VALUES (?, 1, ?, ?, ?, ?, 'PROPOSED', ?, ?)""",
+            (rule["code"], rule["rule_type"], rule["org_level"], rule["brand_code"],
+             json.dumps(rule["params"], sort_keys=True), rule["notes"], now_iso()))
     conn.commit()
 
 

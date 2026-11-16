@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections import defaultdict
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
 from typing import Any
 
 from app.db import now_iso
@@ -18,7 +18,7 @@ from app.realimport.normalize import decimal_text, parse_decimal
 
 TOLERANCE = Decimal("0.0005")
 ROUNDING_EXPLANATION = (
-    "SalesData is a Power Query output that casts net cartons to Int64 (round half away from zero) "
+    "SalesData is a Power Query output that casts net cartons to Int64 (convention detected from the data: {mode}) "
     "while the base sheet keeps fractional cartons. Verified per business key: every differing key equals "
     "the sum of its individually rounded rows. The difference is a rounding artefact of the derived sheet, "
     "not missing sales. It is shown, not hidden; the carton basis used for calculation is configurable (BD-05)."
@@ -59,13 +59,14 @@ def _sheet_facts(conn: sqlite3.Connection, batch_id: str, sheet: str):
 def _aggregate(rows) -> dict[str, dict[str, Any]]:
     agg: dict[str, dict[str, Any]] = {}
     for r in rows:
-        a = agg.setdefault(r["business_key_hash"], {"net": Decimal(0), "gross": Decimal(0), "inv": 0, "rows": 0, "rounded": Decimal(0)})
+        a = agg.setdefault(r["business_key_hash"], {"net": Decimal(0), "gross": Decimal(0), "inv": 0, "rows": 0, "rounded": Decimal(0), "rounded_even": Decimal(0)})
         net = _dec(r["net_cartons"])
         a["net"] += net
         a["gross"] += _dec(r["gross_cartons"])
         a["inv"] += r["invoice_count"] or 0
         a["rows"] += 1
         a["rounded"] += net.quantize(Decimal(1), rounding=ROUND_HALF_UP)
+        a["rounded_even"] += net.quantize(Decimal(1), rounding=ROUND_HALF_EVEN)
     return agg
 
 
@@ -127,19 +128,26 @@ def compute_import_checks(conn: sqlite3.Connection, batch_id: str) -> list[dict[
         ref_net = sum((a["net"] for a in derived.values()), Decimal(0))
         proto_net = sum((a["net"] for a in primary.values()), Decimal(0))
         differing = [k for k in primary if k in derived and abs(primary[k]["net"] - derived[k]["net"]) > TOLERANCE]
-        explained = [k for k in differing if abs(primary[k]["rounded"] - derived[k]["net"]) <= TOLERANCE]
+        # Which integer-cast convention does the derived sheet follow? Test both against the data, keep the better one.
+        by_mode = {
+            mode: [k for k in differing if abs(primary[k][field] - derived[k]["net"]) <= TOLERANCE]
+            for mode, field in (("half_away_from_zero", "rounded"), ("half_to_even", "rounded_even"))
+        }
+        rounding_mode = max(by_mode, key=lambda m: len(by_mode[m]))
+        explained = by_mode[rounding_mode]
         unexplained = len(differing) - len(explained)
         delta = proto_net - ref_net
         if not differing and abs(delta) <= TOLERANCE:
             status, why = "match", "Net cartons are identical on both sheets."
         elif differing and unexplained == 0:
-            status, why = "explained", ROUNDING_EXPLANATION
+            status, why = "explained", ROUNDING_EXPLANATION.format(mode=rounding_mode.replace("_", " "))
         else:
             status, why = "warning", f"{unexplained} differing keys are NOT explained by integer rounding; investigate before relying on either basis."
         checks.append(_check(
             "IMP-NET", "Net cartons Σ (derived sheet = reference, base sheet = prototype)", reference=ref_net, prototype=proto_net,
             matched=len(primary) - len(differing), missing=unexplained, status=status, explanation=why,
             detail={"signed_variance": decimal_text(delta), "differing_keys": len(differing), "explained_by_rounding": len(explained),
+                    "rounding_mode_tested": {m: len(v) for m, v in by_mode.items()}, "rounding_mode": rounding_mode,
                     "unexplained": unexplained, "fractional_rows_primary": sum(1 for r in primary_rows if _dec(r["net_cartons"]) % 1 != 0),
                     "negative_rows_primary": sum(1 for r in primary_rows if _dec(r["net_cartons"]) < 0)}))
 
@@ -178,8 +186,8 @@ def compute_run_checks(conn: sqlite3.Connection, run_id: str) -> list[dict[str, 
     run = conn.execute("SELECT r.*, b.norm_key AS brand_code FROM ri_calc_runs r JOIN ri_brands b ON b.id = r.brand_id WHERE r.id = ?", (run_id,)).fetchone()
     results = conn.execute("SELECT entity_key, input_quantity, reward_rials, result_status FROM ri_calc_results WHERE run_id = ?", (run_id,)).fetchall()
     refs: dict[str, dict[str, Decimal]] = defaultdict(dict)
-    for r in conn.execute("SELECT ref_code, value FROM ri_workbook_references WHERE batch_id = ? AND brand_code = ? AND ref_code LIKE 'mgr|%'",
-                          (run["batch_id"], run["brand_code"])):
+    for r in conn.execute("SELECT ref_code, value FROM ri_workbook_references WHERE batch_id = ? AND brand_code = ? AND org_level = ? AND ref_code LIKE 'mgr|%'",
+                          (run["batch_id"], run["brand_code"], run["org_level"])):  # like for like: same org level only
         _, _, rest = r["ref_code"].split("|", 2)  # mgr|<brand>|<branch>|<line group>|<kind>
         entity, kind = rest.rsplit("|", 1)
         refs[entity][kind] = _dec(r["value"])

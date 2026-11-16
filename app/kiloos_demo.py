@@ -227,6 +227,8 @@ def sample_rows() -> tuple[list[list], list[list]]:
 def _workbook(sales: list[list], targets: list[list], note: str) -> bytes:
     from openpyxl import Workbook
 
+    from app.realimport.xlsxfix import deterministic_xlsx
+
     wb = Workbook()
     ws = wb.active
     ws.title = "SalesData"
@@ -256,7 +258,7 @@ def _workbook(sales: list[list], targets: list[list], note: str) -> bytes:
     readme.append([note])
     buffer = io.BytesIO()
     wb.save(buffer)
-    return buffer.getvalue()
+    return deterministic_xlsx(buffer.getvalue())  # identical bytes on every call (spike fix)
 
 
 def sample_workbook_bytes() -> bytes:

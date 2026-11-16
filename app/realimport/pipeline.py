@@ -682,7 +682,7 @@ def _stage_manager_targets(conn, wb, sheet_name, batch_id, dims: Dims, issues: I
             continue
         brand_id = dims.brand(P.BRAND_ALIASES.get(brand_label, brand_label).upper() if brand_label in P.BRAND_ALIASES else brand_label)
         level_text = fold_text(_cell(cells, cols, "level"))
-        org_level = "branch_manager" if level_text in {"", "مدیر"} else f"other:{level_text}"
+        org_level = {"": "branch_manager", "مدیر": "branch_manager", "مدیرکل": "general_manager"}.get(level_text, f"other:{level_text}")
         codes = P.line_group_codes(_cell(cells, cols, "line"))
         entity_key = f"{fold_text(branch)}|{'-'.join(sorted(codes))}"
         if (brand_id, entity_key) in seen:

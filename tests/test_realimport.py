@@ -109,6 +109,16 @@ def test_calculation_error_for_invalid_target() -> None:
 
 
 # ---------------------------------------------------------------------------------- isolation
+def test_generated_workbooks_are_byte_identical_across_calls() -> None:
+    import time
+
+    from app import kiloos_demo
+
+    first = (build_synthetic_workbook()[0], kiloos_demo.sample_workbook_bytes())
+    time.sleep(1.1)  # openpyxl stamps wall-clock seconds; deterministic_xlsx must neutralise that
+    assert first == (build_synthetic_workbook()[0], kiloos_demo.sample_workbook_bytes())
+
+
 def test_feature_flag_off_means_no_routes(client: TestClient) -> None:
     assert client.get(f"{BASE}/meta").status_code == 404
 
@@ -404,6 +414,22 @@ def test_run_reconciliation_flags_the_hand_adjusted_figure(ri, synthetic) -> Non
     summary = client.get(f"{BASE}/batches/{batch_id}/summary", headers=headers).json()
     efes = next(b for b in summary["brands"] if b["brand"] == "efes")
     assert efes["levels"][0]["org_level"] == "branch_manager" and efes["levels"][0]["rule"]["status"] == "PROPOSED"
+
+
+def test_general_manager_level_reports_a_calculation_error_not_a_guess(ri, synthetic) -> None:
+    client, headers = ri
+    batch_id = pipeline_to_confirmed(client, headers, synthetic[0])
+    rules = {r["code"]: r for r in client.get(f"{BASE}/rules", headers=headers).json()["rules"]}
+    general = rules["MGR_GENERAL_EFES_LADDER_PROPOSED"]
+    assert general["status"] == "PROPOSED" and general["org_level"] == "general_manager"
+    run = post(client, headers, f"/batches/{batch_id}/runs", {"rule_set_id": general["id"]}).json()["run"]
+    assert run["result_count"] == 1 and run["error_count"] == 1
+    result = client.get(f"{BASE}/runs/{run['id']}", headers=headers).json()["results"][0]
+    # fixture has no P/A sales lines: the entity cannot be calculated, and says so instead of returning 0
+    assert result["result_status"] == "error" and "LINE_GROUP_UNMAPPED" in result["error"]
+    assert result["achievement"] is None and result["reward_rials"] is None
+    net = client.get(f"{BASE}/batches/{batch_id}/reconciliation", headers=headers).json()["checks"]
+    assert next(c for c in net if c["check_code"] == "IMP-NET")["detail"]["rounding_mode"] in {"half_away_from_zero", "half_to_even"}
 
 
 def test_decision_register_is_complete_and_never_claims_approval(ri) -> None:

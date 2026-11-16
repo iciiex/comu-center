@@ -17,6 +17,7 @@ from typing import Any
 from openpyxl import Workbook
 
 from app.realimport import profile as P
+from app.realimport.xlsxfix import deterministic_xlsx
 
 MONTH = "شهریور"
 BRANCHES = ["تهران نمونه", "کرج", "بوشهر"]
@@ -111,6 +112,9 @@ def build_synthetic_workbook(seed: int = 7) -> tuple[bytes, dict[str, Any]]:
                              "Fictional Manager", "-", "Fictional Deputy", 8_100_000 + index, "-", target, definitive,
                              float(achievement), None, float(reward), *STEPS])
 
+    # a «مدیرکل» row over lines G-P-A: the fixture has no P/A lines, so the calculation reports an error for it
+    manager_rows.append([None, MONTH, "Synthetic supplier", "افس", "بوشهر", "G-P-A", "مدیرکل", "Fictional General Manager", "-",
+                         "Fictional Deputy", 8_100_900, "-", 100.0, 0.0, 0.0, None, 0.0, *STEPS])
     wb = Workbook()
     ws = wb.active
     ws.title = "فروش"
@@ -149,14 +153,16 @@ def build_synthetic_workbook(seed: int = 7) -> tuple[bytes, dict[str, Any]]:
     wb.create_sheet(P.SYNTHETIC_MARKER_SHEET).append(["Synthetic fixture: fictional data only. Not Kiloos data."])
     buffer = io.BytesIO()
     wb.save(buffer)
+    content = deterministic_xlsx(buffer.getvalue())
 
     manifest = {
         "rows_primary": len(rows), "rows_derived": len(derived), "valid_primary": len(rows) - 3, "rejected_primary": 3,
         "duplicate_key_rows": 1, "branch_variants": 1, "roster_rows": len(roster),
-        "expected_rewards": expected_rewards, "manager_rows": len(manager_rows), "adjusted_manager_rows": 1,
+        "expected_rewards": expected_rewards, "manager_rows": len(manager_rows) - 1, "general_manager_rows": 1,
+        "adjusted_manager_rows": 1,
         "net_sum_primary": str(sum(Decimal(repr(r[10])) for r in rows[: valid_keys + 2] if isinstance(r[10], float))),
     }
-    return buffer.getvalue(), manifest
+    return content, manifest
 
 
 def synthetic_workbook_bytes() -> bytes:

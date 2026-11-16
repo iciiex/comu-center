@@ -36,7 +36,7 @@ Contents: [1 Modules](#1-modules) · [2 Routes](#2-routes) · [3 Route details](
 | `app/game.py` | 35 | `db`, `perf`, `scoring` |
 | `app/imports.py` | 5 | `repo`, `sales` |
 | `app/jalali.py` | 3 | — |
-| `app/kiloos_demo.py` | 13 | `config`, `db`, `game`, `imports`, `repo`, `security` |
+| `app/kiloos_demo.py` | 13 | `config`, `db`, `game`, `imports`, `repo`, `security`, `xlsxfix` |
 | `app/main.py` | 66 | `api`, `api_demo`, `config`, `db`, `game`, `jalali`, `repo`, `sales`, `sample_sales`, `security`, `tribal` |
 | `app/maintenance.py` | 3 | `config`, `db` |
 | `app/perf.py` | 11 | `repo` |
@@ -68,6 +68,7 @@ graph LR
     kiloos_demo --> db
     kiloos_demo --> game
     kiloos_demo --> imports
+    kiloos_demo --> xlsxfix
     kiloos_demo --> repo
     kiloos_demo --> security
     main --> api_demo
@@ -923,7 +924,7 @@ graph LR
 | `overlap_workbook_bytes` | function | A second SAMPLE file: re-sends 10 earlier rows (cross-import duplicates) + 5 new rows. | — | — | `kiloos_demo._workbook`, `kiloos_demo.sample_rows` | `api_demo.register`, `kiloos_demo.load_sample`, `kiloos_demo.main`, `test_kiloos_demo::test_import_workflow_validates_dedupes_and_processes_once` |
 | `reset` | function | Delete the SQLite file and rebuild the deterministic demo (base seed + Kiloos profile). | — | — | `db.init_db`, `kiloos_demo._settings` | `kiloos_demo.main`, `test_kiloos_demo::test_reset_and_load_sample_cli_are_deterministic` |
 | `sample_rows` | function | Deterministic SAMPLE rows: (sales rows, target rows). Seeded RNG, no clock dependence. | — | — | `kiloos_demo._split` | `kiloos_demo.overlap_workbook_bytes`, `kiloos_demo.sample_workbook_bytes` |
-| `sample_workbook_bytes` | function | — | — | — | `kiloos_demo._workbook`, `kiloos_demo.sample_rows` | `api_demo.register`, `kiloos_demo.load_sample`, `kiloos_demo.main`, `test_kiloos_demo::import_and_process`, `test_kiloos_demo::test_import_workflow_validates_dedupes_and_processes_once`, `test_kiloos_demo::test_only_admin_can_import` |
+| `sample_workbook_bytes` | function | — | — | — | `kiloos_demo._workbook`, `kiloos_demo.sample_rows` | `api_demo.register`, `kiloos_demo.load_sample`, `kiloos_demo.main`, `test_kiloos_demo::import_and_process`, `test_kiloos_demo::test_import_workflow_validates_dedupes_and_processes_once`, `test_kiloos_demo::test_only_admin_can_import`, `test_realimport::test_generated_workbooks_are_byte_identical_across_calls` |
 | `seed_kiloos` | function | Add the sample hierarchy on top of the base prototype seed (deterministic). | `organizations`, `users` | `users` | `kiloos_demo._iso`, `kiloos_demo._seed_game_profile`, `kiloos_demo._uid` | `db.init_db` |
 
 ### `app/maintenance.py`
@@ -1583,7 +1584,7 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_sales_mission_is_gated_by_processed_sales_and_awards_once` | `GET /api/v1/game/bootstrap`, `POST /api/v1/game/missions/{mission_id}/completions` | `kiloos_demo.sample_workbook_bytes` | — |
 | `test_reset_and_load_sample_cli_are_deterministic` | — | `kiloos_demo.load_sample`, `kiloos_demo.reset` | — |
 
-### `tests/test_realimport.py` (29 tests)
+### `tests/test_realimport.py` (31 tests)
 
 | Test | Routes exercised | Direct domain calls | IDs |
 |---|---|---|---|
@@ -1592,6 +1593,7 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_line_codes_and_manager_line_groups` | — | — | — |
 | `test_pseudonyms_are_deterministic_keyed_and_leak_guarded` | — | — | — |
 | `test_calculation_error_for_invalid_target` | — | — | — |
+| `test_generated_workbooks_are_byte_identical_across_calls` | — | `kiloos_demo.sample_workbook_bytes` | — |
 | `test_feature_flag_off_means_no_routes` | — | — | — |
 | `test_migration_only_adds_prefixed_tables` | — | — | — |
 | `test_demo_tables_untouched_by_full_flow` | — | — | — |
@@ -1614,6 +1616,7 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_changed_rule_params_create_a_distinct_run` | — | — | — |
 | `test_reconciliation_explains_the_rounding_gap_instead_of_hiding_it` | — | — | — |
 | `test_run_reconciliation_flags_the_hand_adjusted_figure` | — | — | — |
+| `test_general_manager_level_reports_a_calculation_error_not_a_guess` | — | — | — |
 | `test_decision_register_is_complete_and_never_claims_approval` | — | — | — |
 | `test_workbook_error_type_is_exposed_for_api_clients` | — | — | — |
 
@@ -1666,7 +1669,7 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_org_tree_and_membership_are_generic_and_tenant_scoped` | — | — | — |
 | `test_org_membership_cannot_cross_organization_boundary` | — | — | — |
 
-124 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
+126 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
 Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::ri`, `conftest::ri_settings`, `conftest::row_id`, `conftest::settings`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_game_store::csrf_header`, `test_game_store::set_game_coins`, `test_hardening::token_csrf`, `test_kiloos_demo::db_rows`, `test_kiloos_demo::demo`, `test_kiloos_demo::demo_settings`, `test_kiloos_demo::game_missions`, `test_kiloos_demo::import_and_process`, `test_kiloos_demo::login`, `test_kiloos_demo::upload`, `test_kiloos_demo::user_id`, `test_realimport::_pretty`, `test_realimport::pipeline_to_confirmed`, `test_realimport::post`, `test_realimport::synthetic`, `test_realimport::table_counts`, `test_realimport::upload`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`.
 
 ## 8. Error codes
@@ -1840,6 +1843,10 @@ test asks for an unknown page on purpose; anything else is a broken link.
 - tests/test_realimport.py::test_endpoints_require_admin: GET {}/meta matches no route
 - tests/test_realimport.py::test_endpoints_require_admin: POST {}/workbooks matches no route
 - tests/test_realimport.py::test_feature_flag_off_means_no_routes: GET {}/meta matches no route
+- tests/test_realimport.py::test_general_manager_level_reports_a_calculation_error_not_a_guess: GET {}/batches/{}/reconciliation matches no route
+- tests/test_realimport.py::test_general_manager_level_reports_a_calculation_error_not_a_guess: GET {}/rules matches no route
+- tests/test_realimport.py::test_general_manager_level_reports_a_calculation_error_not_a_guess: GET {}/runs/{} matches no route
+- tests/test_realimport.py::test_general_manager_level_reports_a_calculation_error_not_a_guess: POST /batches/{}/runs matches no route
 - tests/test_realimport.py::test_no_raw_personal_value_in_any_api_response: GET {}/batches/{}/mappings matches no route
 - tests/test_realimport.py::test_no_raw_personal_value_in_any_api_response: GET {}/rules matches no route
 - tests/test_realimport.py::test_no_raw_personal_value_in_any_api_response: GET {}/runs/{} matches no route
