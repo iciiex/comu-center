@@ -1,0 +1,25 @@
+# Render Blueprint — Kiloos Club demo (MODE: P). SAMPLE data only; not production.
+# A persistent disk requires a paid instance type (starter or above).
+services:
+  - type: web
+    name: kiloos-club-demo
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    healthCheckPath: /health
+    numInstances: 1            # SQLite = single writer; do not scale out
+    disk:
+      name: kiloos-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: KILOOS_ENV
+        value: demo
+      - key: KILOOS_DB
+        value: /var/data/kiloos.sqlite
+      - key: KILOOS_EVIDENCE_DIR
+        value: /var/data/evidence
+      - key: KILOOS_SECRET
+        generateValue: true
+      - key: KILOOS_DEMO_STAFF_CODE   # D-008: staff (operator/admin) login on the hosted demo
+        generateValue: true

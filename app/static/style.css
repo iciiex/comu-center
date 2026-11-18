@@ -160,7 +160,12 @@ a:hover { text-decoration: underline; }
 .nav a.is-active { color: var(--brand); background: var(--brand-soft); font-weight: 700; }
 .nav__icon { font-size: 18px; line-height: 1; }
 
-.adminnav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.adminnav { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; margin-bottom: 14px;
+  padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.adminnav a { white-space: nowrap; }
+.table-wrap { overflow-x: auto; }
+.badge-demo { font-size: 10px; background: #fff4d6; color: #8a5a00; border-radius: 6px;
+  padding: 1px 6px; margin-inline-start: 6px; font-weight: 700; }
 .adminnav a {
   font-size: 12.5px; padding: 7px 12px; border-radius: 10px;
   border: 1px solid var(--line); background: var(--surface); color: var(--ink);

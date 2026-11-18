@@ -10,12 +10,13 @@
 <body>
 {% set wide = request.url.path.startswith('/admin') %}
 <div class="demo-strip">
+  {% if env == 'demo' %}<b>DEMO</b> ·{% endif %}
   محیط نمایشی (Prototype) — داده‌ها <b>نمونه</b> هستند و هیچ امتیاز یا پاداش واقعی ایجاد نمی‌شود.
 </div>
 
 <div class="shell {{ 'shell--wide' if wide }}">
   <header class="topbar">
-    <a class="brand" href="{{ url('/admin/submissions' if user and user.is_staff else '/home') }}">
+    <a class="brand" href="{{ url(('/admin' if user.is_admin else '/admin/submissions') if user and user.is_staff else '/home') }}">
       <span class="brand__mark">ک</span>
       <span class="brand__text">
         <strong>کیلوس کلاب</strong>
@@ -38,10 +39,19 @@
 
   {% if wide and user %}
     <nav class="adminnav">
-      <a href="{{ url('/admin/submissions') }}" class="{{ 'is-active' if active == 'queue' }}">صف بررسی</a>
+      {% if user.is_admin %}
+        <a href="{{ url('/admin') }}" class="{{ 'is-active' if active == 'dashboard' }}">داشبورد</a>
+        <a href="{{ url('/admin/users') }}" class="{{ 'is-active' if active == 'users' }}">کاربران</a>
+        <a href="{{ url('/admin/sales/new') }}" class="{{ 'is-active' if active == 'sales' }}">ورود اطلاعات فروش</a>
+        <a href="{{ url('/admin/sales') }}" class="{{ 'is-active' if active == 'import_log' }}">سوابق ورود اکسل</a>
+      {% endif %}
+      <a href="{{ url('/admin/submissions') }}" class="{{ 'is-active' if active == 'queue' }}">بررسی مأموریت‌ها</a>
       <a href="{{ url('/admin/missions') }}" class="{{ 'is-active' if active == 'missions' }}">مأموریت‌ها</a>
       {% if user.is_admin %}
-        <a href="{{ url('/admin/sales') }}" class="{{ 'is-active' if active == 'sales' }}">ورود فروش</a>
+        <a href="{{ url('/admin/points') }}" class="{{ 'is-active' if active == 'points' }}">امتیازات و کیف امتیاز</a>
+        <a href="{{ url('/admin/game') }}" class="{{ 'is-active' if active == 'game' }}">رقابت و بازی</a>
+        <a href="{{ url('/admin/leaderboard') }}" class="{{ 'is-active' if active == 'leaderboard' }}">رتبه‌بندی</a>
+        <a href="{{ url('/admin/activity') }}" class="{{ 'is-active' if active == 'activity' }}">گزارش فعالیت‌ها</a>
       {% endif %}
       <a href="{{ url('/home') }}">نمای ویزیتور</a>
     </nav>

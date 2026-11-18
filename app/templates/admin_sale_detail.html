@@ -42,12 +42,18 @@
       <div class="alert alert--error" style="margin-top:12px">{{ import['error_message'] }}</div>
     {% endif %}
 
-    <form method="post" action="{{ url('/admin/sales/' ~ import['id'] ~ '/process') }}" style="margin-top:14px">
+    <form method="post" action="{{ url('/admin/sales/' ~ import['id'] ~ '/process') }}" style="margin-top:14px"
+          onsubmit="return confirm('پردازش {{ counts['valid']|fa }} ردیف معتبر؟ امتیاز مورد انتظار: {{ expected_total|fa }} (قانون نمونه). امتیاز ثبت‌شده قابل ویرایش نیست و فقط با رخداد اصلاحی اصلاح می‌شود.')">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <button class="btn" type="submit">
         {{ 'پردازش دوباره (بدون امتیاز تکراری)' if import['status'] == 'completed' else 'پردازش ردیف‌های معتبر' }}
       </button>
     </form>
+    {% if rule %}<p class="small" style="margin:10px 0 0">
+      امتیاز مورد انتظار ردیف‌های در انتظار پردازش: <b>{{ expected_total|fa }}</b>
+      — قانون <span style="direction:ltr">{{ rule['rule_code'] }} v{{ rule['version'] }}</span>
+      (هر {{ rule['unit_size']|fa }} = {{ rule['points']|fa }} امتیاز، <b>نمونه / SAMPLE</b>)
+    </p>{% endif %}
     <p class="tiny muted" style="margin:8px 0 0">
       پردازش، برای هر ردیف معتبر یک رخداد امتیاز با کلید idempotency می‌سازد؛ اجرای دوباره امتیاز جدید نمی‌سازد.
     </p>
@@ -67,6 +73,15 @@
         مجموع امتیاز رخدادها ({{ scored_points|fa }}) با مجموع ثبت‌شده ({{ import['points_sum']|fa }}) برابر نیست.
       </p>
     {% endif %}
+  </div>
+
+  <div class="section-head"><h2>دریافت‌کنندگان امتیاز</h2></div>
+  <div class="card card--flat table-wrap">
+    {% if breakdown %}<table class="table"><thead><tr><th>کاربر</th><th>رخداد</th><th>امتیاز ثبت‌شده</th><th>اصلاح</th><th>خالص</th></tr></thead><tbody>
+      {% for b in breakdown %}<tr>
+        <td class="small"><a href="{{ url('/admin/users/' ~ b['id']) }}">{{ b['full_name'] }}</a></td>
+        <td>{{ b['events']|fa }}</td><td>+{{ b['awarded']|fa }}</td><td>{{ b['corrected']|fa }}</td><td><b>{{ b['net']|fa }}</b></td></tr>{% endfor %}
+    </tbody></table>{% else %}<p class="muted small mb-0">هنوز امتیازی از این import ثبت نشده است.</p>{% endif %}
   </div>
 
   {% if score_events %}
@@ -97,11 +112,11 @@
     {% endfor %}
   {% endif %}
 
-  <div class="section-head"><h2>ردیف‌ها</h2><span class="tiny muted">{{ records|length|fa }} نمایش</span></div>
-  <div class="card card--flat">
+  <div class="section-head"><h2>ردیف‌ها</h2><span class="tiny muted">صفحه {{ page_no|fa }} · {{ records|length|fa }} نمایش از {{ import['row_count']|fa }}</span></div>
+  <div class="card card--flat table-wrap">
     <table class="table">
       <thead>
-        <tr><th>#</th><th>شناسه</th><th>ویزیتور</th><th>تاریخ</th><th>مبلغ</th><th>وضعیت</th><th>پیام</th></tr>
+        <tr><th>#</th><th>شناسه</th><th>ویزیتور</th><th>تاریخ</th><th>مبلغ</th><th>وضعیت</th><th>امتیاز مورد انتظار</th><th>امتیاز ثبت‌شده</th><th>پیام</th></tr>
       </thead>
       <tbody>
         {% for row in records %}
@@ -117,10 +132,16 @@
               {% elif row['status'] == 'duplicate' %}<span class="pill">تکراری</span>
               {% else %}<span class="pill pill--red">خراب</span>{% endif %}
             </td>
+            <td class="tiny">{{ expected[row['id']]|fa if row['id'] in expected else '—' }}</td>
+            <td class="tiny">{{ awarded[row['id']]|fa if row['id'] in awarded else '—' }}</td>
             <td class="tiny muted">{{ row['error_message'] or '—' }}</td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  <p class="small" style="margin:10px 2px">
+    {% if page_no > 1 %}<a href="{{ url('/admin/sales/' ~ import['id'] ~ '?p=' ~ (page_no - 1)) }}">← قبلی</a>{% endif %}
+    {% if has_next %} <a href="{{ url('/admin/sales/' ~ import['id'] ~ '?p=' ~ (page_no + 1)) }}">بعدی →</a>{% endif %}
+  </p>
 {% endblock %}

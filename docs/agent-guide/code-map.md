@@ -30,11 +30,12 @@ Contents: [1 Modules](#1-modules) · [2 Routes](#2-routes) · [3 Route details](
 
 | Module | Symbols | Imports (project modules) |
 |---|---|---|
+| `app/admin_queries.py` | 10 | `repo` |
 | `app/config.py` | 2 | — |
 | `app/db.py` | 4 | `config`, `seed` |
 | `app/game.py` | 32 | `db` |
 | `app/jalali.py` | 3 | — |
-| `app/main.py` | 66 | `config`, `db`, `game`, `jalali`, `repo`, `sales`, `sample_sales`, `security`, `tribal` |
+| `app/main.py` | 73 | `admin_queries`, `config`, `db`, `game`, `jalali`, `repo`, `sales`, `sample_sales`, `scoring`, `security`, `tribal` |
 | `app/maintenance.py` | 3 | `config`, `db` |
 | `app/repo.py` | 42 | `scoring` |
 | `app/sales.py` | 11 | — |
@@ -46,9 +47,11 @@ Contents: [1 Modules](#1-modules) · [2 Routes](#2-routes) · [3 Route details](
 
 ```mermaid
 graph LR
+    admin_queries --> repo
     db --> config
     db --> seed
     game --> db
+    main --> admin_queries
     main --> config
     main --> db
     main --> game
@@ -56,6 +59,7 @@ graph LR
     main --> repo
     main --> sales
     main --> sample_sales
+    main --> scoring
     main --> security
     main --> tribal
     maintenance --> config
@@ -72,6 +76,10 @@ graph LR
 | Method | Path | Access | CSRF | Handler | Templates | Tests |
 |---|---|---|---|---|---|---|
 | GET | `/` | public | — | `main.root` | — | 0 |
+| GET | `/admin` | admin | — | `main.admin_dashboard` | `admin_dashboard.html` | 1 |
+| GET | `/admin/activity` | admin | — | `main.admin_activity` | `admin_activity.html` | 0 |
+| GET | `/admin/game` | admin | — | `main.admin_game` | `admin_game.html` | 0 |
+| GET | `/admin/leaderboard` | admin | — | `main.admin_leaderboard` | `admin_leaderboard.html` | 1 |
 | GET | `/admin/missions` | staff | — | `main.admin_missions` | `admin_missions.html` | 0 |
 | GET | `/admin/missions/new` | admin | — | `main.admin_mission_new` | `admin_mission_form.html` | 1 |
 | POST | `/admin/missions/new` | admin | yes | `main.admin_mission_create` | `admin_mission_form.html` | 2 |
@@ -79,19 +87,22 @@ graph LR
 | POST | `/admin/missions/{mission_id}` | admin | yes | `main.admin_mission_update` | `admin_mission_form.html` | 6 |
 | POST | `/admin/missions/{mission_id}/archive` | admin | yes | `main.admin_mission_archive` | — | 0 |
 | POST | `/admin/missions/{mission_id}/publish` | admin | yes | `main.admin_mission_publish` | — | 2 |
+| GET | `/admin/points` | admin | — | `main.admin_points` | `admin_points.html` | 2 |
 | GET | `/admin/sales` | admin | — | `main.admin_sales` | `admin_sales.html` | 4 |
-| POST | `/admin/sales` | admin | yes | `main.admin_sales_upload` | `admin_sales_new.html` | 17 |
+| POST | `/admin/sales` | admin | yes | `main.admin_sales_upload` | `admin_sales_new.html` | 19 |
 | GET | `/admin/sales/new` | admin | — | `main.admin_sales_new` | `admin_sales_new.html` | 2 |
 | GET | `/admin/sales/sample` | admin | — | `main.admin_sales_sample` | — | 1 |
-| GET | `/admin/sales/{import_id}` | admin | — | `main.admin_sale_detail` | `admin_sale_detail.html` | 2 |
-| POST | `/admin/sales/{import_id}/process` | admin | yes | `main.admin_sales_process` | `error.html` | 9 |
+| GET | `/admin/sales/{import_id}` | admin | — | `main.admin_sale_detail` | `admin_sale_detail.html` | 3 |
+| POST | `/admin/sales/{import_id}/process` | admin | yes | `main.admin_sales_process` | `error.html` | 11 |
 | POST | `/admin/score-events/{event_id}/reverse` | admin | yes | `main.admin_reverse_score` | `error.html` | 13 |
 | GET | `/admin/submissions` | staff | — | `main.admin_queue` | `admin_queue.html` | 5 |
 | GET | `/admin/submissions/{submission_id}` | staff | — | `main.admin_review` | `admin_review.html` | 2 |
 | POST | `/admin/submissions/{submission_id}/review` | staff | yes | `main.admin_decide` | `admin_review.html` | 18 |
+| GET | `/admin/users` | admin | — | `main.admin_users` | `admin_users.html` | 2 |
+| GET | `/admin/users/{user_id}` | admin | — | `main.admin_user_detail` | `admin_user.html` | 1 |
 | GET | `/api/v1/game/bootstrap` | public | — | `main.game_bootstrap` | — | 11 |
-| POST | `/api/v1/game/demo-login` | public | exempt | `main.game_demo_login` | — | 2 |
-| GET | `/api/v1/game/demo-users` | public | — | `main.game_demo_users` | — | 2 |
+| POST | `/api/v1/game/demo-login` | public | exempt | `main.game_demo_login` | — | 3 |
+| GET | `/api/v1/game/demo-users` | public | — | `main.game_demo_users` | — | 4 |
 | GET | `/api/v1/game/history` | public | — | `main.game_history` | — | 1 |
 | POST | `/api/v1/game/logout` | token | yes | `main.game_logout` | — | 1 |
 | POST | `/api/v1/game/missions/{mission_id}/completions` | token | yes | `main.game_complete_mission` | — | 5 |
@@ -104,12 +115,12 @@ graph LR
 | GET | `/api/v1/tribal/bootstrap` | user | — | `main.tribal_bootstrap` | — | 2 |
 | GET | `/api/v1/tribal/org-units` | user | — | `main.tribal_org_units` | — | 2 |
 | GET | `/api/v1/tribal/org-units/{unit_id}` | user | — | `main.tribal_org_unit` | — | 1 |
-| POST | `/demo-login` | public | exempt | `main.demo_login` | — | 68 |
+| POST | `/demo-login` | public | exempt | `main.demo_login` | — | 76 |
 | GET | `/evidence/{evidence_id}` | user | — | `main.evidence_file` | — | 0 |
 | GET | `/health` | public | — | `main.health` | — | 2 |
 | GET | `/home` | user | — | `main.home` | `home.html` | 3 |
 | GET | `/leaderboard` | user | — | `main.leaderboard_page` | `leaderboard.html` | 2 |
-| GET | `/login` | public | — | `main.login_page` | `login.html` | 1 |
+| GET | `/login` | public | — | `main.login_page` | `login.html` | 3 |
 | POST | `/logout` | token | yes | `main.logout` | — | 26 |
 | GET | `/missions` | user | — | `main.missions_page` | `missions.html` | 1 |
 | GET | `/missions/{mission_id}` | user | — | `main.mission_page` | `mission.html` | 3 |
@@ -117,7 +128,7 @@ graph LR
 | GET | `/score` | user | — | `main.score_page` | `score.html` | 3 |
 | GET | `/submissions/{submission_id}` | user | — | `main.submission_page` | `submission.html` | 4 |
 
-45 routes. FastAPI also serves `/api/docs`, `/openapi.json` and the
+52 routes. FastAPI also serves `/api/docs`, `/openapi.json` and the
 `/static` mount; they are framework-provided and not listed.
 
 ## 3. Route details
@@ -133,6 +144,54 @@ graph LR
 - Writes: —
 - Error codes reachable: —
 - Tests (0): —
+
+### `GET /admin`
+
+- Handler: `main.admin_dashboard` — access **admin** — CSRF not needed (GET)
+- Renders: `admin_dashboard.html` · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `403`
+- Calls: `admin_queries.metrics`, `admin_queries.score_events`, `admin_queries.top_visitors`, `repo.list_sales_imports`
+- Closures used: `main.conn_dep`, `main.page`, `main.require_admin`
+- Reads: `missions`, `point_wallets`, `sales_imports`, `sales_records`, `score_events`, `scoring_rule_versions`, `submissions`, `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (1): `test_admin_demo::test_dashboard_numbers_come_from_the_database`
+
+### `GET /admin/activity`
+
+- Handler: `main.admin_activity` — access **admin** — CSRF not needed (GET)
+- Renders: `admin_activity.html` · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `403`
+- Calls: `admin_queries.audit`
+- Closures used: `main.conn_dep`, `main.page`, `main.require_admin`
+- Reads: `audit_logs`, `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (0): —
+
+### `GET /admin/game`
+
+- Handler: `main.admin_game` — access **admin** — CSRF not needed (GET)
+- Renders: `admin_game.html` · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `403`
+- Calls: `admin_queries.game_overview`
+- Closures used: `main.conn_dep`, `main.page`, `main.require_admin`
+- Reads: `game_completions`, `game_progress`, `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (0): —
+
+### `GET /admin/leaderboard`
+
+- Handler: `main.admin_leaderboard` — access **admin** — CSRF not needed (GET)
+- Renders: `admin_leaderboard.html` · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `403`
+- Calls: `repo.leaderboard`
+- Closures used: `main.conn_dep`, `main.page`, `main.require_admin`
+- Reads: `competitions`, `score_events`, `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (1): `test_admin_demo::test_user_pages_are_organization_scoped`
 
 ### `GET /admin/missions`
 
@@ -218,6 +277,18 @@ graph LR
 - Error codes reachable: `DomainError:NOT_DRAFT`
 - Tests (2): `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`
 
+### `GET /admin/points`
+
+- Handler: `main.admin_points` — access **admin** — CSRF not needed (GET)
+- Renders: `admin_points.html` · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `403`
+- Calls: `admin_queries.count_score_events`, `admin_queries.score_events`, `admin_queries.users`
+- Closures used: `main.conn_dep`, `main.page`, `main.require_admin`
+- Reads: `organizations`, `point_wallets`, `sales_records`, `sales_user_map`, `score_events`, `scoring_rule_versions`, `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (2): `test_admin_demo::test_points_page_filters_and_labels_corrections`, `test_admin_demo::test_user_pages_are_organization_scoped`
+
 ### `GET /admin/sales`
 
 - Handler: `main.admin_sales` — access **admin** — CSRF not needed (GET)
@@ -240,7 +311,7 @@ graph LR
 - Reads: `sales_imports`, `sales_records`, `sales_user_map`, `scoring_rule_versions`, `users`
 - Writes: `sales_imports`, `sales_records`
 - Error codes reachable: `row-error:E_AMOUNT`, `row-error:E_DATE`, `row-error:E_DUPLICATE_EXISTING`, `row-error:E_DUPLICATE_IN_FILE`, `row-error:E_EXTERNAL_ID`, `row-error:E_FUTURE_DATE`, `row-error:E_QUANTITY`, `row-error:E_SKU`, `row-error:E_USER_ID`, `row-error:E_USER_MAPPING`
-- Tests (17): `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_demo_stability::test_sales_score_correction_is_admin_only_and_org_scoped`, `test_sales::test_amount_below_one_unit_scores_nothing`, `test_sales::test_detail_page_shows_reconciliation`, `test_sales::test_duplicate_external_id_across_imports_is_skipped`, `test_sales::test_missing_columns_reject_the_file`, `test_sales::test_non_xlsx_is_rejected`, `test_sales::test_other_organization_import_is_not_visible`, `test_sales::test_process_creates_each_score_once`, `test_sales::test_processing_failure_rolls_back_all_events`, `test_sales::test_row_errors_do_not_block_valid_rows`, `test_sales::test_same_file_is_rejected_by_fingerprint`, `test_sales::test_upload_requires_csrf`, `test_sales::test_upload_validates_without_scoring`
+- Tests (19): `test_admin_demo::test_dashboard_numbers_come_from_the_database`, `test_admin_demo::test_import_breakdown_matches_ledger_and_reprocess_adds_nothing`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_demo_stability::test_sales_score_correction_is_admin_only_and_org_scoped`, `test_sales::test_amount_below_one_unit_scores_nothing`, `test_sales::test_detail_page_shows_reconciliation`, `test_sales::test_duplicate_external_id_across_imports_is_skipped`, `test_sales::test_missing_columns_reject_the_file`, `test_sales::test_non_xlsx_is_rejected`, `test_sales::test_other_organization_import_is_not_visible`, `test_sales::test_process_creates_each_score_once`, `test_sales::test_processing_failure_rolls_back_all_events`, `test_sales::test_row_errors_do_not_block_valid_rows`, `test_sales::test_same_file_is_rejected_by_fingerprint`, `test_sales::test_upload_requires_csrf`, `test_sales::test_upload_validates_without_scoring`
 
 ### `GET /admin/sales/new`
 
@@ -272,12 +343,12 @@ graph LR
 - Handler: `main.admin_sale_detail` — access **admin** — CSRF not needed (GET)
 - Renders: `admin_sale_detail.html` · Redirects: —
 - Non-200 status codes (handler and its guards): `303`, `403`, `404`
-- Calls: `repo.sales_import`, `repo.sales_record_counts`, `repo.sales_records`, `repo.sales_score_events`
+- Calls: `admin_queries.import_user_breakdown`, `repo.sales_import`, `repo.sales_record_counts`, `repo.sales_records`, `repo.sales_score_events`, `sales.money_points`, `scoring.find_rule_version`
 - Closures used: `main.conn_dep`, `main.page`, `main.require_admin`
-- Reads: `sales_imports`, `sales_records`, `score_events`, `users`
+- Reads: `sales_imports`, `sales_records`, `score_events`, `scoring_rule_versions`, `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (2): `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_sales::test_other_organization_import_is_not_visible`
+- Tests (3): `test_admin_demo::test_import_breakdown_matches_ledger_and_reprocess_adds_nothing`, `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_sales::test_other_organization_import_is_not_visible`
 
 ### `POST /admin/sales/{import_id}/process`
 
@@ -289,7 +360,7 @@ graph LR
 - Reads: `sales_imports`, `sales_records`, `score_events`, `scoring_rule_versions`, `users`
 - Writes: `audit_logs`, `outbox_events`, `point_transactions`, `point_wallets`, `sales_imports`, `sales_records`, `score_events`
 - Error codes reachable: `DomainError:IMPORT_BUSY`, `DomainError:IMPORT_FAILED`, `DomainError:IMPORT_REJECTED`, `ScoringError:INVALID_UNIT_SIZE`, `ScoringError:NO_ACTIVE_RULE_VERSION`
-- Tests (9): `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_demo_stability::test_sales_score_correction_is_admin_only_and_org_scoped`, `test_sales::test_amount_below_one_unit_scores_nothing`, `test_sales::test_process_creates_each_score_once`, `test_sales::test_processing_failure_rolls_back_all_events`, `test_sales::test_row_errors_do_not_block_valid_rows`
+- Tests (11): `test_admin_demo::test_dashboard_numbers_come_from_the_database`, `test_admin_demo::test_import_breakdown_matches_ledger_and_reprocess_adds_nothing`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_demo_stability::test_sales_score_correction_is_admin_only_and_org_scoped`, `test_sales::test_amount_below_one_unit_scores_nothing`, `test_sales::test_process_creates_each_score_once`, `test_sales::test_processing_failure_rolls_back_all_events`, `test_sales::test_row_errors_do_not_block_valid_rows`
 
 ### `POST /admin/score-events/{event_id}/reverse`
 
@@ -340,6 +411,30 @@ graph LR
 - Error codes reachable: `DomainError:ALREADY_REVIEWED`, `DomainError:INVALID_DECISION`, `DomainError:REASON_REQUIRED`, `ScoringError:MISSION_NOT_FOUND`, `ScoringError:NO_ACTIVE_RULE_VERSION`
 - Tests (18): `test_corrections::test_a_correction_cannot_be_reversed`, `test_corrections::test_leaderboard_reflects_the_correction`, `test_corrections::test_only_admin_can_reverse`, `test_corrections::test_other_organization_event_is_forbidden`, `test_corrections::test_reason_is_required`, `test_corrections::test_reversal_creates_negative_event_and_fixes_projections`, `test_corrections::test_reversal_requires_csrf`, `test_corrections::test_second_reversal_is_rejected`, `test_demo_stability::test_admin_review_screen_can_correct_a_mission_score`, `test_demo_stability::test_approval_rolls_back_when_no_rule_version_is_effective`, `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_approve_redirect_keeps_queue_filter`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_reject_requires_reason_and_awards_nothing`
 
+### `GET /admin/users`
+
+- Handler: `main.admin_users` — access **admin** — CSRF not needed (GET)
+- Renders: `admin_users.html` · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `403`
+- Calls: `admin_queries.users`
+- Closures used: `main.conn_dep`, `main.page`, `main.require_admin`
+- Reads: `organizations`, `point_wallets`, `sales_records`, `sales_user_map`, `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (2): `test_admin_demo::test_user_pages_are_organization_scoped`, `test_admin_demo::test_user_search_by_name_and_external_id`
+
+### `GET /admin/users/{user_id}`
+
+- Handler: `main.admin_user_detail` — access **admin** — CSRF not needed (GET)
+- Renders: `admin_user.html` · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `403`, `404`
+- Calls: `admin_queries.user_detail`
+- Closures used: `main.conn_dep`, `main.page`, `main.require_admin`
+- Reads: `missions`, `organizations`, `point_wallets`, `sales_records`, `sales_user_map`, `score_events`, `scoring_rule_versions`, `submissions`, `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (1): `test_admin_demo::test_user_pages_are_organization_scoped`
+
 ### `GET /api/v1/game/bootstrap`
 
 - Handler: `main.game_bootstrap` — access **public** — CSRF not needed (GET)
@@ -362,7 +457,7 @@ graph LR
 - Reads: `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (2): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`
+- Tests (3): `test_admin_demo::test_demo_env_game_login_is_visitor_only`, `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`
 
 ### `GET /api/v1/game/demo-users`
 
@@ -374,7 +469,7 @@ graph LR
 - Reads: `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (2): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`
+- Tests (4): `test_admin_demo::test_demo_env_game_login_is_visitor_only`, `test_admin_demo::test_prod_like_env_still_blocks_game_demo_login`, `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`
 
 ### `GET /api/v1/game/history`
 
@@ -524,14 +619,14 @@ graph LR
 ### `POST /demo-login`
 
 - Handler: `main.demo_login` — access **public** — CSRF exempt
-- Renders: — · Redirects: `/admin/submissions | /home`
-- Non-200 status codes (handler and its guards): `303`, `404`
-- Calls: `security.make_token`, `security.set_session`
+- Renders: — · Redirects: `/admin | /admin/submissions | /home`
+- Non-200 status codes (handler and its guards): `303`, `403`, `404`
+- Calls: `repo.audit`, `security.make_token`, `security.set_session`
 - Closures used: `main.conn_dep`, `main.with_token`
 - Reads: `users`
-- Writes: —
+- Writes: `audit_logs`
 - Error codes reachable: —
-- Tests (68): `test_corrections::test_a_correction_cannot_be_reversed`, `test_corrections::test_leaderboard_reflects_the_correction`, `test_corrections::test_missing_event_returns_404`, `test_corrections::test_only_admin_can_reverse`, `test_corrections::test_other_organization_event_is_forbidden`, `test_corrections::test_reason_is_required`, `test_corrections::test_reversal_creates_negative_event_and_fixes_projections`, `test_corrections::test_reversal_requires_csrf`, `test_corrections::test_second_reversal_is_rejected`, `test_demo_stability::test_admin_review_screen_can_correct_a_mission_score`, `test_demo_stability::test_approval_rolls_back_when_no_rule_version_is_effective`, `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_operator_navigation_hides_sales_import_link`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_demo_stability::test_sales_score_correction_is_admin_only_and_org_scoped`, `test_demo_stability::test_sample_sales_workbook_download_is_admin_only`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_approve_redirect_keeps_queue_filter`, `test_flow::test_duplicate_request_id_is_idempotent`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_mission_edit_publishes_new_rule_version`, `test_flow::test_mission_respects_max_per_user`, `test_flow::test_mission_window_and_status_filtering`, `test_flow::test_organization_scope_blocks_foreign_submission`, `test_flow::test_reject_requires_reason_and_awards_nothing`, `test_flow::test_visitors_and_operators_have_no_admin_powers`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_game_store::test_demo_store_rejects_insufficient_balance_and_missing_csrf`, `test_hardening::test_admin_queue_carries_token_between_pages`, `test_hardening::test_admin_queue_paginates`, `test_hardening::test_cookie_session_still_works`, `test_hardening::test_forged_csrf_upload_creates_nothing`, `test_hardening::test_forms_render_a_csrf_field`, `test_hardening::test_login_is_rate_limited`, `test_hardening::test_post_with_forged_csrf_is_rejected`, `test_hardening::test_post_without_csrf_is_rejected`, `test_hardening::test_session_token_in_url_works_without_cookies`, `test_hardening::test_token_only_session_can_post_forms`, `test_sales::test_amount_below_one_unit_scores_nothing`, `test_sales::test_detail_page_shows_reconciliation`, `test_sales::test_duplicate_external_id_across_imports_is_skipped`, `test_sales::test_missing_columns_reject_the_file`, `test_sales::test_non_xlsx_is_rejected`, `test_sales::test_only_admin_can_use_sales_import`, `test_sales::test_other_organization_import_is_not_visible`, `test_sales::test_process_creates_each_score_once`, `test_sales::test_processing_failure_rolls_back_all_events`, `test_sales::test_row_errors_do_not_block_valid_rows`, `test_sales::test_same_file_is_rejected_by_fingerprint`, `test_sales::test_upload_requires_csrf`, `test_sales::test_upload_validates_without_scoring`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_gate::test_tribal_bootstrap_is_feature_disabled_by_default`, `test_tribal_org_api::test_org_units_api_is_gated_when_feature_is_off`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated`
+- Tests (76): `test_admin_demo::test_admin_pages_require_admin`, `test_admin_demo::test_dashboard_numbers_come_from_the_database`, `test_admin_demo::test_demo_env_staff_login_disabled_without_configured_code`, `test_admin_demo::test_demo_env_visitor_login_is_secure_and_staff_needs_code`, `test_admin_demo::test_import_breakdown_matches_ledger_and_reprocess_adds_nothing`, `test_admin_demo::test_points_page_filters_and_labels_corrections`, `test_admin_demo::test_user_pages_are_organization_scoped`, `test_admin_demo::test_user_search_by_name_and_external_id`, `test_corrections::test_a_correction_cannot_be_reversed`, `test_corrections::test_leaderboard_reflects_the_correction`, `test_corrections::test_missing_event_returns_404`, `test_corrections::test_only_admin_can_reverse`, `test_corrections::test_other_organization_event_is_forbidden`, `test_corrections::test_reason_is_required`, `test_corrections::test_reversal_creates_negative_event_and_fixes_projections`, `test_corrections::test_reversal_requires_csrf`, `test_corrections::test_second_reversal_is_rejected`, `test_demo_stability::test_admin_review_screen_can_correct_a_mission_score`, `test_demo_stability::test_approval_rolls_back_when_no_rule_version_is_effective`, `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_operator_navigation_hides_sales_import_link`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_demo_stability::test_sales_score_correction_is_admin_only_and_org_scoped`, `test_demo_stability::test_sample_sales_workbook_download_is_admin_only`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_approve_redirect_keeps_queue_filter`, `test_flow::test_duplicate_request_id_is_idempotent`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_mission_edit_publishes_new_rule_version`, `test_flow::test_mission_respects_max_per_user`, `test_flow::test_mission_window_and_status_filtering`, `test_flow::test_organization_scope_blocks_foreign_submission`, `test_flow::test_reject_requires_reason_and_awards_nothing`, `test_flow::test_visitors_and_operators_have_no_admin_powers`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_game_store::test_demo_store_rejects_insufficient_balance_and_missing_csrf`, `test_hardening::test_admin_queue_carries_token_between_pages`, `test_hardening::test_admin_queue_paginates`, `test_hardening::test_cookie_session_still_works`, `test_hardening::test_forged_csrf_upload_creates_nothing`, `test_hardening::test_forms_render_a_csrf_field`, `test_hardening::test_login_is_rate_limited`, `test_hardening::test_post_with_forged_csrf_is_rejected`, `test_hardening::test_post_without_csrf_is_rejected`, `test_hardening::test_session_token_in_url_works_without_cookies`, `test_hardening::test_token_only_session_can_post_forms`, `test_sales::test_amount_below_one_unit_scores_nothing`, `test_sales::test_detail_page_shows_reconciliation`, `test_sales::test_duplicate_external_id_across_imports_is_skipped`, `test_sales::test_missing_columns_reject_the_file`, `test_sales::test_non_xlsx_is_rejected`, `test_sales::test_only_admin_can_use_sales_import`, `test_sales::test_other_organization_import_is_not_visible`, `test_sales::test_process_creates_each_score_once`, `test_sales::test_processing_failure_rolls_back_all_events`, `test_sales::test_row_errors_do_not_block_valid_rows`, `test_sales::test_same_file_is_rejected_by_fingerprint`, `test_sales::test_upload_requires_csrf`, `test_sales::test_upload_validates_without_scoring`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_gate::test_tribal_bootstrap_is_feature_disabled_by_default`, `test_tribal_org_api::test_org_units_api_is_gated_when_feature_is_off`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated`
 
 ### `GET /evidence/{evidence_id}`
 
@@ -591,7 +686,7 @@ graph LR
 - Reads: `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (1): `test_flow::test_login_page_lists_demo_users`
+- Tests (3): `test_admin_demo::test_demo_env_login_page_lists_only_visitors_in_picker`, `test_admin_demo::test_demo_env_staff_login_disabled_without_configured_code`, `test_flow::test_login_page_lists_demo_users`
 
 ### `POST /logout`
 
@@ -676,14 +771,14 @@ graph LR
 | `_http_error` | exception-handler | — | — | — | `main.page` | — |
 | `_login_required` | exception-handler | — | — | — | — | — |
 | `_starlette_error` | exception-handler | — | — | — | `main.page` | — |
-| `conn_dep` | closure | — | — | — | `db.connect` | 43 callers |
-| `create_app` | function | — | — | — | `config.Settings`, `db.init_db`, `jalali.format_jalali` | `conftest::client`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`, `test_hardening::test_admin_queue_paginates`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated` |
+| `conn_dep` | closure | — | — | — | `db.connect` | 50 callers |
+| `create_app` | function | — | — | — | `config.Settings`, `db.init_db`, `jalali.format_jalali` | `conftest::client`, `test_admin_demo::demo_client`, `test_admin_demo::test_demo_env_staff_login_disabled_without_configured_code`, `test_admin_demo::test_prod_like_env_still_blocks_game_demo_login`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`, `test_hardening::test_admin_queue_paginates`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated` |
 | `csrf_guard` | closure | Reject form posts whose CSRF value does not match the session token. | — | — | `main.LoginRequired`, `security.csrf_for`, `security.session_token` | 16 callers |
 | `go` | closure | — | — | — | `main.url_session`, `main.with_token` | 10 callers |
 | `hardening` | middleware | — | — | — | `main.login_rate_limited`, `main.page` | — |
 | `login_rate_limited` | closure | In-memory token bucket. Single-process only (documented limitation). | — | — | — | `main.game_demo_login`, `main.hardening` |
-| `page` | closure | — | — | — | `main.url_session`, `security.csrf_token` | 25 callers |
-| `require_admin` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | 13 callers |
+| `page` | closure | — | — | — | `main.url_session`, `security.csrf_token` | 32 callers |
+| `require_admin` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | 20 callers |
 | `require_api_user` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | 10 callers |
 | `require_staff` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | `main.admin_decide`, `main.admin_missions`, `main.admin_queue`, `main.admin_review` |
 | `require_user` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | 11 callers |
@@ -704,19 +799,19 @@ graph LR
 | `_validate_mission_form` | function | — | — | — | `repo.DomainError`, `repo._parse_day` | `repo.create_mission`, `repo.update_mission` |
 | `active_competition` | function | — | `competitions` | — | `repo.now_iso` | `main.leaderboard_page`, `repo.leaderboard` |
 | `archive_mission` | function | — | — | `missions` | `repo.audit` | `main.admin_mission_archive` |
-| `audit` | function | — | — | `audit_logs` | `repo._new_id`, `repo.now_iso` | `repo.archive_mission`, `repo.create_mission`, `repo.create_submission`, `repo.publish_mission`, `repo.review_submission`, `repo.update_mission` |
-| `count_queue` | function | — | `missions`, `submissions`, `users` | — | — | `main.admin_queue` |
+| `audit` | function | — | — | `audit_logs` | `repo._new_id`, `repo.now_iso` | `main.demo_login`, `repo.archive_mission`, `repo.create_mission`, `repo.create_submission`, `repo.publish_mission`, `repo.review_submission`, `repo.update_mission` |
+| `count_queue` | function | — | `missions`, `submissions`, `users` | — | — | `admin_queries.metrics`, `main.admin_queue` |
 | `count_user_submissions` | function | — | `submissions` | — | — | `main.submit_mission`, `repo.create_submission` |
 | `create_mission` | function | — | — | `missions`, `scoring_rule_versions` | `repo._new_id`, `repo._validate_mission_form`, `repo.audit`, `repo.now_iso` | `main.admin_mission_create` |
 | `create_sales_import` | function | Store the upload and its rows; never scores anything. | `sales_imports` | `sales_imports`, `sales_records` | `repo.now_iso` | `main.admin_sales_upload` |
 | `create_submission` | function | Create a submission once per request_id. Returns (submission, created). | `submissions` | `submission_evidences`, `submissions` | `repo.DomainError`, `repo._new_id`, `repo.audit`, `repo.count_user_submissions`, `repo.now_iso`, `scoring.award_mission_approval` | `main.submit_mission` |
 | `evidence` | function | — | `missions`, `submission_evidences`, `submissions` | — | — | `main.evidence_file` |
 | `get_mission_for_user` | function | — | `missions` | — | `repo.now_iso` | `main.mission_page`, `main.submit_mission` |
-| `leaderboard` | function | — | `score_events`, `users` | — | `repo.active_competition` | `main.home`, `main.leaderboard_page` |
+| `leaderboard` | function | — | `score_events`, `users` | — | `repo.active_competition` | `main.admin_leaderboard`, `main.home`, `main.leaderboard_page` |
 | `list_active_missions` | function | — | `missions`, `submissions` | — | `repo.now_iso` | `main.home`, `main.missions_page` |
 | `list_missions_admin` | function | — | `missions` | — | — | `main.admin_missions` |
 | `list_queue` | function | Review queue, oldest first (stable order for pagination). | `missions`, `submission_evidences`, `submissions`, `users` | — | — | `main.admin_queue` |
-| `list_sales_imports` | function | — | `sales_imports`, `sales_records`, `users` | — | — | `main.admin_sales` |
+| `list_sales_imports` | function | — | `sales_imports`, `sales_records`, `users` | — | — | `main.admin_dashboard`, `main.admin_sales` |
 | `list_user_submissions` | function | — | `missions`, `submissions` | — | — | `main.home`, `main.mission_page`, `main.submit_mission` |
 | `mission_by_id` | function | — | `missions` | — | — | `main.admin_mission_archive`, `main.admin_mission_edit`, `main.admin_mission_publish`, `main.admin_mission_update` |
 | `now_iso` | function | — | — | — | — | 11 callers |
@@ -750,7 +845,7 @@ graph LR
 | `_persist_award` | function | Event + ledger + wallet projection + outbox row (caller owns the transaction). | — | `outbox_events`, `point_transactions`, `point_wallets`, `score_events` | — | `scoring.award_mission_approval`, `scoring.award_sales_record` |
 | `award_mission_approval` | function | Create (or return) the score event for an approved submission. | `missions`, `score_events` | — | `scoring.ScoringError`, `scoring._existing`, `scoring._now`, `scoring._persist_award`, `scoring.find_rule_version` | `repo.create_submission`, `repo.review_submission`, `seed.seed_demo`, `test_scoring::test_award_is_idempotent` |
 | `award_sales_record` | function | Score one validated sales row. | `score_events` | — | `scoring.ScoringError`, `scoring._existing`, `scoring._now`, `scoring._persist_award`, `scoring.find_rule_version` | `repo.process_sales_import` |
-| `find_rule_version` | function | — | `scoring_rule_versions` | — | `scoring._now` | `repo._ensure_rule_version`, `scoring.award_mission_approval`, `scoring.award_sales_record`, `test_scoring::test_active_rule_version_selection_after_retirement` |
+| `find_rule_version` | function | — | `scoring_rule_versions` | — | `scoring._now` | `main.admin_sale_detail`, `repo._ensure_rule_version`, `scoring.award_mission_approval`, `scoring.award_sales_record`, `test_scoring::test_active_rule_version_selection_after_retirement` |
 | `reversal_of` | function | Return the correction event that reverses ``event_id``, if any. | `score_events` | — | — | `scoring.reverse_event` |
 | `reverse_event` | function | Correct a score event with a new, negative event. | `score_events`, `scoring_rule_versions` | `audit_logs`, `outbox_events`, `point_transactions`, `point_wallets`, `score_events` | `scoring.ScoringError`, `scoring._existing`, `scoring._now`, `scoring.reversal_of` | `repo.reverse_score_event` |
 
@@ -766,7 +861,7 @@ graph LR
 | `_row_status` | function | — | — | — | `sales._duplicate`, `sales._invalid` | `sales.validate_rows` |
 | `_sale_date` | function | — | — | — | `sales._text` | `sales.validate_rows` |
 | `_text` | function | — | — | — | — | `sales._sale_date`, `sales.parse_workbook`, `sales.validate_rows` |
-| `money_points` | function | SAMPLE formula shared by the engine and the UI preview. | — | — | — | — |
+| `money_points` | function | SAMPLE formula shared by the engine and the UI preview. | — | — | — | `main.admin_sale_detail` |
 | `parse_workbook` | function | Read the first sheet into row dicts; raise ``SalesFileError`` on file problems. | — | — | `sales.SalesFileError`, `sales._raw`, `sales._text` | `main.admin_sales_upload` |
 | `validate_rows` | function | Attach status/error/user to every parsed row (pure function, no writes). | — | — | `sales._decimal`, `sales._row_status`, `sales._sale_date`, `sales._text` | `main.admin_sales_upload` |
 
@@ -785,6 +880,21 @@ graph LR
 | `read_token` | function | Verify signature and expiry; return the user id or ``None``. | — | — | `security._unsign` | `main.url_session`, `security.current_user`, `security.session_token` |
 | `session_token` | function | Effective session token: ``?s=`` first (iframe fallback), then cookie. | — | — | `security.read_token` | `main.csrf_guard`, `security.csrf_token` |
 | `set_session` | function | Set the cookie and return the token (reused for the ``?s=`` fallback). | — | — | `security.make_token` | `main.demo_login`, `main.game_demo_login` |
+
+### `app/admin_queries.py`
+
+| Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
+|---|---|---|---|---|---|---|
+| `_event_filter` | function | — | — | — | — | `admin_queries.count_score_events`, `admin_queries.score_events` |
+| `audit` | function | — | `audit_logs`, `users` | — | — | `main.admin_activity` |
+| `count_score_events` | function | — | `score_events`, `users` | — | `admin_queries._event_filter` | `main.admin_points` |
+| `game_overview` | function | Game XP/coins per visitor — a separate domain from the points ledger. | `game_completions`, `game_progress`, `users` | — | — | `main.admin_game` |
+| `import_user_breakdown` | function | Who received points from an import, and exactly how many (read from the ledger). | `sales_records`, `score_events`, `users` | — | — | `main.admin_sale_detail`, `test_admin_demo::test_import_breakdown_matches_ledger_and_reprocess_adds_nothing` |
+| `metrics` | function | — | `point_wallets`, `sales_records`, `score_events`, `users` | — | `repo.count_queue` | `main.admin_dashboard` |
+| `score_events` | function | — | `score_events`, `scoring_rule_versions`, `users` | — | `admin_queries._event_filter` | `admin_queries.user_detail`, `main.admin_dashboard`, `main.admin_points` |
+| `top_visitors` | function | — | `point_wallets`, `users` | — | — | `main.admin_dashboard` |
+| `user_detail` | function | None for unknown users *and* for users of another organization. | `missions`, `sales_records`, `submissions` | — | `admin_queries.score_events`, `admin_queries.users` | `main.admin_user_detail` |
+| `users` | function | — | `organizations`, `point_wallets`, `sales_records`, `sales_user_map`, `users` | — | — | `admin_queries.user_detail`, `main.admin_points`, `main.admin_users` |
 
 ### `app/config.py`
 
@@ -845,7 +955,7 @@ graph LR
 |---|---|---|---|---|---|---|
 | `format_jalali` | function | Format an ISO string/date as e.g. «۲۷ آبان ۱۴۰۵». | — | — | `jalali.gregorian_to_jalali`, `jalali.to_persian_digits` | `main.create_app`, `test_jalali::test_formatting_uses_persian_digits` |
 | `gregorian_to_jalali` | function | Convert a Gregorian date to the Jalali calendar (arithmetic algorithm). | — | — | — | `jalali.format_jalali`, `test_jalali::test_known_dates` |
-| `to_persian_digits` | function | — | — | — | — | `jalali.format_jalali`, `test_jalali::test_digits` |
+| `to_persian_digits` | function | — | — | — | — | `jalali.format_jalali`, `test_admin_demo::test_dashboard_numbers_come_from_the_database`, `test_jalali::test_digits` |
 
 ### `app/maintenance.py`
 
@@ -896,7 +1006,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Defined in: `db/migrations/0001_init.sql`
 - Columns: `id` TEXT PRIMARY KEY; `actor_id` TEXT; `action` TEXT NOT NULL; `entity_type` TEXT NOT NULL; `entity_id` TEXT NOT NULL; `detail_json` TEXT NOT NULL DEFAULT '{}'; `created_at` TEXT NOT NULL
 - References: —
-- Read by: —
+- Read by: `admin_queries.audit`
 - INSERT by: `maintenance._audit`, `repo.audit`, `repo.process_sales_import`, `scoring.reverse_event`
 
 ### `competitions`
@@ -924,7 +1034,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Table constraints: UNIQUE (user_id, idempotency_key)
 - Indexes: `ix_game_completions_user_time` (user_id, completed_at DESC, id DESC) — db/migrations/0004_game_progress.sql
 - References: `users`
-- Read by: `game._history`, `game.complete_mission`, `game.list_history`
+- Read by: `admin_queries.game_overview`, `game._history`, `game.complete_mission`, `game.list_history`
 - INSERT by: `game.complete_mission`
 
 ### `game_progress`
@@ -932,7 +1042,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Defined in: `db/migrations/0004_game_progress.sql`
 - Columns: `user_id` TEXT PRIMARY KEY REFERENCES users(id); `state_json` TEXT NOT NULL; `updated_at` TEXT NOT NULL
 - References: `users`
-- Read by: `game._initialize`, `game._load_daily_before`
+- Read by: `admin_queries.game_overview`, `game._initialize`, `game._load_daily_before`
 - INSERT by: `game._save`
 
 ### `game_store_purchases`
@@ -950,7 +1060,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Defined in: `db/migrations/0001_init.sql`
 - Columns: `id` TEXT PRIMARY KEY; `organization_id` TEXT NOT NULL REFERENCES organizations(id); `title` TEXT NOT NULL; `description` TEXT NOT NULL; `mission_type` TEXT NOT NULL DEFAULT 'photo_submission'; `points` INTEGER NOT NULL DEFAULT 0; `starts_at` TEXT NOT NULL; `ends_at` TEXT NOT NULL; `max_per_user` INTEGER NOT NULL DEFAULT 1; `requires_review` INTEGER NOT NULL DEFAULT 1 CHECK (requires_review IN (0, 1)); `status` TEXT NOT NULL CHECK (status IN ('draft', 'active', 'archived')); `rule_code` TEXT NOT NULL; `created_at` TEXT NOT NULL
 - References: `organizations`
-- Read by: `repo.count_queue`, `repo.evidence`, `repo.get_mission_for_user`, `repo.list_active_missions`, `repo.list_missions_admin`, `repo.list_queue`, `repo.list_user_submissions`, `repo.mission_by_id`, `repo.score_event_detail`, `repo.score_history`, `repo.submission_detail`, `scoring.award_mission_approval`
+- Read by: `admin_queries.user_detail`, `repo.count_queue`, `repo.evidence`, `repo.get_mission_for_user`, `repo.list_active_missions`, `repo.list_missions_admin`, `repo.list_queue`, `repo.list_user_submissions`, `repo.mission_by_id`, `repo.score_event_detail`, `repo.score_history`, `repo.submission_detail`, `scoring.award_mission_approval`
 - INSERT by: `repo.create_mission`, `seed.seed_demo`
 - UPDATE by: `repo.archive_mission`, `repo.publish_mission`, `repo.update_mission`
 
@@ -997,7 +1107,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Defined in: `db/migrations/0001_init.sql`
 - Columns: `id` TEXT PRIMARY KEY; `name` TEXT NOT NULL; `created_at` TEXT NOT NULL
 - References: —
-- Read by: —
+- Read by: `admin_queries.users`
 - INSERT by: `seed.seed_demo`
 
 ### `outbox_events`
@@ -1021,7 +1131,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Defined in: `db/migrations/0001_init.sql`
 - Columns: `user_id` TEXT PRIMARY KEY REFERENCES users(id); `balance` NUMERIC NOT NULL DEFAULT 0; `updated_at` TEXT NOT NULL
 - References: `users`
-- Read by: `repo.wallet_balance`
+- Read by: `admin_queries.metrics`, `admin_queries.top_visitors`, `admin_queries.users`, `repo.wallet_balance`
 - INSERT by: `scoring._persist_award`, `scoring.reverse_event`
 
 ### `sales_imports`
@@ -1040,7 +1150,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Columns: `id` TEXT PRIMARY KEY; `import_id` TEXT NOT NULL REFERENCES sales_imports(id); `organization_id` TEXT NOT NULL REFERENCES organizations(id); `row_number` INTEGER NOT NULL; `external_id` TEXT NOT NULL; `user_external_id` TEXT NOT NULL; `user_id` TEXT REFERENCES users(id); `sale_date` TEXT; `sku_code` TEXT; `quantity` NUMERIC; `amount` NUMERIC; `customer_external_id` TEXT; `branch_code` TEXT; `raw_json` TEXT NOT NULL DEFAULT '{}'; `status` TEXT NOT NULL CHECK (status IN ('valid', 'invalid', 'duplicate', 'scored')); `error_code` TEXT; `error_message` TEXT; `created_at` TEXT NOT NULL
 - Indexes: UNIQUE `ux_sales_records_external` (organization_id, external_id) WHERE status IN ('valid', 'scored') — db/migrations/0003_sales_import.sql; `ix_sales_records_import` (import_id, status) — db/migrations/0003_sales_import.sql
 - References: `organizations`, `sales_imports`, `users`
-- Read by: `main.admin_sale_detail`, `repo.list_sales_imports`, `repo.process_sales_import`, `repo.sales_external_ids`, `repo.sales_record_counts`, `repo.sales_records`, `repo.sales_score_events`, `repo.score_event_detail`
+- Read by: `admin_queries.import_user_breakdown`, `admin_queries.metrics`, `admin_queries.user_detail`, `admin_queries.users`, `main.admin_sale_detail`, `repo.list_sales_imports`, `repo.process_sales_import`, `repo.sales_external_ids`, `repo.sales_record_counts`, `repo.sales_records`, `repo.sales_score_events`, `repo.score_event_detail`
 - INSERT by: `repo.create_sales_import`
 - UPDATE by: `repo.process_sales_import`
 
@@ -1050,7 +1160,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Columns: `organization_id` TEXT NOT NULL REFERENCES organizations(id); `user_external_id` TEXT NOT NULL; `user_id` TEXT NOT NULL REFERENCES users(id); `created_at` TEXT NOT NULL
 - Table constraints: PRIMARY KEY (organization_id, user_external_id)
 - References: `organizations`, `users`
-- Read by: `main.sales_page_context`, `repo.sales_user_map`
+- Read by: `admin_queries.users`, `main.sales_page_context`, `repo.sales_user_map`
 - INSERT by: `seed.seed_demo`
 
 ### `schema_migrations`
@@ -1068,7 +1178,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Columns: `id` TEXT PRIMARY KEY; `user_id` TEXT NOT NULL REFERENCES users(id); `source_type` TEXT NOT NULL; `source_id` TEXT NOT NULL; `rule_code` TEXT NOT NULL; `rule_version_id` TEXT NOT NULL REFERENCES scoring_rule_versions(id); `points` NUMERIC NOT NULL; `occurred_at` TEXT NOT NULL; `idempotency_key` TEXT NOT NULL UNIQUE; `corrects_event_id` TEXT REFERENCES score_events(id); `reason` TEXT; `explain_json` TEXT NOT NULL; `created_at` TEXT NOT NULL
 - Indexes: UNIQUE `ux_score_events_source` (source_type, source_id, rule_code, rule_version_id) WHERE corrects_event_id IS NULL — db/migrations/0001_init.sql; `ix_score_events_user` (user_id, occurred_at) — db/migrations/0001_init.sql; UNIQUE `ux_score_events_corrects` (corrects_event_id) WHERE corrects_event_id IS NOT NULL — db/migrations/0002_score_corrections.sql
 - References: `score_events`, `scoring_rule_versions`, `users`
-- Read by: `main.admin_sale_detail`, `repo.leaderboard`, `repo.reversal_for`, `repo.sales_score_events`, `repo.score_event_detail`, `repo.score_event_for_source`, `repo.score_history`, `scoring._existing`, `scoring.award_mission_approval`, `scoring.award_sales_record`, `scoring.reversal_of`, `scoring.reverse_event`
+- Read by: `admin_queries.count_score_events`, `admin_queries.import_user_breakdown`, `admin_queries.metrics`, `admin_queries.score_events`, `main.admin_sale_detail`, `repo.leaderboard`, `repo.reversal_for`, `repo.sales_score_events`, `repo.score_event_detail`, `repo.score_event_for_source`, `repo.score_history`, `scoring._existing`, `scoring.award_mission_approval`, `scoring.award_sales_record`, `scoring.reversal_of`, `scoring.reverse_event`
 - INSERT by: `scoring._persist_award`, `scoring.reverse_event`
 
 ### `scoring_rule_versions`
@@ -1077,7 +1187,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Columns: `id` TEXT PRIMARY KEY; `rule_code` TEXT NOT NULL; `version` INTEGER NOT NULL; `calculation_type` TEXT NOT NULL; `points` INTEGER NOT NULL; `effective_from` TEXT NOT NULL; `effective_to` TEXT; `status` TEXT NOT NULL CHECK (status IN ('published', 'retired')); `is_sample` INTEGER NOT NULL DEFAULT 1 CHECK (is_sample IN (0, 1)); `unit_size` NUMERIC NOT NULL DEFAULT 1 — added in db/migrations/0003_sales_import.sql
 - Table constraints: UNIQUE (rule_code, version)
 - References: —
-- Read by: `main.sales_page_context`, `repo._ensure_rule_version`, `repo.update_mission`, `scoring.find_rule_version`, `scoring.reverse_event`
+- Read by: `admin_queries.score_events`, `main.sales_page_context`, `repo._ensure_rule_version`, `repo.update_mission`, `scoring.find_rule_version`, `scoring.reverse_event`
 - INSERT by: `repo._ensure_rule_version`, `repo.create_mission`, `repo.update_mission`, `seed.seed_demo`
 - UPDATE by: `repo.update_mission`
 
@@ -1097,7 +1207,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Table constraints: UNIQUE (user_id, request_id)
 - Indexes: `ix_submissions_status` (status, created_at) — db/migrations/0001_init.sql; `ix_submissions_user_mission` (user_id, mission_id) — db/migrations/0001_init.sql
 - References: `missions`, `users`
-- Read by: `repo.count_queue`, `repo.count_user_submissions`, `repo.create_submission`, `repo.evidence`, `repo.list_active_missions`, `repo.list_queue`, `repo.list_user_submissions`, `repo.review_submission`, `repo.score_event_detail`, `repo.score_history`, `repo.submission_detail`, `seed.seed_demo`
+- Read by: `admin_queries.user_detail`, `repo.count_queue`, `repo.count_user_submissions`, `repo.create_submission`, `repo.evidence`, `repo.list_active_missions`, `repo.list_queue`, `repo.list_user_submissions`, `repo.review_submission`, `repo.score_event_detail`, `repo.score_history`, `repo.submission_detail`, `seed.seed_demo`
 - INSERT by: `repo.create_submission`, `seed.seed_demo`
 - UPDATE by: `repo.review_submission`
 
@@ -1108,21 +1218,29 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Table constraints: UNIQUE (organization_id, mobile)
 - Indexes: UNIQUE `ux_users_id_organization` (id, organization_id) — db/migrations/0005_tribal_org_foundation.sql
 - References: `organizations`
-- Read by: `db.init_db`, `main.demo_login`, `main.game_demo_login`, `main.game_demo_users`, `main.login_page`, `main.sales_page_context`, `repo.count_queue`, `repo.leaderboard`, `repo.list_queue`, `repo.list_sales_imports`, `repo.sales_import`, `repo.score_event_detail`, `repo.submission_detail`, `security.current_user`
+- Read by: `admin_queries.audit`, `admin_queries.count_score_events`, `admin_queries.game_overview`, `admin_queries.import_user_breakdown`, `admin_queries.metrics`, `admin_queries.score_events`, `admin_queries.top_visitors`, `admin_queries.users`, `db.init_db`, `main.demo_login`, `main.game_demo_login`, `main.game_demo_users`, `main.login_page`, `main.sales_page_context`, `repo.count_queue`, `repo.leaderboard`, `repo.list_queue`, `repo.list_sales_imports`, `repo.sales_import`, `repo.score_event_detail`, `repo.submission_detail`, `security.current_user`
 - INSERT by: `seed.seed_demo`
 
 ## 6. Templates
 
 | Template | Extends | Rendered by | Links and forms point to |
 |---|---|---|---|
+| `_events_table.html` | — | — | `GET /admin/submissions/{submission_id}`, `GET /admin/users/{user_id}` |
+| `admin_activity.html` | base.html | `main.admin_activity` | — |
+| `admin_dashboard.html` | base.html | `main.admin_dashboard` | `GET /admin/points`, `GET /admin/sales`, `GET /admin/sales/{import_id}`, `GET /admin/users/{user_id}` |
+| `admin_game.html` | base.html | `main.admin_game` | — |
+| `admin_leaderboard.html` | base.html | `main.admin_leaderboard` | `GET /admin/users/{user_id}` |
 | `admin_mission_form.html` | base.html | `main.admin_mission_create`, `main.admin_mission_edit`, `main.admin_mission_new`, `main.admin_mission_update` | `GET /admin/missions`, `POST /admin/missions/new`, `POST /admin/missions/{mission_id}`, `POST /admin/missions/{mission_id}/archive`, `POST /admin/missions/{mission_id}/publish` |
 | `admin_missions.html` | base.html | `main.admin_missions` | `GET /admin/missions/new`, `GET /admin/missions/{mission_id}` |
+| `admin_points.html` | base.html | `main.admin_points` | `GET /admin/points` |
 | `admin_queue.html` | base.html | `main.admin_queue` | `GET /admin/submissions`, `GET /admin/submissions/{submission_id}` |
 | `admin_review.html` | base.html | `main.admin_decide`, `main.admin_review` | `GET /admin/submissions`, `GET /evidence/{evidence_id}`, `POST /admin/score-events/{event_id}/reverse`, `POST /admin/submissions/{submission_id}/review` |
-| `admin_sale_detail.html` | base.html | `main.admin_sale_detail` | `GET /admin/sales`, `POST /admin/sales/{import_id}/process`, `POST /admin/score-events/{event_id}/reverse` |
+| `admin_sale_detail.html` | base.html | `main.admin_sale_detail` | `GET /admin/sales`, `GET /admin/sales/{import_id}`, `GET /admin/users/{user_id}`, `POST /admin/sales/{import_id}/process`, `POST /admin/score-events/{event_id}/reverse` |
 | `admin_sales.html` | base.html | `main.admin_sales` | `GET /admin/sales/new`, `GET /admin/sales/{import_id}` |
 | `admin_sales_new.html` | base.html | `main.admin_sales_new`, `main.admin_sales_upload` | `GET /admin/sales`, `GET /admin/sales/sample`, `POST /admin/sales` |
-| `base.html` | — | — | `GET /admin/missions`, `GET /admin/sales`, `GET /admin/submissions`, `GET /home`, `GET /leaderboard`, `GET /missions`, `GET /score`, `POST /logout` |
+| `admin_user.html` | base.html | `main.admin_user_detail` | `GET /admin/sales/{import_id}`, `GET /admin/users` |
+| `admin_users.html` | base.html | `main.admin_users` | `GET /admin/users/{user_id}` |
+| `base.html` | — | — | `GET /admin`, `GET /admin/activity`, `GET /admin/game`, `GET /admin/leaderboard`, `GET /admin/missions`, `GET /admin/points`, `GET /admin/sales`, `GET /admin/sales/new`, `GET /admin/submissions`, `GET /admin/users`, `GET /home`, `GET /leaderboard`, `GET /missions`, `GET /score`, `POST /logout` |
 | `error.html` | base.html | `main._http_error`, `main._starlette_error`, `main.admin_reverse_score`, `main.admin_sales_process`, `main.hardening` | `GET /home`, `GET /login` |
 | `home.html` | base.html | `main.home` | `GET /admin/submissions`, `GET /missions`, `GET /missions/{mission_id}`, `GET /score` |
 | `leaderboard.html` | base.html | `main.leaderboard_page` | — |
@@ -1136,6 +1254,22 @@ All templates live in `app/templates/`. Every internal link goes through the `ur
 helper so the `?s=` session token survives (see `app/main.py::create_app`).
 
 ## 7. Tests
+
+### `tests/test_admin_demo.py` (11 tests)
+
+| Test | Routes exercised | Direct domain calls | IDs |
+|---|---|---|---|
+| `test_dashboard_numbers_come_from_the_database` | `GET /admin`, `POST /admin/sales`, `POST /admin/sales/{import_id}/process`, `POST /demo-login` | `jalali.to_persian_digits`, `security.csrf_for` | — |
+| `test_admin_pages_require_admin` | `POST /demo-login` | — | — |
+| `test_user_pages_are_organization_scoped` | `GET /admin/leaderboard`, `GET /admin/points`, `GET /admin/users`, `GET /admin/users/{user_id}`, `POST /demo-login` | — | — |
+| `test_user_search_by_name_and_external_id` | `GET /admin/users`, `POST /demo-login` | — | — |
+| `test_import_breakdown_matches_ledger_and_reprocess_adds_nothing` | `GET /admin/sales/{import_id}`, `POST /admin/sales`, `POST /admin/sales/{import_id}/process`, `POST /demo-login` | `admin_queries.import_user_breakdown`, `security.csrf_for` | — |
+| `test_points_page_filters_and_labels_corrections` | `GET /admin/points`, `POST /demo-login` | — | — |
+| `test_demo_env_visitor_login_is_secure_and_staff_needs_code` | `POST /demo-login` | — | — |
+| `test_demo_env_staff_login_disabled_without_configured_code` | `GET /login`, `POST /demo-login` | — | — |
+| `test_demo_env_login_page_lists_only_visitors_in_picker` | `GET /login` | — | — |
+| `test_demo_env_game_login_is_visitor_only` | `GET /api/v1/game/demo-users`, `POST /api/v1/game/demo-login` | — | — |
+| `test_prod_like_env_still_blocks_game_demo_login` | `GET /api/v1/game/demo-users` | — | — |
 
 ### `tests/test_corrections.py` (9 tests)
 
@@ -1291,8 +1425,8 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_org_tree_and_membership_are_generic_and_tenant_scoped` | — | — | — |
 | `test_org_membership_cannot_cross_organization_boundary` | — | — | — |
 
-89 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
-Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::row_id`, `conftest::settings`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_game_store::csrf_header`, `test_game_store::set_game_coins`, `test_hardening::token_csrf`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`.
+100 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
+Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::row_id`, `conftest::settings`, `test_admin_demo::_count`, `test_admin_demo::_user_id`, `test_admin_demo::demo_client`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_game_store::csrf_header`, `test_game_store::set_game_coins`, `test_hardening::token_csrf`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`.
 
 ## 8. Error codes
 
@@ -1380,6 +1514,7 @@ Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db
 | Environment variable | Default (as written in code) | `Settings` field |
 |---|---|---|
 | `KILOOS_DB` | `REPO_ROOT / 'var' / 'kiloos.db'` | `db_path` |
+| `KILOOS_DEMO_STAFF_CODE` | `''` | `demo_staff_code` |
 | `KILOOS_ENV` | `'dev'` | `env` |
 | `KILOOS_EVIDENCE_DIR` | `REPO_ROOT / 'var' / 'evidence'` | `evidence_dir` |
 | `KILOOS_EVIDENCE_RETENTION_DAYS` | `90` | `evidence_retention_days` |
@@ -1422,4 +1557,6 @@ Read in `app/config.py::Settings.from_env`. Meaning of each variable:
 Paths written in templates or tests that match no route. An entry is expected when a
 test asks for an unknown page on purpose; anything else is a broken link.
 
+- app/templates/admin_points.html: POST /admin/points matches no route
+- app/templates/admin_users.html: POST /admin/users matches no route
 - tests/test_hardening.py::test_unknown_route_renders_persian_404: GET /no-such-page matches no route

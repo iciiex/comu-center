@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}گزارش فعالیت‌ها · کیلوس کلاب{% endblock %}
+{% block content %}
+  <div class="section-head"><h2>گزارش فعالیت‌ها (Audit) <span class="badge-demo">نمونه</span></h2></div>
+  <div class="card card--flat table-wrap">
+    {% if rows %}<table class="table"><thead><tr><th>زمان</th><th>اقدام‌کننده</th><th>رویداد</th><th>موجودیت</th></tr></thead><tbody>
+      {% for r in rows %}<tr>
+        <td class="tiny muted">{{ r['created_at']|jdatetime }}</td>
+        <td class="small">{{ r['actor_name'] }}</td>
+        <td class="tiny" style="direction:ltr">{{ r['action'] }}</td>
+        <td class="tiny" style="direction:ltr">{{ r['entity_type'] }} · {{ r['entity_id'][:8] }}</td></tr>{% endfor %}
+    </tbody></table>{% else %}<p class="muted small mb-0">رویدادی ثبت نشده است.</p>{% endif %}
+  </div>
+{% endblock %}

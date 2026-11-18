@@ -24,6 +24,28 @@
     </form>
   </div>
 
+  {% if staff %}
+  <details class="card card--flat">
+    <summary class="card__title" style="cursor:pointer">ورود کارکنان (اپراتور / مدیر)</summary>
+    <form method="post" action="/demo-login" class="stack mt-2">
+      <div class="field">
+        <label for="staff_id">حساب کارمند</label>
+        <select id="staff_id" name="user_id" required>
+          {% for person in staff %}
+            <option value="{{ person['id'] }}">{{ person['full_name'] }} — {% if person['role'] == 'operator' %}اپراتور{% else %}مدیر سیستم{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="access_code">کد دسترسی کارکنان</label>
+        <input id="access_code" name="access_code" type="password" autocomplete="off" required>
+        <p class="field__hint">این کد از طریق تیم محصول در اختیار شما قرار می‌گیرد.</p>
+      </div>
+      <button class="btn btn--block" type="submit">ورود کارکنان</button>
+    </form>
+  </details>
+  {% endif %}
+
   <div class="card card--flat">
     <div class="card__title">این نسخه چه کاری انجام می‌دهد؟</div>
     <ul class="small muted" style="padding-inline-start:18px; margin:8px 0 0">

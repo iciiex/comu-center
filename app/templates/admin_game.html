@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}رقابت و بازی · کیلوس کلاب{% endblock %}
+{% block content %}
+  <div class="section-head"><h2>رقابت و بازی <span class="badge-demo">نمونه</span></h2></div>
+  <div class="alert alert--info">XP و سکه بازی (Sales Quest Arena) یک حسابداری جدا از امتیاز سازمانی است و هرگز دفتر امتیاز را تغییر نمی‌دهد. مقادیر پاداش نمونه (SAMPLE) هستند.</div>
+  <div class="card card--flat table-wrap">
+    {% if rows %}<table class="table"><thead><tr><th>ویزیتور</th><th>XP بازی</th><th>سکه</th><th>تعداد تکمیل</th></tr></thead><tbody>
+      {% for r in rows %}<tr><td class="small">{{ r['name'] }}</td><td>{{ r['xp']|fa }}</td><td>{{ r['coins']|fa }}</td><td>{{ r['completions']|fa }}</td></tr>{% endfor %}
+    </tbody></table>{% else %}<p class="muted small mb-0">هنوز بازیکنی وجود ندارد.</p>{% endif %}
+  </div>
+{% endblock %}

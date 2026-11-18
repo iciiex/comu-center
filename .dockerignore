@@ -1,0 +1,16 @@
+.git
+.venv
+.env
+.env.*
+var/
+*.db
+*.sqlite
+*.sqlite3
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+graphify-out/
+tests/
+docs/
+.agent/
+.github/

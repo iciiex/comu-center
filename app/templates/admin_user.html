@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ person['full_name'] }} · کیلوس کلاب{% endblock %}
+{% block content %}
+  <p class="small" style="margin:4px 2px"><a href="{{ url('/admin/users') }}">→ بازگشت به کاربران</a></p>
+  <div class="card">
+    <h1 class="card__title">{{ person['full_name'] }}</h1>
+    <div class="card__meta">{% if person['role'] == 'visitor' %}ویزیتور{% elif person['role'] == 'operator' %}اپراتور{% else %}مدیر سیستم{% endif %}
+      · {{ person['org_name'] }} · شناسه پرسنلی: <span style="direction:ltr">{{ person['external_ids'] or '—' }}</span></div>
+    <div class="grid grid--3 mt-2">
+      <div class="stat"><div class="stat__label">کیف امتیاز سازمانی</div><div class="stat__value">{{ person['balance']|fa }}</div></div>
+      <div class="stat"><div class="stat__label">مبلغ فروش واردشده</div><div class="stat__value">{{ "{:,.0f}".format(person['sales_amount'])|fa }}</div></div>
+      <div class="stat"><div class="stat__label">ردیف فروش معتبر</div><div class="stat__value">{{ person['sales_valid']|fa }}</div></div>
+    </div>
+  </div>
+
+  <div class="section-head"><h2>تاریخچه امتیاز (منبع هر امتیاز)</h2></div>
+  {% include "_events_table.html" %}
+
+  <div class="section-head"><h2>فعالیت اخیر</h2></div>
+  <div class="card card--flat">
+    <div class="card__title">ثبت مأموریت‌ها</div>
+    {% for item in submissions %}<div class="card__row small"><span>{{ item['title'] }}</span><span class="muted">{{ item['status'] }} · {{ item['created_at']|jdatetime }}</span></div>
+    {% else %}<p class="muted small">ثبتی وجود ندارد.</p>{% endfor %}
+    <div class="card__title" style="margin-top:10px">ردیف‌های فروش اخیر</div>
+    {% for r in sales %}<div class="card__row small"><span style="direction:ltr">{{ r['external_id'] }}</span><span class="muted">{{ r['status'] }} · <a href="{{ url('/admin/sales/' ~ r['import_id']) }}">import</a></span></div>
+    {% else %}<p class="muted small mb-0">ردیف فروشی وجود ندارد.</p>{% endfor %}
+  </div>
+{% endblock %}

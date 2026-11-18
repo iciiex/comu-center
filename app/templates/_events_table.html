@@ -1,0 +1,13 @@
+<div class="card card--flat table-wrap">
+  {% if events %}<table class="table"><thead><tr><th>کاربر</th><th>امتیاز</th><th>منبع</th><th>تاریخ</th><th>قانون / نسخه</th><th>توضیح</th><th>اصلاح</th></tr></thead><tbody>
+    {% for e in events %}<tr>
+      <td class="small"><a href="{{ url('/admin/users/' ~ e['user_id']) }}">{{ e['full_name'] }}</a></td>
+      <td><b>{{ ('+' if e['points'] > 0 else '') ~ e['points']|fa }}</b></td>
+      <td class="tiny">{{ 'ردیف فروش' if e['source_type'] == 'sales_record' else 'تأیید مأموریت' }}
+        {% if e['source_type'] == 'mission_submission' %}<a href="{{ url('/admin/submissions/' ~ e['source_id']) }}">↗</a>{% endif %}</td>
+      <td class="tiny muted">{{ e['occurred_at']|jdatetime }}</td>
+      <td class="tiny" style="direction:ltr">{{ e['rule_code'] }} v{{ e['rule_version'] }}</td>
+      <td class="tiny">{{ e['reason'] or ('امتیاز طبق قانون نمونه' if not e['corrects_event_id'] else '') }}</td>
+      <td class="tiny">{% if e['corrects_event_id'] %}<span class="pill pill--amber">رخداد اصلاحی</span>{% elif e['reversed_by'] %}<span class="pill pill--amber">اصلاح‌شده</span>{% else %}—{% endif %}</td></tr>{% endfor %}
+  </tbody></table>{% else %}<p class="muted small mb-0">رخدادی ثبت نشده است.</p>{% endif %}
+</div>

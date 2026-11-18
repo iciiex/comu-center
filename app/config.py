@@ -37,6 +37,17 @@ class Settings:
     sales_max_bytes: int = 5 * 1024 * 1024
     sales_max_rows: int = 5000
     tribal_gamification_enabled: bool = False
+    # Public demo hosting (D-006/D-008): staff login needs this code; empty = disabled.
+    demo_staff_code: str = ""
+
+    @property
+    def is_public(self) -> bool:
+        """True for any hosted environment (anything except local dev/test)."""
+        return self.env not in {"dev", "test"}
+
+    @property
+    def game_demo_login_enabled(self) -> bool:
+        return self.env in {"dev", "test", "demo"}
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -52,6 +63,7 @@ class Settings:
             queue_page_size=_int_env("KILOOS_QUEUE_PAGE_SIZE", 20),
             sales_max_bytes=_int_env("KILOOS_SALES_MAX_BYTES", 5 * 1024 * 1024),
             sales_max_rows=_int_env("KILOOS_SALES_MAX_ROWS", 5000),
+            demo_staff_code=os.getenv("KILOOS_DEMO_STAFF_CODE", ""),
             tribal_gamification_enabled=(
                 os.getenv("KILOOS_TRIBAL_GAMIFICATION_ENABLED", "false").strip().lower()
                 in {"1", "true", "yes", "on"}

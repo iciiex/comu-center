@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}کاربران · کیلوس کلاب{% endblock %}
+{% block content %}
+  <div class="section-head"><h2>کاربران <span class="badge-demo">نمونه</span></h2></div>
+  <form method="get" action="{{ url('/admin/users') }}" class="card card--flat stack">
+    {% if s %}<input type="hidden" name="s" value="{{ s }}">{% endif %}
+    <div class="field mb-0"><label for="q">جست‌وجو (نام یا شناسه پرسنلی)</label>
+      <input id="q" name="q" value="{{ q }}" placeholder="مثلاً سارا یا V-001"></div>
+    <button class="btn btn--sm" type="submit">جست‌وجو</button>
+  </form>
+  <p class="tiny muted" style="margin:8px 2px">نمایش فقط‌خواندنی — مدیریت حساب و گذرواژه در این نسخه وجود ندارد.</p>
+  <div class="card card--flat table-wrap">
+    {% if people %}<table class="table"><thead><tr><th>نام</th><th>نقش</th><th>سازمان</th><th>شناسه پرسنلی</th><th>کیف امتیاز</th><th>مبلغ فروش</th><th>ردیف معتبر</th></tr></thead><tbody>
+      {% for u in people %}<tr>
+        <td class="small"><a href="{{ url('/admin/users/' ~ u['id']) }}">{{ u['full_name'] }}</a>{% if not u['is_active'] %} <span class="pill">غیرفعال</span>{% endif %}</td>
+        <td class="tiny">{% if u['role'] == 'visitor' %}ویزیتور{% elif u['role'] == 'operator' %}اپراتور{% else %}مدیر سیستم{% endif %}</td>
+        <td class="tiny">{{ u['org_name'] }}</td>
+        <td class="tiny" style="direction:ltr">{{ u['external_ids'] or '—' }}</td>
+        <td><b>{{ u['balance']|fa }}</b></td>
+        <td class="tiny">{{ "{:,.0f}".format(u['sales_amount'])|fa }}</td>
+        <td>{{ u['sales_valid']|fa }}</td></tr>{% endfor %}
+    </tbody></table>{% else %}<p class="muted small mb-0">کاربری با این جست‌وجو پیدا نشد.</p>{% endif %}
+  </div>
+{% endblock %}

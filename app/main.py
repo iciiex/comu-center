@@ -14,6 +14,7 @@ import threading
 import time
 import uuid
 from collections.abc import Iterator
+from decimal import Decimal
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
@@ -23,11 +24,12 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app import db, game, repo, sales, tribal
+from app import admin_queries, db, game, repo, sales, tribal
 from app.config import Settings
 from app.jalali import format_jalali, to_persian_digits
 from app.repo import DomainError
 from app.sample_sales import sample_workbook_bytes
+from app.scoring import SALES_RULE_CODE, find_rule_version
 from app.security import (
     CurrentUser,
     clear_session,
@@ -105,6 +107,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "user": user,
             "active": context.pop("active", ""),
             "demo": True,
+            "env": settings.env,
             "s": url_session(request),
             "csrf": csrf_token(request),
         }
@@ -380,7 +383,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/v1/game/demo-users")
     def game_demo_users(conn: sqlite3.Connection = Depends(conn_dep)) -> JSONResponse:
-        if settings.env not in {"dev", "test"}:
+        if not settings.game_demo_login_enabled:
             raise HTTPException(
                 status_code=404, detail="Demo login is disabled in this environment."
             )
@@ -396,7 +399,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def game_demo_login(
         request: Request, conn: sqlite3.Connection = Depends(conn_dep)
     ) -> JSONResponse:
-        if settings.env not in {"dev", "test"}:
+        if not settings.game_demo_login_enabled:
             raise HTTPException(
                 status_code=404, detail="Demo login is disabled in this environment."
             )
@@ -422,7 +425,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if row is None:
             raise HTTPException(status_code=404, detail="Demo visitor not found.")
         response = JSONResponse({"user": {"id": row["id"], "name": row["full_name"]}})
-        token = set_session(response, row["id"], settings.secret)
+        token = set_session(response, row["id"], settings.secret, secure=settings.is_public)
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-CSRF-Token"] = csrf_for(token, settings.secret)
         return response
@@ -560,15 +563,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def login_page(request: Request, conn: sqlite3.Connection = Depends(conn_dep)):
         users = conn.execute(
             """SELECT id, full_name, role FROM users
-               WHERE role IN ('visitor', 'operator', 'admin') AND is_active = 1
+               WHERE is_active = 1 AND (? = 0 OR role = 'visitor')
                ORDER BY CASE role WHEN 'visitor' THEN 0 WHEN 'operator' THEN 1 ELSE 2 END,
-                        full_name"""
+                        full_name""",
+            (1 if settings.is_public else 0,),
         ).fetchall()
-        return page(request, "login.html", {"people": users})
+        staff = []
+        if settings.is_public and settings.demo_staff_code:
+            staff = conn.execute(
+                """SELECT id, full_name, role FROM users
+                   WHERE role IN ('operator', 'admin') AND is_active = 1
+                   ORDER BY role, full_name"""
+            ).fetchall()
+        return page(request, "login.html", {"people": users, "staff": staff})
 
     @app.post("/demo-login")
     def demo_login(
+        request: Request,
         user_id: str = Form(...),
+        access_code: str = Form(""),
         conn: sqlite3.Connection = Depends(conn_dep),
     ) -> RedirectResponse:
         row = conn.execute(
@@ -576,10 +589,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ).fetchone()
         if row is None:
             raise HTTPException(status_code=404, detail="کاربر نمایشی یافت نشد.")
-        target = "/admin/submissions" if row["role"] in {"operator", "admin"} else "/home"
+        is_staff_role = row["role"] in {"operator", "admin"}
+        if settings.is_public and is_staff_role:
+            # D-008 (ASSUMPTION): hosted demo staff login needs a secret access code.
+            expected = settings.demo_staff_code
+            if not expected or not hmac.compare_digest(
+                access_code.encode(), expected.encode()
+            ):
+                repo.audit(
+                    conn, None, "auth.staff_login_denied", "user", row["id"],
+                    {"ip": request.client.host if request.client else "unknown"},
+                )
+                conn.commit()
+                raise HTTPException(status_code=403, detail="کد دسترسی کارکنان نادرست است.")
+        target = (
+            "/admin" if row["role"] == "admin"
+            else "/admin/submissions" if is_staff_role else "/home"
+        )
         token = make_token(row["id"], settings.secret)
         response = RedirectResponse(with_token(target, token), status_code=303)
-        set_session(response, row["id"], settings.secret, token)
+        set_session(response, row["id"], settings.secret, token, secure=settings.is_public)
         return response
 
     @app.post("/logout", dependencies=[Depends(csrf_guard)])
@@ -952,6 +981,135 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ).fetchone()
         return {"mapping": mapping, "rule": rule}
 
+    # ------------------------------------------------- admin demo panel (read-only)
+    @app.get("/admin", response_class=HTMLResponse)
+    def admin_dashboard(
+        request: Request,
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ):
+        org = user.organization_id
+        return page(
+            request,
+            "admin_dashboard.html",
+            {
+                "active": "dashboard",
+                "m": admin_queries.metrics(conn, org),
+                "top": admin_queries.top_visitors(conn, org, 5),
+                "imports": repo.list_sales_imports(conn, org)[:5],
+                "events": admin_queries.score_events(conn, org, limit=8),
+            },
+            user=user,
+        )
+
+    @app.get("/admin/users", response_class=HTMLResponse)
+    def admin_users(
+        request: Request,
+        q: str = "",
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ):
+        return page(
+            request,
+            "admin_users.html",
+            {
+                "active": "users",
+                "q": q,
+                "people": admin_queries.users(conn, user.organization_id, q),
+            },
+            user=user,
+        )
+
+    @app.get("/admin/users/{user_id}", response_class=HTMLResponse)
+    def admin_user_detail(
+        user_id: str,
+        request: Request,
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ):
+        detail = admin_queries.user_detail(conn, user.organization_id, user_id)
+        if detail is None:
+            raise HTTPException(status_code=404, detail="کاربر یافت نشد.")
+        return page(
+            request,
+            "admin_user.html",
+            {
+                "active": "users",
+                "person": detail["user"],
+                "events": detail["events"],
+                "submissions": detail["submissions"],
+                "sales": detail["sales"],
+            },
+            user=user,
+        )
+
+    @app.get("/admin/points", response_class=HTMLResponse)
+    def admin_points(
+        request: Request,
+        user_id: str = "",
+        source: str = "",
+        p: int = 1,
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ):
+        org, per_page, p = user.organization_id, 30, max(p, 1)
+        total = admin_queries.count_score_events(conn, org, user_id or None, source or None)
+        return page(
+            request,
+            "admin_points.html",
+            {
+                "active": "points",
+                "events": admin_queries.score_events(
+                    conn, org, user_id=user_id or None, source_type=source or None,
+                    limit=per_page, offset=(p - 1) * per_page,
+                ),
+                "total": total,
+                "page_no": p,
+                "has_next": p * per_page < total,
+                "user_id": user_id,
+                "source": source,
+                "people": admin_queries.users(conn, org),
+            },
+            user=user,
+        )
+
+    @app.get("/admin/game", response_class=HTMLResponse)
+    def admin_game(
+        request: Request,
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ):
+        return page(
+            request,
+            "admin_game.html",
+            {"active": "game", "rows": admin_queries.game_overview(conn, user.organization_id)},
+            user=user,
+        )
+
+    @app.get("/admin/leaderboard", response_class=HTMLResponse)
+    def admin_leaderboard(
+        request: Request,
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ):
+        board, _ = repo.leaderboard(conn, user)
+        return page(
+            request, "admin_leaderboard.html", {"active": "leaderboard", "board": board}, user=user
+        )
+
+    @app.get("/admin/activity", response_class=HTMLResponse)
+    def admin_activity(
+        request: Request,
+        user: CurrentUser = Depends(require_admin),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ):
+        return page(
+            request,
+            "admin_activity.html",
+            {"active": "activity", "rows": admin_queries.audit(conn, user.organization_id, 100)},
+            user=user,
+        )
+
     @app.get("/admin/sales", response_class=HTMLResponse)
     def admin_sales(
         request: Request,
@@ -1060,6 +1218,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         request: Request,
         user: CurrentUser = Depends(require_admin),
         conn: sqlite3.Connection = Depends(conn_dep),
+        p: int = 1,
     ):
         import_row = repo.sales_import(conn, import_id, user.organization_id)
         if import_row is None:
@@ -1072,14 +1231,42 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             (import_id,),
         ).fetchone()["total"]
         accounted = counts["valid"] + counts["invalid"] + counts["duplicate"] + counts["scored"]
+        per_page = 100
+        p = max(p, 1)
+        records = repo.sales_records(conn, import_id, limit=per_page, offset=(p - 1) * per_page)
+        rule = find_rule_version(conn, SALES_RULE_CODE)
+        expected: dict[str, int] = {}
+        expected_total = 0
+        if rule is not None:
+            unit, per_unit = Decimal(str(rule["unit_size"])), int(rule["points"])
+            for row in conn.execute(
+                "SELECT id, amount, status FROM sales_records "
+                "WHERE import_id = ? AND status IN ('valid', 'scored')",
+                (import_id,),
+            ).fetchall():
+                value = sales.money_points(Decimal(str(row["amount"])), unit, per_unit)
+                expected[row["id"]] = value
+                if row["status"] == "valid":
+                    expected_total += value
+        awarded = {
+            row["source_id"]: row["points"]
+            for row in repo.sales_score_events(conn, import_id)
+        }
         return page(
             request,
             "admin_sale_detail.html",
             {
-                "active": "sales",
+                "active": "import_log",
                 "import": import_row,
                 "counts": counts,
-                "records": repo.sales_records(conn, import_id, limit=200),
+                "records": records,
+                "page_no": p,
+                "has_next": p * per_page < import_row["row_count"],
+                "expected": expected,
+                "expected_total": expected_total,
+                "awarded": awarded,
+                "rule": rule,
+                "breakdown": admin_queries.import_user_breakdown(conn, import_id),
                 "score_events": repo.sales_score_events(conn, import_id),
                 "scored_points": scored_points,
                 "rows_ok": accounted == import_row["row_count"],

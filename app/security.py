@@ -124,7 +124,14 @@ def csrf_token(request: Request) -> str:
     return csrf_for(token, request.app.state.settings.secret)
 
 
-def set_session(response: Response, user_id: str, secret: str, token: str | None = None) -> str:
+def set_session(
+    response: Response,
+    user_id: str,
+    secret: str,
+    token: str | None = None,
+    *,
+    secure: bool = False,
+) -> str:
     """Set the cookie and return the token (reused for the ``?s=`` fallback)."""
     token = token or make_token(user_id, secret)
     response.set_cookie(
@@ -132,6 +139,7 @@ def set_session(response: Response, user_id: str, secret: str, token: str | None
         token,
         httponly=True,
         samesite="lax",
+        secure=secure,
         max_age=SESSION_TTL_SECONDS,
     )
     return token

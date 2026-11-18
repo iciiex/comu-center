@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}رتبه‌بندی · کیلوس کلاب{% endblock %}
+{% block content %}
+  <div class="section-head"><h2>رتبه‌بندی ویزیتورها <span class="badge-demo">نمونه</span></h2></div>
+  <p class="small muted" style="margin:0 2px 10px">بر اساس امتیاز سازمانی در دوره فعال رقابت.</p>
+  <div class="card card--flat table-wrap">
+    {% if board %}<table class="table"><thead><tr><th>رتبه</th><th>ویزیتور</th><th>امتیاز</th></tr></thead><tbody>
+      {% for r in board %}<tr><td>{{ r['rank']|fa }}</td><td class="small"><a href="{{ url('/admin/users/' ~ r['user_id']) }}">{{ r['full_name'] }}</a></td><td><b>{{ r['total']|fa }}</b></td></tr>{% endfor %}
+    </tbody></table>{% else %}<p class="muted small mb-0">هنوز رتبه‌ای وجود ندارد.</p>{% endif %}
+  </div>
+{% endblock %}

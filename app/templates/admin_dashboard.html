@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}داشبورد مدیریت · کیلوس کلاب{% endblock %}
+{% block content %}
+  <div class="section-head"><h2>داشبورد <span class="badge-demo">نمونه / Demo</span></h2></div>
+  <p class="small muted" style="margin:0 2px 10px">همه اعداد زیر از پایگاه داده محاسبه می‌شوند (داده نمونه است و تصویب‌شده نیست).</p>
+  <div class="grid grid--3">
+    <div class="stat"><div class="stat__label">کل کاربران</div><div class="stat__value">{{ m.users_total|fa }}</div></div>
+    <div class="stat"><div class="stat__label">کاربران فعال</div><div class="stat__value">{{ m.users_active|fa }}</div></div>
+    <div class="stat"><div class="stat__label">مجموع امتیاز سازمانی</div><div class="stat__value">{{ m.wallet_points|fa }}</div></div>
+    <div class="stat"><div class="stat__label">مجموع مبلغ فروش (معتبر)</div><div class="stat__value">{{ "{:,.0f}".format(m.sales_amount)|fa }}</div></div>
+    <div class="stat"><div class="stat__label">ردیف فروش معتبر</div><div class="stat__value">{{ m.sales_valid_records|fa }}</div></div>
+    <div class="stat"><div class="stat__label">مأموریت در انتظار بررسی</div><div class="stat__value">{{ m.pending_reviews|fa }}</div></div>
+  </div>
+  <p class="tiny muted" style="margin:8px 2px">
+    {{ m.score_events|fa }} رخداد امتیاز در دفتر ثبت شده؛ مجموع رخدادها {{ m.ledger_points|fa }}
+    {% if m.ledger_points == m.wallet_points %}— با کیف امتیاز برابر است.{% else %}— <b>با کیف امتیاز برابر نیست!</b>{% endif %}
+    امتیاز بازی (XP / سکه) جدا از امتیاز سازمانی است.
+  </p>
+
+  <div class="section-head"><h2>۵ ویزیتور برتر <span class="badge-demo">نمونه</span></h2></div>
+  <div class="card card--flat">
+    {% for v in top %}
+      <div class="card__row"><a href="{{ url('/admin/users/' ~ v['id']) }}">{{ loop.index|fa }}. {{ v['full_name'] }}</a><b>{{ v['balance']|fa }}</b></div>
+    {% else %}<p class="muted small mb-0">ویزیتوری وجود ندارد.</p>{% endfor %}
+  </div>
+
+  <div class="section-head"><h2>آخرین ورودهای اکسل</h2><a class="btn btn--sm btn--ghost" href="{{ url('/admin/sales') }}">همه</a></div>
+  <div class="card card--flat table-wrap">
+    {% if imports %}<table class="table"><thead><tr><th>فایل</th><th>وضعیت</th><th>ردیف</th><th>امتیاز</th><th>زمان</th></tr></thead><tbody>
+      {% for i in imports %}<tr>
+        <td class="small"><a href="{{ url('/admin/sales/' ~ i['id']) }}">{{ i['file_name'] }}</a></td>
+        <td class="tiny">{{ i['status'] }}</td><td>{{ i['row_count']|fa }}</td><td>{{ i['points_sum']|fa }}</td>
+        <td class="tiny muted">{{ i['created_at']|jdatetime }}</td></tr>{% endfor %}
+    </tbody></table>{% else %}<p class="muted small mb-0">هنوز فایلی وارد نشده است.</p>{% endif %}
+  </div>
+
+  <div class="section-head"><h2>آخرین تراکنش‌های امتیاز</h2><a class="btn btn--sm btn--ghost" href="{{ url('/admin/points') }}">همه</a></div>
+  {% include "_events_table.html" %}
+{% endblock %}

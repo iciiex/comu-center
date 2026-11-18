@@ -737,12 +737,12 @@ def sales_import(
 
 
 def sales_records(
-    conn: sqlite3.Connection, import_id: str, limit: int = 200
+    conn: sqlite3.Connection, import_id: str, limit: int = 200, offset: int = 0
 ) -> list[sqlite3.Row]:
     return conn.execute(
         """SELECT * FROM sales_records WHERE import_id = ?
-           ORDER BY row_number LIMIT ?""",
-        (import_id, limit),
+           ORDER BY row_number LIMIT ? OFFSET ?""",
+        (import_id, limit, offset),
     ).fetchall()
 
 
