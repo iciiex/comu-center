@@ -17,6 +17,14 @@ exists, move them under a dated heading with its number
 
 ## [Unreleased]
 
+Unified missions (2026-11-18, MODE: P, D-009 PROPOSED, migration `0007_unified_missions.sql`). The `missions` table is the
+single mission source for Sales Quest Arena: the admin form now has instructions, category, difficulty, time, XP/coins and
+evidence/approval switches; the game BFF (API v2, `X-Game-Api: 2`; v1 kept for the deploy gap) lists DB missions, accepts
+multipart submissions (text + image, idempotent) into the existing operator queue, and on approval records organizational
+points in `score_events` and XP/coins in the new `game_reward_events` ledger (frozen at submit time, one grant per
+submission). Frontend repo: dynamic mission cards/detail, evidence step, new statuses, rewritten cross-repo browser test.
+Tests: 112 backend (12 new in `tests/test_unified_missions.py`), 64 frontend, cross-repo scenario `npm run test:bff`.
+
 MS-01 demo sprint (2026-11-18, MODE: P). Read-only admin panel (dashboard, users, points ledger, game overview,
 leaderboard, audit) with organization scope; sales import detail now shows expected points per row, per-user
 award breakdown and paging; process asks for confirmation. Hosted-demo hardening: `KILOOS_ENV=demo` allows the visitor-only

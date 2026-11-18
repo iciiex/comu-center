@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% block title %}{{ 'ویرایش مأموریت' if mission else 'مأموریت جدید' }} · کیلوس کلاب{% endblock %}
 {% block content %}
+  {% set ev_on = (form.get('requires_evidence', 1) | string) in ('1', 'true', 'on') %}
+  {% set rv_on = (form.get('requires_review', 1) | string) in ('1', 'true', 'on') %}
   <p class="small" style="margin:4px 2px"><a href="{{ url('/admin/missions') }}">→ بازگشت به مأموریت‌ها</a></p>
+
+  {% if error %}<div class="alert alert--error" role="alert">{{ error }}</div>{% endif %}
 
   {% if mission %}
     <div class="card">
@@ -9,7 +13,7 @@
         <div>
           <div class="card__title">{{ mission['title'] }}</div>
           <div class="card__meta">
-            {% if mission['status'] == 'active' %}فعال{% elif mission['status'] == 'draft' %}پیش‌نویس{% else %}آرشیو{% endif %}
+            {% if mission['status'] == 'active' %}منتشر شده{% elif mission['status'] == 'draft' %}پیش‌نویس{% else %}بایگانی{% endif %}
             · کد قانون {{ mission['rule_code'] }}
           </div>
         </div>
@@ -22,11 +26,16 @@
           {% elif mission['status'] == 'active' %}
             <form method="post" action="{{ url('/admin/missions/' ~ mission['id'] ~ '/archive') }}" class="mb-0">
               <input type="hidden" name="csrf" value="{{ csrf }}">
-              <button class="btn btn--ghost btn--sm" type="submit">آرشیو</button>
+              <button class="btn btn--ghost btn--sm" type="submit">بایگانی</button>
             </form>
           {% endif %}
         </div>
       </div>
+      {% if mission['status'] == 'draft' %}
+        <p class="field__hint">این مأموریت پیش‌نویس است و تا انتشار برای ویزیتورها (وب و بازی) دیده نمی‌شود.</p>
+      {% elif mission['status'] == 'active' %}
+        <p class="field__hint">منتشر شده: در وب و در بازی Sales Quest Arena برای ویزیتورهای مجاز نمایش داده می‌شود.</p>
+      {% endif %}
     </div>
   {% endif %}
 
@@ -35,42 +44,120 @@
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <h1 class="card__title">{{ 'ویرایش مأموریت' if mission else 'ساخت مأموریت جدید' }}</h1>
 
-    <div class="field mt-2">
-      <label for="title">عنوان</label>
-      <input id="title" name="title" required maxlength="120" value="{{ form.get('title', '') }}">
-    </div>
-
-    <div class="field">
-      <label for="description">توضیحات و شرایط انجام</label>
-      <textarea id="description" name="description" required maxlength="800">{{ form.get('description', '') }}</textarea>
-    </div>
-
-    <div class="grid-2">
+    <fieldset class="mt-2" style="border:0;padding:0;margin:0">
+      <legend class="card__title" style="font-size:1rem">اطلاعات مأموریت</legend>
       <div class="field">
-        <label for="points">امتیاز</label>
-        <input id="points" name="points" type="number" min="0" max="10000" required value="{{ form.get('points', 10) }}">
-        <p class="field__hint">تغییر امتیاز = انتشار نسخه جدید قانون</p>
+        <label for="title">عنوان</label>
+        <input id="title" name="title" required minlength="3" maxlength="120" value="{{ form.get('title', '') }}">
       </div>
       <div class="field">
-        <label for="max_per_user">سقف انجام هر کاربر</label>
+        <label for="description">توضیح کوتاه</label>
+        <textarea id="description" name="description" required minlength="5" maxlength="800">{{ form.get('description', '') }}</textarea>
+      </div>
+      <div class="field">
+        <label for="instructions">راهنما و دستورالعمل انجام</label>
+        <textarea id="instructions" name="instructions" maxlength="4000" rows="4">{{ form.get('instructions', '') }}</textarea>
+        <p class="field__hint">مراحل انجام مأموریت را برای ویزیتور بنویسید؛ در بازی نمایش داده می‌شود.</p>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label for="category">دسته‌بندی</label>
+          <select id="category" name="category">
+            {% for value, label in category_options %}
+              <option value="{{ value }}" {{ 'selected' if form.get('category', 'customer_visit') == value }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="difficulty">سطح دشواری</label>
+          <select id="difficulty" name="difficulty">
+            {% for value, label in difficulty_options %}
+              <option value="{{ value }}" {{ 'selected' if form.get('difficulty', 'easy') == value }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="estimated_minutes">زمان تقریبی انجام (دقیقه)</label>
+        <input id="estimated_minutes" name="estimated_minutes" type="number" min="1" max="600" required value="{{ form.get('estimated_minutes', 5) }}">
+      </div>
+    </fieldset>
+
+    <fieldset class="mt-2" style="border:0;padding:0;margin:0">
+      <legend class="card__title" style="font-size:1rem">زمان‌بندی و سقف انجام</legend>
+      <div class="grid-2">
+        <div class="field">
+          <label for="starts_on">شروع (میلادی)</label>
+          <input id="starts_on" name="starts_on" type="date" required value="{{ form.get('starts_on', '') }}">
+        </div>
+        <div class="field">
+          <label for="ends_on">پایان / انقضا (میلادی)</label>
+          <input id="ends_on" name="ends_on" type="date" required value="{{ form.get('ends_on', '') }}">
+        </div>
+      </div>
+      <p class="field__hint" style="margin-top:-6px">
+        ورودی تاریخ در این نسخه میلادی است؛ نمایش به کاربر شمسی است. یکسان‌سازی کامل تقویم در فاز Harden انجام می‌شود.
+      </p>
+      <div class="field">
+        <label for="max_per_user">حداکثر تعداد انجام برای هر کاربر</label>
         <input id="max_per_user" name="max_per_user" type="number" min="1" max="50" required value="{{ form.get('max_per_user', 1) }}">
+        <p class="field__hint">این سقف در سرور اعمال می‌شود؛ درخواست‌های ردشده هم در شمارش سقف حساب می‌شوند.</p>
       </div>
-    </div>
+    </fieldset>
 
-    <div class="grid-2">
-      <div class="field">
-        <label for="starts_on">شروع (میلادی)</label>
-        <input id="starts_on" name="starts_on" type="date" required value="{{ form.get('starts_on', '') }}">
+    <fieldset class="mt-2" style="border:0;padding:0;margin:0">
+      <legend class="card__title" style="font-size:1rem">پاداش‌ها (دو اقتصاد جدا)</legend>
+      <div class="alert alert--info">
+        <strong>امتیاز سازمانی</strong> فقط در دفتر امتیاز کیلوس ثبت می‌شود.
+        <strong>XP و سکه</strong> فقط در اقتصاد بازی ثبت می‌شوند و هرگز به امتیاز سازمانی اضافه نمی‌شوند.
+        هر دو پس از تأیید اپراتور (در مأموریت‌های نیازمند تأیید) و فقط یک بار پرداخت می‌شوند.
       </div>
       <div class="field">
-        <label for="ends_on">پایان (میلادی)</label>
-        <input id="ends_on" name="ends_on" type="date" required value="{{ form.get('ends_on', '') }}">
+        <label for="points">امتیاز سازمانی</label>
+        <input id="points" name="points" type="number" min="0" max="10000" required value="{{ form.get('points', 10) }}">
+        <p class="field__hint">تغییر امتیاز = انتشار نسخه جدید قانون؛ امتیازهای گذشته بازنویسی نمی‌شوند.</p>
       </div>
-    </div>
-    <p class="field__hint" style="margin-top:-6px">
-      ورودی تاریخ در این نسخه میلادی است؛ نمایش به کاربر شمسی است. یکسان‌سازی کامل تقویم در فاز Harden انجام می‌شود.
-    </p>
+      <div class="grid-2">
+        <div class="field">
+          <label for="game_xp">پاداش بازی: XP</label>
+          <input id="game_xp" name="game_xp" type="number" min="0" max="10000" required value="{{ form.get('game_xp', 0) }}">
+        </div>
+        <div class="field">
+          <label for="game_coins">پاداش بازی: سکه</label>
+          <input id="game_coins" name="game_coins" type="number" min="0" max="10000" required value="{{ form.get('game_coins', 0) }}">
+        </div>
+      </div>
+      <p class="field__hint" style="margin-top:-6px">
+        مقدار XP و سکه لحظه ثبت درخواست ویزیتور برای همان درخواست ثابت می‌شود؛ تغییر بعدی، درخواست‌های قبلی را عوض نمی‌کند.
+      </p>
+    </fieldset>
+
+    <fieldset class="mt-2" style="border:0;padding:0;margin:0">
+      <legend class="card__title" style="font-size:1rem">الزامات</legend>
+      <div class="grid-2">
+        <div class="field">
+          <label for="requires_evidence">تصویر شاهد</label>
+          <select id="requires_evidence" name="requires_evidence">
+            <option value="1" {{ 'selected' if ev_on }}>الزامی است</option>
+            <option value="0" {{ 'selected' if not ev_on }}>اختیاری است</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="requires_review">تأیید اپراتور</label>
+          <select id="requires_review" name="requires_review">
+            <option value="1" {{ 'selected' if rv_on }}>لازم است</option>
+            <option value="0" {{ 'selected' if not rv_on }}>لازم نیست (تأیید خودکار)</option>
+          </select>
+        </div>
+      </div>
+      <p class="field__hint" style="margin-top:-6px">
+        اگر تصویر اختیاری باشد، پاسخ متنی (حداقل ۲ نویسه) الزامی است.
+      </p>
+    </fieldset>
 
     <button class="btn btn--block mt-2" type="submit">ذخیره</button>
+    {% if not mission %}
+      <p class="field__hint">مأموریت جدید به‌صورت پیش‌نویس ساخته می‌شود؛ پس از ذخیره، «انتشار» را بزنید.</p>
+    {% endif %}
   </form>
 {% endblock %}

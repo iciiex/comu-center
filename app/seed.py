@@ -62,6 +62,10 @@ def seed_demo(conn: sqlite3.Connection, evidence_dir=None) -> None:
             "ends": 30,
             "max_per_user": 1,
             "status": "active",
+            "category": "customer_visit",
+            "difficulty": "easy",
+            "game_xp": 100,
+            "game_coins": 20,
         },
         {
             "title": "چیدمان قفسه محصولات هدف",
@@ -71,6 +75,10 @@ def seed_demo(conn: sqlite3.Connection, evidence_dir=None) -> None:
             "ends": 20,
             "max_per_user": 2,
             "status": "active",
+            "category": "product_intro",
+            "difficulty": "medium",
+            "game_xp": 150,
+            "game_coins": 30,
         },
         {
             "title": "کمپین پایان‌یافته (نمونه)",
@@ -103,8 +111,9 @@ def seed_demo(conn: sqlite3.Connection, evidence_dir=None) -> None:
         conn.execute(
             """INSERT INTO missions
                (id, organization_id, title, description, mission_type, points, starts_at,
-                ends_at, max_per_user, requires_review, status, rule_code, created_at)
-               VALUES (?, ?, ?, ?, 'photo_submission', ?, ?, ?, ?, 1, ?, ?, ?)""",
+                ends_at, max_per_user, requires_review, status, rule_code, created_at,
+                category, difficulty, game_xp, game_coins)
+               VALUES (?, ?, ?, ?, 'photo_submission', ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 mission_id,
                 org_id,
@@ -117,6 +126,10 @@ def seed_demo(conn: sqlite3.Connection, evidence_dir=None) -> None:
                 mission["status"],
                 rule_code,
                 _iso(timedelta()),
+                mission.get("category", "customer_visit"),
+                mission.get("difficulty", "easy"),
+                mission.get("game_xp", 0),  # SAMPLE values (D-009 PROPOSED)
+                mission.get("game_coins", 0),
             ),
         )
         conn.execute(

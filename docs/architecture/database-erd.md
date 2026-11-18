@@ -99,12 +99,24 @@ sales_user_map (organization_id, user_external_id) → users.id   -- explicit ma
 ## Migrations
 
 - `db/migrations/*.sql` run at startup (`app.db.apply_migrations`), once each, in filename order:
-  `0001_init.sql`, `0002_score_corrections.sql`, `0003_sales_import.sql`, `0004_game_progress.sql`, `0005_tribal_org_foundation.sql`, `0006_game_demo_store.sql`.
+  `0001_init.sql`, `0002_score_corrections.sql`, `0003_sales_import.sql`, `0004_game_progress.sql`, `0005_tribal_org_foundation.sql`, `0006_game_demo_store.sql`, `0007_unified_missions.sql`.
 - `schema_migrations (name, applied_at)` records what ran, because 0003 needs a real `ALTER TABLE`
   that is not idempotent. Existing databases pick up the record automatically (0001/0002 are idempotent).
 - The runner has no checksums or downgrades — it is a prototype stopgap; never edit an applied file.
 - Before production: explicit versioned runner (Alembic/Knex), PostgreSQL, tested rollback path.
   Destructive migrations require backup + restore plan (AGENTS.md §6).
+
+## Unified missions (0007, D-009 PROPOSED)
+
+- `missions` gains `instructions, category, difficulty, estimated_minutes, game_xp, game_coins, requires_evidence,
+  updated_at`. Existing rows keep working: neutral defaults, 0 XP/coins, evidence required.
+- `submissions` gains `source` (`web|game`) and `game_xp_snapshot` / `game_coins_snapshot`, the game rewards frozen when
+  the visitor submits. The text answer is stored in the existing `note` column; the image in `submission_evidences`.
+- `game_reward_events (id, user_id, source_type, source_id → submissions, mission_id, xp, coins, created_at)`:
+  append-only game-economy ledger, `UNIQUE(source_type, source_id)` makes a grant idempotent. It is never combined with
+  `score_events` / `point_transactions` / `point_wallets`. The balance shown in the game remains the `game_progress`
+  projection, and each grant also writes a `game_completions` row (`idempotency_key = approval:<submission id>`) so
+  `/history` lists it.
 
 ## Known gaps
 

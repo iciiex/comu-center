@@ -12,6 +12,7 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+from app import game, game_rewards
 from app.scoring import (
     ScoringError,
     award_mission_approval,
@@ -110,6 +111,7 @@ def create_submission(
     request_id: str,
     note: str,
     evidence: dict[str, Any] | None,
+    source: str = "web",
 ) -> tuple[sqlite3.Row, bool]:
     """Create a submission once per request_id. Returns (submission, created)."""
     existing = conn.execute(
@@ -121,7 +123,7 @@ def create_submission(
 
     if count_user_submissions(conn, user.id, mission["id"]) >= mission["max_per_user"]:
         raise DomainError("MAX_ATTEMPTS_REACHED", "سقف تعداد انجام این مأموریت تکمیل شده است.")
-    if evidence is None:
+    if evidence is None and mission["requires_evidence"]:
         raise DomainError("EVIDENCE_REQUIRED", "برای این مأموریت ثبت تصویر شاهد الزامی است.")
 
     submission_id = _new_id()
@@ -131,25 +133,29 @@ def create_submission(
         with conn:
             conn.execute(
                 """INSERT INTO submissions
-                   (id, mission_id, user_id, status, note, request_id, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (submission_id, mission["id"], user.id, status, note.strip()[:500],
-                 request_id, created_at),
+                   (id, mission_id, user_id, status, note, request_id, created_at,
+                    source, game_xp_snapshot, game_coins_snapshot)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (submission_id, mission["id"], user.id, status, note.strip()[:1000],
+                 request_id, created_at, source, int(mission["game_xp"]),
+                 int(mission["game_coins"])),
             )
-            conn.execute(
-                """INSERT INTO submission_evidences
-                   (id, submission_id, file_name, content_type, storage_path, sha256, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    _new_id(),
-                    submission_id,
-                    evidence["file_name"],
-                    evidence["content_type"],
-                    evidence["storage_path"],
-                    evidence["sha256"],
-                    created_at,
-                ),
-            )
+            if evidence is not None:
+                conn.execute(
+                    """INSERT INTO submission_evidences
+                       (id, submission_id, file_name, content_type, storage_path, sha256,
+                        created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        _new_id(),
+                        submission_id,
+                        evidence["file_name"],
+                        evidence["content_type"],
+                        evidence["storage_path"],
+                        evidence["sha256"],
+                        created_at,
+                    ),
+                )
             audit(conn, user.id, "submission.created", "submission", submission_id,
                   {"mission_id": mission["id"]})
             if not mission["requires_review"]:
@@ -157,6 +163,7 @@ def create_submission(
                     "SELECT * FROM submissions WHERE id = ?", (submission_id,)
                 ).fetchone()
                 award_mission_approval(conn, submission, actor_id=None)
+                game_rewards.grant_game_reward(conn, submission)
     except sqlite3.IntegrityError:
         duplicate = conn.execute(
             "SELECT * FROM submissions WHERE user_id = ? AND request_id = ?",
@@ -283,6 +290,9 @@ def review_submission(
             ).fetchone()
             if new_status == "approved":
                 _, created = award_mission_approval(conn, updated, actor_id=actor.id)
+                # Game economy is separate from the score ledger; same transaction and
+                # idempotent through game_reward_events UNIQUE(source_type, source_id).
+                game_rewards.grant_game_reward(conn, updated)
     except ScoringError as exc:
         code = str(exc)
         messages = {
@@ -449,6 +459,26 @@ def _parse_day(value: str, *, end_of_day: bool = False) -> str:
     return moment.isoformat(timespec="seconds")
 
 
+def _int_field(form, name, default, low, high, code, message):
+    raw = form.get(name)
+    if raw is None or str(raw).strip() == "":
+        return default
+    try:
+        value = int(str(raw).strip())
+    except ValueError as exc:
+        raise DomainError(code, message) from exc
+    if value < low or value > high:
+        raise DomainError(code, message)
+    return value
+
+
+def _flag_field(form, name, default):
+    raw = form.get(name)
+    if raw is None or str(raw).strip() == "":
+        return 1 if default else 0
+    return 1 if str(raw).strip() in {"1", "true", "on", "yes"} else 0
+
+
 def _validate_mission_form(form: dict[str, Any]) -> dict[str, Any]:
     title = str(form.get("title", "")).strip()
     description = str(form.get("description", "")).strip()
@@ -474,6 +504,21 @@ def _validate_mission_form(form: dict[str, Any]) -> dict[str, Any]:
     if ends_at <= starts_at:
         raise DomainError("INVALID_WINDOW", "پایان بازه باید بعد از شروع باشد.")
 
+    instructions = str(form.get("instructions", "") or "").strip()
+    if len(instructions) > 4000:
+        raise DomainError("INSTRUCTIONS_TOO_LONG", "راهنمای انجام مأموریت حداکثر ۴۰۰۰ نویسه است.")
+    category = str(form.get("category") or "customer_visit")
+    if category not in game.catalog()["categories"]:
+        raise DomainError("INVALID_CATEGORY", "دسته‌بندی نامعتبر است.")
+    difficulty = str(form.get("difficulty") or "easy")
+    if difficulty not in game.catalog()["difficulty"]:
+        raise DomainError("INVALID_DIFFICULTY", "سطح دشواری نامعتبر است.")
+    estimated = _int_field(form, "estimated_minutes", 5, 1, 600, "INVALID_MINUTES",
+                           "زمان تقریبی باید بین ۱ تا ۶۰۰ دقیقه باشد.")
+    game_xp = _int_field(form, "game_xp", 0, 0, 10_000, "INVALID_GAME_XP",
+                         "XP بازی باید بین ۰ و ۱۰٬۰۰۰ باشد.")
+    game_coins = _int_field(form, "game_coins", 0, 0, 10_000, "INVALID_GAME_COINS",
+                            "سکه بازی باید بین ۰ و ۱۰٬۰۰۰ باشد.")
     return {
         "title": title,
         "description": description,
@@ -481,6 +526,14 @@ def _validate_mission_form(form: dict[str, Any]) -> dict[str, Any]:
         "max_per_user": max_per_user,
         "starts_at": starts_at,
         "ends_at": ends_at,
+        "instructions": instructions,
+        "category": category,
+        "difficulty": difficulty,
+        "estimated_minutes": estimated,
+        "game_xp": game_xp,
+        "game_coins": game_coins,
+        "requires_evidence": _flag_field(form, "requires_evidence", True),
+        "requires_review": _flag_field(form, "requires_review", True),
     }
 
 
@@ -492,10 +545,16 @@ def create_mission(conn: sqlite3.Connection, org_id: str, form: dict[str, Any], 
         conn.execute(
             """INSERT INTO missions
                (id, organization_id, title, description, mission_type, points, starts_at,
-                ends_at, max_per_user, requires_review, status, rule_code, created_at)
-               VALUES (?, ?, ?, ?, 'photo_submission', ?, ?, ?, ?, 1, 'draft', ?, ?)""",
+                ends_at, max_per_user, requires_review, status, rule_code, created_at,
+                instructions, category, difficulty, estimated_minutes, game_xp, game_coins,
+                requires_evidence, updated_at)
+               VALUES (?, ?, ?, ?, 'photo_submission', ?, ?, ?, ?, ?, 'draft', ?, ?,
+                       ?, ?, ?, ?, ?, ?, ?, ?)""",
             (mission_id, org_id, data["title"], data["description"], data["points"],
-             data["starts_at"], data["ends_at"], data["max_per_user"], rule_code, now_iso()),
+             data["starts_at"], data["ends_at"], data["max_per_user"], data["requires_review"],
+             rule_code, now_iso(), data["instructions"], data["category"], data["difficulty"],
+             data["estimated_minutes"], data["game_xp"], data["game_coins"],
+             data["requires_evidence"], now_iso()),
         )
         conn.execute(
             """INSERT INTO scoring_rule_versions
@@ -505,7 +564,10 @@ def create_mission(conn: sqlite3.Connection, org_id: str, form: dict[str, Any], 
             (_new_id(), rule_code, data["points"], data["starts_at"]),
         )
         audit(conn, actor.id, "mission.created", "mission", mission_id,
-              {"points": data["points"], "rule_code": rule_code})
+              {"points": data["points"], "rule_code": rule_code,
+               "game_xp": data["game_xp"], "game_coins": data["game_coins"],
+               "requires_review": data["requires_review"],
+               "requires_evidence": data["requires_evidence"]})
     return mission_id
 
 
@@ -576,13 +638,19 @@ def update_mission(
         conn.execute(
             """UPDATE missions
                SET title = ?, description = ?, points = ?, starts_at = ?, ends_at = ?,
-                   max_per_user = ?
+                   max_per_user = ?, instructions = ?, category = ?, difficulty = ?,
+                   estimated_minutes = ?, game_xp = ?, game_coins = ?, requires_evidence = ?,
+                   requires_review = ?, updated_at = ?
                WHERE id = ?""",
             (data["title"], data["description"], data["points"], data["starts_at"],
-             data["ends_at"], data["max_per_user"], mission["id"]),
+             data["ends_at"], data["max_per_user"], data["instructions"], data["category"],
+             data["difficulty"], data["estimated_minutes"], data["game_xp"],
+             data["game_coins"], data["requires_evidence"], data["requires_review"],
+             now_iso(), mission["id"]),
         )
         audit(conn, actor.id, "mission.updated", "mission", mission["id"],
-              {"points": data["points"], "new_rule_version": new_version})
+              {"points": data["points"], "new_rule_version": new_version,
+               "game_xp": data["game_xp"], "game_coins": data["game_coins"]})
     return new_version
 
 

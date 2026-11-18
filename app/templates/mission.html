@@ -27,7 +27,7 @@
 
       <div class="field mt-2">
         <label for="evidence">تصویر شاهد</label>
-        <input id="evidence" type="file" name="evidence" accept="image/jpeg,image/png,image/webp" required>
+        <input id="evidence" type="file" name="evidence" accept="image/jpeg,image/png,image/webp" {{ "required" if mission["requires_evidence"] }}>
         <p class="field__hint">JPG / PNG / WEBP — حداکثر ۴ مگابایت. تصویر فقط برای شما و اپراتور قابل مشاهده است.</p>
       </div>
 

@@ -24,7 +24,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app import admin_queries, db, game, repo, sales, tribal
+from app import admin_queries, db, game, game_missions, repo, sales, tribal
 from app.config import Settings
 from app.jalali import format_jalali, to_persian_digits
 from app.repo import DomainError
@@ -437,24 +437,55 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers["Cache-Control"] = "no-store"
         return response
 
+    def wants_v2(request: Request) -> bool:
+        """API v1 (catalog missions) stays the default; v2 (DB missions) is opt-in per request."""
+        return (
+            request.headers.get("x-game-api") == "2" or request.query_params.get("api") == "2"
+        )
+
     @app.get("/api/v1/game/bootstrap")
     def game_bootstrap(
         request: Request,
         user: CurrentUser = Depends(require_api_user),
         conn: sqlite3.Connection = Depends(conn_dep),
     ) -> JSONResponse:
-        result = game.bootstrap(conn, user, csrf_token(request))
+        if wants_v2(request):
+            result = game_missions.bootstrap_v2(conn, user, csrf_token(request))
+        else:
+            result = game.bootstrap(conn, user, csrf_token(request))
         conn.commit()
         return JSONResponse(result)
 
     @app.get("/api/v1/game/progress")
     def game_progress(
+        request: Request,
         user: CurrentUser = Depends(require_api_user),
         conn: sqlite3.Connection = Depends(conn_dep),
     ) -> JSONResponse:
-        result = game.get_progress(conn, user)
+        if wants_v2(request):
+            result = game_missions.get_progress_v2(conn, user)
+        else:
+            result = game.get_progress(conn, user)
         conn.commit()
         return JSONResponse(result)
+
+    @app.get("/api/v1/game/missions")
+    def game_missions_list(
+        request: Request,
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        progress = game._initialize(conn, user.id, user.full_name)
+        result = game_missions.projection(conn, user, progress)
+        conn.commit()
+        return JSONResponse({"missions": result["missions"], "date_key": result["date_key"]})
+
+    @app.get("/api/v1/game/submissions")
+    def game_submissions(
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        return JSONResponse(game_missions.list_submissions(conn, user))
 
     @app.get("/api/v1/game/store")
     def game_store(
@@ -511,6 +542,67 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         conn.commit()
         return JSONResponse(result)
 
+    @app.get("/api/v1/game/missions/{mission_id}")
+    def game_mission_detail(
+        mission_id: str,
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        result = {"mission": game_missions.get_mission(conn, user, mission_id)}
+        conn.commit()
+        return JSONResponse(result)
+
+    @app.post(
+        "/api/v1/game/missions/{mission_id}/submissions", dependencies=[Depends(csrf_guard)]
+    )
+    async def game_submit_mission(
+        mission_id: str,
+        answer: str = Form(""),
+        evidence: UploadFile | None = File(None),
+        idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+        user: CurrentUser = Depends(require_api_user),
+        conn: sqlite3.Connection = Depends(conn_dep),
+    ) -> JSONResponse:
+        stored: dict | None = None
+        written: Path | None = None
+        if evidence is not None and evidence.filename:
+            content_type = evidence.content_type or ""
+            if content_type not in ALLOWED_TYPES:
+                raise game.GameError(
+                    422, "INVALID_EVIDENCE_TYPE", "Only JPEG, PNG or WEBP images are accepted."
+                )
+            raw = await evidence.read(MAX_EVIDENCE_BYTES + 1)
+            if len(raw) > MAX_EVIDENCE_BYTES:
+                raise game.GameError(
+                    422, "EVIDENCE_TOO_LARGE", "The image must be smaller than 4 MB."
+                )
+            if not raw:
+                raise game.GameError(422, "EVIDENCE_EMPTY", "The image file is empty.")
+            relative = f"{uuid.uuid4()}{ALLOWED_TYPES[content_type]}"
+            written = settings.evidence_dir / relative
+            written.write_bytes(raw)
+            stored = {
+                "file_name": evidence.filename[:120],
+                "content_type": content_type,
+                "storage_path": relative,
+                "sha256": hashlib.sha256(raw).hexdigest(),
+            }
+        try:
+            result, replayed = game_missions.submit(
+                conn, user, mission_id, answer, stored, idempotency_key or ""
+            )
+        except Exception:
+            if written is not None:
+                written.unlink(missing_ok=True)
+            raise
+        if replayed and written is not None:
+            written.unlink(missing_ok=True)  # the first request already stored this image
+        return JSONResponse(
+            result,
+            status_code=200 if replayed else 201,
+            headers={"Idempotent-Replay": "true" if replayed else "false"},
+        )
+
     @app.put("/api/v1/game/missions/{mission_id}/draft", dependencies=[Depends(csrf_guard)])
     async def game_save_draft(
         mission_id: str,
@@ -522,17 +614,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             payload = await request.json()
         except (ValueError, UnicodeDecodeError):
             raise HTTPException(status_code=400, detail="Expected a JSON request body.") from None
-        result = game.save_draft(conn, user, mission_id, payload)
+        if wants_v2(request):
+            if mission_id in game._mission_map():  # demo-store special missions keep catalog drafts
+                game.save_draft(conn, user, mission_id, payload)
+                result = game_missions.get_progress_v2(conn, user)
+            else:
+                result = game_missions.save_draft(conn, user, mission_id, payload)
+        else:
+            result = game.save_draft(conn, user, mission_id, payload)
         conn.commit()
         return JSONResponse(result)
 
     @app.delete("/api/v1/game/missions/{mission_id}/draft", dependencies=[Depends(csrf_guard)])
     def game_discard_draft(
         mission_id: str,
+        request: Request,
         user: CurrentUser = Depends(require_api_user),
         conn: sqlite3.Connection = Depends(conn_dep),
     ) -> JSONResponse:
-        result = game.discard_draft(conn, user, mission_id)
+        if wants_v2(request):
+            if mission_id in game._mission_map():
+                game.discard_draft(conn, user, mission_id)
+                result = game_missions.get_progress_v2(conn, user)
+            else:
+                result = game_missions.discard_draft(conn, user, mission_id)
+        else:
+            result = game.discard_draft(conn, user, mission_id)
         conn.commit()
         return JSONResponse(result)
 
@@ -549,9 +656,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail="Expected a JSON request body.") from None
         if not isinstance(payload, dict) or set(payload) != {"answers"}:
             raise HTTPException(status_code=422, detail="Request may contain answers only.")
+        v2 = wants_v2(request)
+        if v2 and mission_id not in game._special_ids():
+            # v2: the six catalog missions are no longer playable; DB missions use /submissions.
+            raise game.GameError(404, "MISSION_NOT_FOUND", "Mission was not found.")
         result, replayed = game.complete_mission(
             conn, user, mission_id, payload["answers"], request.headers.get("Idempotency-Key", "")
         )
+        if v2:
+            progress = game._initialize(conn, user.id, user.full_name)
+            projection = game_missions.projection(conn, user, progress)
+            result = {**result, "missions": projection["missions"]}
+            result["progress"] = {**result["progress"], "daily": None}
         return JSONResponse(result, headers={"Idempotent-Replay": "true" if replayed else "false"})
 
     @app.get("/", response_class=HTMLResponse)
@@ -1301,6 +1417,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         return go(f"/admin/sales/{import_id}?processed={result['created']}", request)
 
+    CATEGORY_FA = {
+        "customer_visit": "ویزیت مشتری",
+        "product_intro": "معرفی محصول",
+        "follow_up": "پیگیری",
+        "new_customer": "مشتری جدید",
+        "market_research": "تحقیق بازار",
+        "sales_achievement": "دستاورد فروش",
+    }
+
+    def mission_form_options() -> dict:
+        catalog = game.catalog()
+        return {
+            "category_options": [
+                (key, CATEGORY_FA.get(key, key)) for key in catalog["categories"]
+            ],
+            "difficulty_options": [
+                ("easy", "آسان"), ("medium", "متوسط"), ("hard", "سخت"),
+            ],
+        }
+
     @app.get("/admin/missions", response_class=HTMLResponse)
     def admin_missions(
         request: Request,
@@ -1325,7 +1461,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return page(
             request,
             "admin_mission_form.html",
-            {"active": "missions", "mission": None, "form": {}},
+            {"active": "missions", "mission": None, "form": {}, **mission_form_options()},
             user=user,
         )
 
@@ -1342,6 +1478,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         max_per_user: str = Form("1"),
         starts_on: str = Form(""),
         ends_on: str = Form(""),
+        instructions: str = Form(""),
+        category: str = Form("customer_visit"),
+        difficulty: str = Form("easy"),
+        estimated_minutes: str = Form("5"),
+        game_xp: str = Form("0"),
+        game_coins: str = Form("0"),
+        requires_evidence: str = Form("1"),
+        requires_review: str = Form("1"),
         user: CurrentUser = Depends(require_admin),
         conn: sqlite3.Connection = Depends(conn_dep),
     ):
@@ -1352,6 +1496,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "max_per_user": max_per_user,
             "starts_on": starts_on,
             "ends_on": ends_on,
+            "instructions": instructions,
+            "category": category,
+            "difficulty": difficulty,
+            "estimated_minutes": estimated_minutes,
+            "game_xp": game_xp,
+            "game_coins": game_coins,
+            "requires_evidence": requires_evidence,
+            "requires_review": requires_review,
         }
         try:
             repo.create_mission(conn, user.organization_id, form, user)
@@ -1359,7 +1511,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return page(
                 request,
                 "admin_mission_form.html",
-                {"active": "missions", "mission": None, "form": form, "error": exc.message},
+                {"active": "missions", "mission": None, "form": form, "error": exc.message,
+                 **mission_form_options()},
                 status_code=422,
                 user=user,
             )
@@ -1382,11 +1535,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "max_per_user": mission["max_per_user"],
             "starts_on": mission["starts_at"][:10],
             "ends_on": mission["ends_at"][:10],
+            "instructions": mission["instructions"],
+            "category": mission["category"],
+            "difficulty": mission["difficulty"],
+            "estimated_minutes": mission["estimated_minutes"],
+            "game_xp": mission["game_xp"],
+            "game_coins": mission["game_coins"],
+            "requires_evidence": mission["requires_evidence"],
+            "requires_review": mission["requires_review"],
         }
         return page(
             request,
             "admin_mission_form.html",
-            {"active": "missions", "mission": mission, "form": form},
+            {"active": "missions", "mission": mission, "form": form, **mission_form_options()},
             user=user,
         )
 
@@ -1404,6 +1565,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         max_per_user: str = Form("1"),
         starts_on: str = Form(""),
         ends_on: str = Form(""),
+        instructions: str = Form(""),
+        category: str = Form("customer_visit"),
+        difficulty: str = Form("easy"),
+        estimated_minutes: str = Form("5"),
+        game_xp: str = Form("0"),
+        game_coins: str = Form("0"),
+        requires_evidence: str = Form("1"),
+        requires_review: str = Form("1"),
         user: CurrentUser = Depends(require_admin),
         conn: sqlite3.Connection = Depends(conn_dep),
     ):
@@ -1417,6 +1586,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "max_per_user": max_per_user,
             "starts_on": starts_on,
             "ends_on": ends_on,
+            "instructions": instructions,
+            "category": category,
+            "difficulty": difficulty,
+            "estimated_minutes": estimated_minutes,
+            "game_xp": game_xp,
+            "game_coins": game_coins,
+            "requires_evidence": requires_evidence,
+            "requires_review": requires_review,
         }
         try:
             new_version = repo.update_mission(conn, mission, form, user)
@@ -1424,7 +1601,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return page(
                 request,
                 "admin_mission_form.html",
-                {"active": "missions", "mission": mission, "form": form, "error": exc.message},
+                {"active": "missions", "mission": mission, "form": form, "error": exc.message,
+                 **mission_form_options()},
                 status_code=422,
                 user=user,
             )

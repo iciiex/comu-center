@@ -24,6 +24,12 @@
       {% if submission['status'] == 'submitted' %}<span class="pill pill--amber">در انتظار بررسی</span>
       {% elif submission['status'] == 'approved' %}<span class="pill pill--green">تأییدشده</span>
       {% else %}<span class="pill pill--red">ردشده</span>{% endif %}
+      {% if submission['source'] == 'game' %}<span class="pill pill--gray">ثبت‌شده از بازی</span>{% endif %}
+      {% if submission['game_xp_snapshot'] or submission['game_coins_snapshot'] %}
+        <span class="pill pill--gray" title="پاداش اقتصاد بازی؛ جدا از امتیاز سازمانی">
+          پاداش بازی پس از تأیید: {{ (submission['game_xp_snapshot'] or 0)|fa }} XP · {{ (submission['game_coins_snapshot'] or 0)|fa }} سکه
+        </span>
+      {% endif %}
       <span class="pill pill--gray">{{ evidences|length|fa }} تصویر شاهد</span>
     </div>
   </div>

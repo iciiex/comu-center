@@ -91,6 +91,7 @@ Two sources feed this file:
 | **OD-10** | سرپرست فروش | OPEN | — | B3 |
 | **OD-11** | یکپارچگی | OPEN | — | — |
 | **OD-12** | ظرفیت | OPEN | — | D1, D6 |
+| **OD-13** | سیاست پاداش بازی برای مأموریت‌های مدیریت‌شده | OPEN | — | — |
 
 Full text, options and impact: `docs/decisions/open-decisions.md`. The "coded in" column
 lists the files to revisit when the decision is made.
@@ -107,6 +108,7 @@ lists the files to revisit when the decision is made.
 | **D-006** | ورود نمایشی بازی در محیط hosted با `KILOOS_ENV=demo` (فقط ویزیتور) | PROPOSED | `docs/decisions/decision-log.md` | `app/config.py` |
 | **D-007** | میزبانی دمو: Render (Docker + دیسک پایدار) با SQLite و Vercel rewrite برای فرانت | PROPOSED | `docs/decisions/decision-log.md` | — |
 | **D-008** | ورود کارکنان (operator/admin) در دموی hosted با کد دسترسی | PROPOSED | `docs/decisions/decision-log.md` | `app/config.py`, `app/main.py` |
+| **D-009** | پایگاه‌داده منبع واحد مأموریت‌ها برای بازی؛ دو اقتصاد پاداش جدا | PROPOSED | `docs/decisions/decision-log.md` | `app/game_missions.py`, `app/game_rewards.py`, `app/seed.py`, `db/migrations/0007_unified_missions.sql`, `tests/test_unified_missions.py` |
 | **ADR-0001** | FastAPI + SQLite for the prototype | PROPOSED | `docs/architecture/decisions/0001-fastapi-sqlite-prototype.md` | `db/migrations/0001_init.sql` |
 
 ## 6. Milestones
@@ -172,7 +174,7 @@ Use this list when a decision changes: these are the files to re-read and update
 | **MVP-01** | `.agent/CONTEXT.md` | 6 | `.agent/CONTEXT.md`, `AGENTS.md`, `CHANGELOG.md`, `docs/delivery/backlog.md`, `docs/handoffs/handover.md`, `docs/product/prd.md` |
 | **MVP-02** | `.agent/CONTEXT.md` | 5 | `.agent/CONTEXT.md`, `README.md`, `docs/delivery/backlog.md`, `docs/handoffs/handover.md`, `docs/product/prd.md` |
 | **MVP-03** | `.agent/CONTEXT.md` | 4 | `.agent/CONTEXT.md`, `docs/delivery/backlog.md`, `docs/handoffs/handover.md`, `docs/product/prd.md` |
-| **MVP-04** | `.agent/CONTEXT.md` | 3 | `.agent/CONTEXT.md`, `docs/delivery/backlog.md`, `docs/product/prd.md` |
+| **MVP-04** | `.agent/CONTEXT.md` | 4 | `.agent/CONTEXT.md`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md`, `docs/product/prd.md` |
 | **MVP-05** | `.agent/CONTEXT.md` | 3 | `.agent/CONTEXT.md`, `docs/delivery/backlog.md`, `docs/product/prd.md` |
 | **MVP-06** | `.agent/CONTEXT.md` | 4 | `.agent/CONTEXT.md`, `.agent/playbooks/vertical-slice.md`, `docs/delivery/backlog.md`, `docs/product/prd.md` |
 | **MVP-07** | `.agent/CONTEXT.md` | 4 | `.agent/CONTEXT.md`, `.agent/playbooks/vertical-slice.md`, `docs/agent-guide/knowledge-graph.md`, `docs/product/prd.md` |
@@ -182,7 +184,7 @@ Use this list when a decision changes: these are the files to re-read and update
 | **MVP-11** | `.agent/CONTEXT.md` | 3 | `.agent/CONTEXT.md`, `docs/delivery/backlog.md`, `docs/product/prd.md` |
 | **MVP-12** | `.agent/CONTEXT.md` | 3 | `.agent/CONTEXT.md`, `docs/delivery/backlog.md`, `docs/product/prd.md` |
 | **MVP-13** | `.agent/CONTEXT.md` | 3 | `.agent/CONTEXT.md`, `docs/delivery/backlog.md`, `docs/product/prd.md` |
-| **BR-001** | `.agent/CONTEXT.md` | 12 | `.agent/CONTEXT.md`, `.agent/playbooks/prototype-9-days.md`, `.agent/roles/03-backend.md`, `CHANGELOG.md`, `README.md`, `docs/delivery/demo-script.md`, `docs/engineering/api-spec.md`, `docs/handoffs/current-state.md`, `docs/handoffs/handover.md`, `docs/product/prd.md`, `docs/quality/qa-test-strategy.md`, `tests/test_flow.py` |
+| **BR-001** | `.agent/CONTEXT.md` | 13 | `.agent/CONTEXT.md`, `.agent/playbooks/prototype-9-days.md`, `.agent/roles/03-backend.md`, `CHANGELOG.md`, `README.md`, `docs/decisions/decision-log.md`, `docs/delivery/demo-script.md`, `docs/engineering/api-spec.md`, `docs/handoffs/current-state.md`, `docs/handoffs/handover.md`, `docs/product/prd.md`, `docs/quality/qa-test-strategy.md`, `tests/test_flow.py` |
 | **BR-002** | `.agent/CONTEXT.md` | 6 | `.agent/CONTEXT.md`, `.agent/playbooks/prototype-9-days.md`, `.agent/roles/03-backend.md`, `docs/engineering/api-spec.md`, `docs/handoffs/handover.md`, `docs/product/prd.md` |
 | **BR-003** | `.agent/CONTEXT.md` | 3 | `.agent/CONTEXT.md`, `.agent/playbooks/vertical-slice.md`, `docs/delivery/backlog.md` |
 | **BR-004** | `.agent/CONTEXT.md` | 2 | `.agent/CONTEXT.md`, `.agent/playbooks/vertical-slice.md` |
@@ -221,14 +223,16 @@ Use this list when a decision changes: these are the files to re-read and update
 | **OD-10** | `docs/decisions/open-decisions.md` | 5 | `.agent/CONTEXT.md`, `docs/decisions/open-decisions.md`, `docs/delivery/backlog.md`, `docs/delivery/demo-script.md`, `docs/product/admin-panel-spec.md` |
 | **OD-11** | `docs/decisions/open-decisions.md` | 5 | `.agent/CONTEXT.md`, `docs/decisions/decision-log.md`, `docs/decisions/open-decisions.md`, `docs/engineering/sales-import.md`, `docs/handoffs/handover.md` |
 | **OD-12** | `docs/decisions/open-decisions.md` | 10 | `.agent/CONTEXT.md`, `docs/agent-guide/01-start.md`, `docs/architecture/decisions/0001-fastapi-sqlite-prototype.md`, `docs/architecture/deployment-architecture.md`, `docs/decisions/decision-log.md`, `docs/decisions/open-decisions.md`, `docs/delivery/backlog.md`, `docs/handoffs/current-state.md`, `docs/handoffs/handover.md`, `docs/product/prd.md` |
+| **OD-13** | `docs/decisions/open-decisions.md` | 3 | `docs/decisions/decision-log.md`, `docs/decisions/open-decisions.md`, `docs/handoffs/current-state.md` |
 | **D-001** | `docs/decisions/decision-log.md` | 9 | `CHANGELOG.md`, `docs/README.md`, `docs/agent-guide/01-start.md`, `docs/architecture/decisions/0001-fastapi-sqlite-prototype.md`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md`, `docs/delivery/demo-script.md`, `docs/handoffs/current-state.md`, `docs/handoffs/handover.md` |
 | **D-002** | `docs/decisions/decision-log.md` | 11 | `CHANGELOG.md`, `README.md`, `app/security.py`, `docs/agent-guide/01-start.md`, `docs/architecture/deployment-architecture.md`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md`, `docs/engineering/api-spec.md`, `docs/handoffs/current-state.md`, `docs/handoffs/handover.md`, `docs/operations/runbook.md` |
 | **D-003** | `docs/decisions/decision-log.md` | 8 | `CHANGELOG.md`, `README.md`, `app/maintenance.py`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md`, `docs/delivery/demo-script.md`, `docs/handoffs/current-state.md`, `docs/operations/runbook.md` |
 | **D-004** | `docs/decisions/decision-log.md` | 10 | `CHANGELOG.md`, `README.md`, `docs/agent-guide/01-start.md`, `docs/agent-guide/knowledge-graph.md`, `docs/architecture/technical-design.md`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md`, `docs/delivery/demo-script.md`, `docs/delivery/execution-plan.md`, `docs/engineering/scoring-engine.md` |
 | **D-005** | `docs/decisions/decision-log.md` | 15 | `CHANGELOG.md`, `README.md`, `docs/README.md`, `docs/agent-guide/01-start.md`, `docs/agent-guide/03-deliver.md`, `docs/architecture/technical-design.md`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md`, `docs/delivery/demo-script.md`, `docs/delivery/execution-plan.md`, `docs/engineering/api-spec.md`, `docs/engineering/sales-import.md`, `docs/engineering/scoring-engine.md`, `docs/handoffs/current-state.md`, `docs/handoffs/handover.md` |
-| **D-006** | `docs/decisions/decision-log.md` | 4 | `CHANGELOG.md`, `app/config.py`, `docs/decisions/decision-log.md`, `docs/handoffs/current-state.md` |
+| **D-006** | `docs/decisions/decision-log.md` | 5 | `CHANGELOG.md`, `app/config.py`, `docs/decisions/decision-log.md`, `docs/engineering/game-bff-alignment.md`, `docs/handoffs/current-state.md` |
 | **D-007** | `docs/decisions/decision-log.md` | 4 | `CHANGELOG.md`, `docs/decisions/decision-log.md`, `docs/handoffs/current-state.md`, `docs/operations/deploy-render.md` |
 | **D-008** | `docs/decisions/decision-log.md` | 6 | `CHANGELOG.md`, `app/config.py`, `app/main.py`, `docs/decisions/decision-log.md`, `docs/handoffs/current-state.md`, `docs/operations/runbook.md` |
+| **D-009** | `docs/decisions/decision-log.md` | 12 | `CHANGELOG.md`, `app/game_missions.py`, `app/game_rewards.py`, `app/seed.py`, `db/migrations/0007_unified_missions.sql`, `docs/architecture/database-erd.md`, `docs/decisions/decision-log.md`, `docs/decisions/open-decisions.md`, `docs/engineering/api-spec.md`, `docs/engineering/game-bff-alignment.md`, `docs/handoffs/current-state.md`, `tests/test_unified_missions.py` |
 | **ADR-0001** | `docs/architecture/decisions/0001-fastapi-sqlite-prototype.md` | 10 | `CHANGELOG.md`, `README.md`, `db/migrations/0001_init.sql`, `docs/README.md`, `docs/agent-guide/knowledge-graph.md`, `docs/architecture/database-erd.md`, `docs/architecture/decisions/0001-fastapi-sqlite-prototype.md`, `docs/architecture/solution-architecture.md`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md` |
 | **ADR-0002** | not defined in this repository | 4 | `docs/architecture/decisions/0001-fastapi-sqlite-prototype.md`, `docs/architecture/solution-architecture.md`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md` |
 | **ADR-0010** | not defined in this repository | 2 | `CHANGELOG.md`, `docs/delivery/backlog.md` |

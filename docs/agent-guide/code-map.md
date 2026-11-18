@@ -33,11 +33,13 @@ Contents: [1 Modules](#1-modules) · [2 Routes](#2-routes) · [3 Route details](
 | `app/admin_queries.py` | 10 | `repo` |
 | `app/config.py` | 2 | — |
 | `app/db.py` | 4 | `config`, `seed` |
-| `app/game.py` | 32 | `db` |
+| `app/game.py` | 33 | `db` |
+| `app/game_missions.py` | 17 | `db`, `game`, `repo`, `scoring` |
+| `app/game_rewards.py` | 2 | `game` |
 | `app/jalali.py` | 3 | — |
-| `app/main.py` | 73 | `admin_queries`, `config`, `db`, `game`, `jalali`, `repo`, `sales`, `sample_sales`, `scoring`, `security`, `tribal` |
+| `app/main.py` | 79 | `admin_queries`, `config`, `db`, `game`, `game_missions`, `jalali`, `repo`, `sales`, `sample_sales`, `scoring`, `security`, `tribal` |
 | `app/maintenance.py` | 3 | `config`, `db` |
-| `app/repo.py` | 42 | `scoring` |
+| `app/repo.py` | 44 | `game`, `game_rewards`, `scoring` |
 | `app/sales.py` | 11 | — |
 | `app/sample_sales.py` | 3 | `config` |
 | `app/scoring.py` | 9 | — |
@@ -51,10 +53,16 @@ graph LR
     db --> config
     db --> seed
     game --> db
+    game_missions --> db
+    game_missions --> game
+    game_missions --> repo
+    game_missions --> scoring
+    game_rewards --> game
     main --> admin_queries
     main --> config
     main --> db
     main --> game
+    main --> game_missions
     main --> jalali
     main --> repo
     main --> sales
@@ -64,6 +72,8 @@ graph LR
     main --> tribal
     maintenance --> config
     maintenance --> db
+    repo --> game
+    repo --> game_rewards
     repo --> scoring
     sample_sales --> config
     seed --> config
@@ -82,11 +92,11 @@ graph LR
 | GET | `/admin/leaderboard` | admin | — | `main.admin_leaderboard` | `admin_leaderboard.html` | 1 |
 | GET | `/admin/missions` | staff | — | `main.admin_missions` | `admin_missions.html` | 0 |
 | GET | `/admin/missions/new` | admin | — | `main.admin_mission_new` | `admin_mission_form.html` | 1 |
-| POST | `/admin/missions/new` | admin | yes | `main.admin_mission_create` | `admin_mission_form.html` | 2 |
-| GET | `/admin/missions/{mission_id}` | admin | — | `main.admin_mission_edit` | `admin_mission_form.html` | 0 |
-| POST | `/admin/missions/{mission_id}` | admin | yes | `main.admin_mission_update` | `admin_mission_form.html` | 6 |
+| POST | `/admin/missions/new` | admin | yes | `main.admin_mission_create` | `admin_mission_form.html` | 14 |
+| GET | `/admin/missions/{mission_id}` | admin | — | `main.admin_mission_edit` | `admin_mission_form.html` | 1 |
+| POST | `/admin/missions/{mission_id}` | admin | yes | `main.admin_mission_update` | `admin_mission_form.html` | 7 |
 | POST | `/admin/missions/{mission_id}/archive` | admin | yes | `main.admin_mission_archive` | — | 0 |
-| POST | `/admin/missions/{mission_id}/publish` | admin | yes | `main.admin_mission_publish` | — | 2 |
+| POST | `/admin/missions/{mission_id}/publish` | admin | yes | `main.admin_mission_publish` | — | 13 |
 | GET | `/admin/points` | admin | — | `main.admin_points` | `admin_points.html` | 2 |
 | GET | `/admin/sales` | admin | — | `main.admin_sales` | `admin_sales.html` | 4 |
 | POST | `/admin/sales` | admin | yes | `main.admin_sales_upload` | `admin_sales_new.html` | 19 |
@@ -95,27 +105,31 @@ graph LR
 | GET | `/admin/sales/{import_id}` | admin | — | `main.admin_sale_detail` | `admin_sale_detail.html` | 3 |
 | POST | `/admin/sales/{import_id}/process` | admin | yes | `main.admin_sales_process` | `error.html` | 11 |
 | POST | `/admin/score-events/{event_id}/reverse` | admin | yes | `main.admin_reverse_score` | `error.html` | 13 |
-| GET | `/admin/submissions` | staff | — | `main.admin_queue` | `admin_queue.html` | 5 |
+| GET | `/admin/submissions` | staff | — | `main.admin_queue` | `admin_queue.html` | 6 |
 | GET | `/admin/submissions/{submission_id}` | staff | — | `main.admin_review` | `admin_review.html` | 2 |
-| POST | `/admin/submissions/{submission_id}/review` | staff | yes | `main.admin_decide` | `admin_review.html` | 18 |
+| POST | `/admin/submissions/{submission_id}/review` | staff | yes | `main.admin_decide` | `admin_review.html` | 21 |
 | GET | `/admin/users` | admin | — | `main.admin_users` | `admin_users.html` | 2 |
 | GET | `/admin/users/{user_id}` | admin | — | `main.admin_user_detail` | `admin_user.html` | 1 |
-| GET | `/api/v1/game/bootstrap` | public | — | `main.game_bootstrap` | — | 11 |
+| GET | `/api/v1/game/bootstrap` | public | — | `main.game_bootstrap` | — | 21 |
 | POST | `/api/v1/game/demo-login` | public | exempt | `main.game_demo_login` | — | 3 |
 | GET | `/api/v1/game/demo-users` | public | — | `main.game_demo_users` | — | 4 |
-| GET | `/api/v1/game/history` | public | — | `main.game_history` | — | 1 |
+| GET | `/api/v1/game/history` | public | — | `main.game_history` | — | 2 |
 | POST | `/api/v1/game/logout` | token | yes | `main.game_logout` | — | 1 |
-| POST | `/api/v1/game/missions/{mission_id}/completions` | token | yes | `main.game_complete_mission` | — | 5 |
+| GET | `/api/v1/game/missions` | public | — | `main.game_missions_list` | — | 1 |
+| GET | `/api/v1/game/missions/{mission_id}` | public | — | `main.game_mission_detail` | — | 1 |
+| POST | `/api/v1/game/missions/{mission_id}/completions` | token | yes | `main.game_complete_mission` | — | 6 |
 | DELETE | `/api/v1/game/missions/{mission_id}/draft` | token | yes | `main.game_discard_draft` | — | 0 |
 | PUT | `/api/v1/game/missions/{mission_id}/draft` | token | yes | `main.game_save_draft` | — | 0 |
+| POST | `/api/v1/game/missions/{mission_id}/submissions` | token | yes | `main.game_submit_mission` | — | 8 |
 | PATCH | `/api/v1/game/profile` | token | yes | `main.game_profile` | — | 0 |
 | GET | `/api/v1/game/progress` | public | — | `main.game_progress` | — | 2 |
 | GET | `/api/v1/game/store` | public | — | `main.game_store` | — | 1 |
 | POST | `/api/v1/game/store/purchases` | token | yes | `main.game_store_purchase` | — | 2 |
+| GET | `/api/v1/game/submissions` | public | — | `main.game_submissions` | — | 0 |
 | GET | `/api/v1/tribal/bootstrap` | user | — | `main.tribal_bootstrap` | — | 2 |
 | GET | `/api/v1/tribal/org-units` | user | — | `main.tribal_org_units` | — | 2 |
 | GET | `/api/v1/tribal/org-units/{unit_id}` | user | — | `main.tribal_org_unit` | — | 1 |
-| POST | `/demo-login` | public | exempt | `main.demo_login` | — | 76 |
+| POST | `/demo-login` | public | exempt | `main.demo_login` | — | 88 |
 | GET | `/evidence/{evidence_id}` | user | — | `main.evidence_file` | — | 0 |
 | GET | `/health` | public | — | `main.health` | — | 2 |
 | GET | `/home` | user | — | `main.home` | `home.html` | 3 |
@@ -128,7 +142,7 @@ graph LR
 | GET | `/score` | user | — | `main.score_page` | `score.html` | 3 |
 | GET | `/submissions/{submission_id}` | user | — | `main.submission_page` | `submission.html` | 4 |
 
-52 routes. FastAPI also serves `/api/docs`, `/openapi.json` and the
+56 routes. FastAPI also serves `/api/docs`, `/openapi.json` and the
 `/static` mount; they are framework-provided and not listed.
 
 ## 3. Route details
@@ -211,7 +225,7 @@ graph LR
 - Renders: `admin_mission_form.html` · Redirects: —
 - Non-200 status codes (handler and its guards): `303`, `403`
 - Calls: —
-- Closures used: `main.page`, `main.require_admin`
+- Closures used: `main.mission_form_options`, `main.page`, `main.require_admin`
 - Reads: `users`
 - Writes: —
 - Error codes reachable: —
@@ -223,11 +237,11 @@ graph LR
 - Renders: `admin_mission_form.html` · Redirects: `/admin/missions?created=1`
 - Non-200 status codes (handler and its guards): `303`, `403`, `422`
 - Calls: `repo.create_mission`
-- Closures used: `main.conn_dep`, `main.csrf_guard`, `main.go`, `main.page`, `main.require_admin`
+- Closures used: `main.conn_dep`, `main.csrf_guard`, `main.go`, `main.mission_form_options`, `main.page`, `main.require_admin`
 - Reads: `users`
 - Writes: `audit_logs`, `missions`, `scoring_rule_versions`
-- Error codes reachable: `DomainError:DESCRIPTION_REQUIRED`, `DomainError:INVALID_DATE`, `DomainError:INVALID_MAX`, `DomainError:INVALID_POINTS`, `DomainError:INVALID_WINDOW`, `DomainError:TITLE_REQUIRED`
-- Tests (2): `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`
+- Error codes reachable: `DomainError:DESCRIPTION_REQUIRED`, `DomainError:INSTRUCTIONS_TOO_LONG`, `DomainError:INVALID_CATEGORY`, `DomainError:INVALID_DATE`, `DomainError:INVALID_DIFFICULTY`, `DomainError:INVALID_MAX`, `DomainError:INVALID_POINTS`, `DomainError:INVALID_WINDOW`, `DomainError:TITLE_REQUIRED`
+- Tests (14): `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_unified_missions::test_admin_form_validation_and_edit_round_trip`, `test_unified_missions::test_auto_approved_mission_awards_both_economies_once`, `test_unified_missions::test_completion_limit_pending_block_and_rejection_gives_no_rewards`, `test_unified_missions::test_draft_and_unstarted_missions_are_hidden_and_not_submittable`, `test_unified_missions::test_existing_web_flow_and_legacy_forms_still_work`, `test_unified_missions::test_expired_mission_is_listed_as_expired_and_cannot_be_started`, `test_unified_missions::test_full_scenario_create_publish_submit_review_rewards_and_retries`, `test_unified_missions::test_game_api_permissions_csrf_and_org_scope`, `test_unified_missions::test_game_reward_is_frozen_at_submission_time`, `test_unified_missions::test_v1_remains_default_and_v2_hides_unavailable_features`, `test_unified_missions::test_v2_drafts_use_db_missions`, `test_unified_missions::test_validation_evidence_answer_and_idempotency_conflict`
 
 ### `GET /admin/missions/{mission_id}`
 
@@ -235,11 +249,11 @@ graph LR
 - Renders: `admin_mission_form.html` · Redirects: —
 - Non-200 status codes (handler and its guards): `303`, `403`, `404`
 - Calls: `repo.mission_by_id`
-- Closures used: `main.conn_dep`, `main.page`, `main.require_admin`
+- Closures used: `main.conn_dep`, `main.mission_form_options`, `main.page`, `main.require_admin`
 - Reads: `missions`, `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (0): —
+- Tests (1): `test_unified_missions::test_admin_form_validation_and_edit_round_trip`
 
 ### `POST /admin/missions/{mission_id}`
 
@@ -247,11 +261,11 @@ graph LR
 - Renders: `admin_mission_form.html` · Redirects: `/admin/missions/{mission_id}{suffix}`
 - Non-200 status codes (handler and its guards): `303`, `403`, `404`, `422`
 - Calls: `repo.mission_by_id`, `repo.update_mission`
-- Closures used: `main.conn_dep`, `main.csrf_guard`, `main.go`, `main.page`, `main.require_admin`
+- Closures used: `main.conn_dep`, `main.csrf_guard`, `main.go`, `main.mission_form_options`, `main.page`, `main.require_admin`
 - Reads: `missions`, `scoring_rule_versions`, `users`
 - Writes: `audit_logs`, `missions`, `scoring_rule_versions`
-- Error codes reachable: `DomainError:DESCRIPTION_REQUIRED`, `DomainError:INVALID_DATE`, `DomainError:INVALID_MAX`, `DomainError:INVALID_POINTS`, `DomainError:INVALID_WINDOW`, `DomainError:TITLE_REQUIRED`
-- Tests (6): `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_mission_edit_publishes_new_rule_version`
+- Error codes reachable: `DomainError:DESCRIPTION_REQUIRED`, `DomainError:INSTRUCTIONS_TOO_LONG`, `DomainError:INVALID_CATEGORY`, `DomainError:INVALID_DATE`, `DomainError:INVALID_DIFFICULTY`, `DomainError:INVALID_MAX`, `DomainError:INVALID_POINTS`, `DomainError:INVALID_WINDOW`, `DomainError:TITLE_REQUIRED`
+- Tests (7): `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_mission_edit_publishes_new_rule_version`, `test_unified_missions::test_game_reward_is_frozen_at_submission_time`
 
 ### `POST /admin/missions/{mission_id}/archive`
 
@@ -275,7 +289,7 @@ graph LR
 - Reads: `missions`, `scoring_rule_versions`, `users`
 - Writes: `audit_logs`, `missions`, `scoring_rule_versions`
 - Error codes reachable: `DomainError:NOT_DRAFT`
-- Tests (2): `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`
+- Tests (13): `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_unified_missions::test_admin_form_validation_and_edit_round_trip`, `test_unified_missions::test_auto_approved_mission_awards_both_economies_once`, `test_unified_missions::test_completion_limit_pending_block_and_rejection_gives_no_rewards`, `test_unified_missions::test_draft_and_unstarted_missions_are_hidden_and_not_submittable`, `test_unified_missions::test_expired_mission_is_listed_as_expired_and_cannot_be_started`, `test_unified_missions::test_full_scenario_create_publish_submit_review_rewards_and_retries`, `test_unified_missions::test_game_api_permissions_csrf_and_org_scope`, `test_unified_missions::test_game_reward_is_frozen_at_submission_time`, `test_unified_missions::test_v1_remains_default_and_v2_hides_unavailable_features`, `test_unified_missions::test_v2_drafts_use_db_missions`, `test_unified_missions::test_validation_evidence_answer_and_idempotency_conflict`
 
 ### `GET /admin/points`
 
@@ -385,7 +399,7 @@ graph LR
 - Reads: `missions`, `submission_evidences`, `submissions`, `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (5): `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_operator_navigation_hides_sales_import_link`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_visitors_and_operators_have_no_admin_powers`, `test_hardening::test_admin_queue_paginates`
+- Tests (6): `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_operator_navigation_hides_sales_import_link`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_visitors_and_operators_have_no_admin_powers`, `test_hardening::test_admin_queue_paginates`, `test_unified_missions::test_full_scenario_create_publish_submit_review_rewards_and_retries`
 
 ### `GET /admin/submissions/{submission_id}`
 
@@ -406,10 +420,10 @@ graph LR
 - Non-200 status codes (handler and its guards): `303`, `403`, `404`, `409`
 - Calls: `repo.review_submission`, `repo.score_event_for_source`, `repo.submission_detail`, `repo.submission_evidences`
 - Closures used: `main.conn_dep`, `main.csrf_guard`, `main.go`, `main.page`, `main.require_staff`
-- Reads: `missions`, `score_events`, `scoring_rule_versions`, `submission_evidences`, `submissions`, `users`
-- Writes: `audit_logs`, `outbox_events`, `point_transactions`, `point_wallets`, `score_events`, `submissions`
+- Reads: `game_completions`, `game_progress`, `missions`, `score_events`, `scoring_rule_versions`, `submission_evidences`, `submissions`, `users`
+- Writes: `audit_logs`, `game_completions`, `game_progress`, `outbox_events`, `point_transactions`, `point_wallets`, `score_events`, `submissions`
 - Error codes reachable: `DomainError:ALREADY_REVIEWED`, `DomainError:INVALID_DECISION`, `DomainError:REASON_REQUIRED`, `ScoringError:MISSION_NOT_FOUND`, `ScoringError:NO_ACTIVE_RULE_VERSION`
-- Tests (18): `test_corrections::test_a_correction_cannot_be_reversed`, `test_corrections::test_leaderboard_reflects_the_correction`, `test_corrections::test_only_admin_can_reverse`, `test_corrections::test_other_organization_event_is_forbidden`, `test_corrections::test_reason_is_required`, `test_corrections::test_reversal_creates_negative_event_and_fixes_projections`, `test_corrections::test_reversal_requires_csrf`, `test_corrections::test_second_reversal_is_rejected`, `test_demo_stability::test_admin_review_screen_can_correct_a_mission_score`, `test_demo_stability::test_approval_rolls_back_when_no_rule_version_is_effective`, `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_approve_redirect_keeps_queue_filter`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_reject_requires_reason_and_awards_nothing`
+- Tests (21): `test_corrections::test_a_correction_cannot_be_reversed`, `test_corrections::test_leaderboard_reflects_the_correction`, `test_corrections::test_only_admin_can_reverse`, `test_corrections::test_other_organization_event_is_forbidden`, `test_corrections::test_reason_is_required`, `test_corrections::test_reversal_creates_negative_event_and_fixes_projections`, `test_corrections::test_reversal_requires_csrf`, `test_corrections::test_second_reversal_is_rejected`, `test_demo_stability::test_admin_review_screen_can_correct_a_mission_score`, `test_demo_stability::test_approval_rolls_back_when_no_rule_version_is_effective`, `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_approve_redirect_keeps_queue_filter`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_reject_requires_reason_and_awards_nothing`, `test_unified_missions::test_completion_limit_pending_block_and_rejection_gives_no_rewards`, `test_unified_missions::test_full_scenario_create_publish_submit_review_rewards_and_retries`, `test_unified_missions::test_game_reward_is_frozen_at_submission_time`
 
 ### `GET /admin/users`
 
@@ -440,12 +454,12 @@ graph LR
 - Handler: `main.game_bootstrap` — access **public** — CSRF not needed (GET)
 - Renders: — · Redirects: —
 - Non-200 status codes (handler and its guards): `303`, `400`, `403`
-- Calls: `game.bootstrap`, `security.csrf_token`
-- Closures used: `main.conn_dep`, `main.require_api_user`
-- Reads: `game_progress`, `users`
+- Calls: `game.bootstrap`, `game_missions.bootstrap_v2`, `security.csrf_token`
+- Closures used: `main.conn_dep`, `main.require_api_user`, `main.wants_v2`
+- Reads: `game_progress`, `missions`, `submissions`, `users`
 - Writes: `game_progress`
 - Error codes reachable: —
-- Tests (11): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_game_store::test_demo_store_rejects_insufficient_balance_and_missing_csrf`
+- Tests (21): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_game_store::test_demo_store_rejects_insufficient_balance_and_missing_csrf`, `test_unified_missions::test_auto_approved_mission_awards_both_economies_once`, `test_unified_missions::test_completion_limit_pending_block_and_rejection_gives_no_rewards`, `test_unified_missions::test_draft_and_unstarted_missions_are_hidden_and_not_submittable`, `test_unified_missions::test_expired_mission_is_listed_as_expired_and_cannot_be_started`, `test_unified_missions::test_full_scenario_create_publish_submit_review_rewards_and_retries`, `test_unified_missions::test_game_api_permissions_csrf_and_org_scope`, `test_unified_missions::test_game_reward_is_frozen_at_submission_time`, `test_unified_missions::test_v1_remains_default_and_v2_hides_unavailable_features`, `test_unified_missions::test_v2_drafts_use_db_missions`, `test_unified_missions::test_validation_evidence_answer_and_idempotency_conflict`
 
 ### `POST /api/v1/game/demo-login`
 
@@ -481,7 +495,7 @@ graph LR
 - Reads: `game_completions`, `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (1): `test_game_api::test_game_profile_draft_history_and_user_scope`
+- Tests (2): `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_unified_missions::test_full_scenario_create_publish_submit_review_rewards_and_retries`
 
 ### `POST /api/v1/game/logout`
 
@@ -495,26 +509,50 @@ graph LR
 - Error codes reachable: —
 - Tests (1): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`
 
+### `GET /api/v1/game/missions`
+
+- Handler: `main.game_missions_list` — access **public** — CSRF not needed (GET)
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `400`, `403`
+- Calls: `game._initialize`, `game_missions.projection`
+- Closures used: `main.conn_dep`, `main.require_api_user`
+- Reads: `game_progress`, `missions`, `submissions`, `users`
+- Writes: `game_progress`
+- Error codes reachable: —
+- Tests (1): `test_unified_missions::test_game_api_permissions_csrf_and_org_scope`
+
+### `GET /api/v1/game/missions/{mission_id}`
+
+- Handler: `main.game_mission_detail` — access **public** — CSRF not needed (GET)
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `400`, `403`
+- Calls: `game_missions.get_mission`
+- Closures used: `main.conn_dep`, `main.require_api_user`
+- Reads: `game_progress`, `missions`, `submissions`, `users`
+- Writes: `game_progress`
+- Error codes reachable: —
+- Tests (1): `test_unified_missions::test_draft_and_unstarted_missions_are_hidden_and_not_submittable`
+
 ### `POST /api/v1/game/missions/{mission_id}/completions`
 
 - Handler: `main.game_complete_mission` — access **token** — CSRF yes
 - Renders: — · Redirects: —
 - Non-200 status codes (handler and its guards): `303`, `400`, `403`, `422`
-- Calls: `game.complete_mission`
-- Closures used: `main.conn_dep`, `main.csrf_guard`, `main.require_api_user`
-- Reads: `game_completions`, `game_progress`, `users`
+- Calls: `game.GameError`, `game._initialize`, `game._special_ids`, `game.complete_mission`, `game_missions.projection`
+- Closures used: `main.conn_dep`, `main.csrf_guard`, `main.require_api_user`, `main.wants_v2`
+- Reads: `game_completions`, `game_progress`, `missions`, `submissions`, `users`
 - Writes: `game_completions`, `game_progress`
 - Error codes reachable: —
-- Tests (5): `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`
+- Tests (6): `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_unified_missions::test_v1_remains_default_and_v2_hides_unavailable_features`
 
 ### `DELETE /api/v1/game/missions/{mission_id}/draft`
 
 - Handler: `main.game_discard_draft` — access **token** — CSRF yes
 - Renders: — · Redirects: —
 - Non-200 status codes (handler and its guards): `303`, `400`, `403`
-- Calls: `game.discard_draft`
-- Closures used: `main.conn_dep`, `main.csrf_guard`, `main.require_api_user`
-- Reads: `game_progress`, `users`
+- Calls: `game._mission_map`, `game.discard_draft`, `game_missions.discard_draft`, `game_missions.get_progress_v2`
+- Closures used: `main.conn_dep`, `main.csrf_guard`, `main.require_api_user`, `main.wants_v2`
+- Reads: `game_progress`, `missions`, `submissions`, `users`
 - Writes: `game_progress`
 - Error codes reachable: —
 - Tests (0): —
@@ -524,12 +562,24 @@ graph LR
 - Handler: `main.game_save_draft` — access **token** — CSRF yes
 - Renders: — · Redirects: —
 - Non-200 status codes (handler and its guards): `303`, `400`, `403`
-- Calls: `game.save_draft`
-- Closures used: `main.conn_dep`, `main.csrf_guard`, `main.require_api_user`
-- Reads: `game_progress`, `users`
+- Calls: `game._mission_map`, `game.save_draft`, `game_missions.get_progress_v2`, `game_missions.save_draft`
+- Closures used: `main.conn_dep`, `main.csrf_guard`, `main.require_api_user`, `main.wants_v2`
+- Reads: `game_progress`, `missions`, `submissions`, `users`
 - Writes: `game_progress`
 - Error codes reachable: —
 - Tests (0): —
+
+### `POST /api/v1/game/missions/{mission_id}/submissions`
+
+- Handler: `main.game_submit_mission` — access **token** — CSRF yes
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `200`, `201`, `303`, `400`, `403`
+- Calls: `game.GameError`, `game_missions.submit`
+- Closures used: `main.conn_dep`, `main.csrf_guard`, `main.require_api_user`
+- Reads: `game_completions`, `game_progress`, `missions`, `score_events`, `scoring_rule_versions`, `submission_evidences`, `submissions`, `users`
+- Writes: `audit_logs`, `game_completions`, `game_progress`, `outbox_events`, `point_transactions`, `point_wallets`, `score_events`, `submission_evidences`, `submissions`
+- Error codes reachable: `DomainError:EVIDENCE_REQUIRED`, `DomainError:MAX_ATTEMPTS_REACHED`, `ScoringError:MISSION_NOT_FOUND`, `ScoringError:NO_ACTIVE_RULE_VERSION`
+- Tests (8): `test_unified_missions::test_auto_approved_mission_awards_both_economies_once`, `test_unified_missions::test_completion_limit_pending_block_and_rejection_gives_no_rewards`, `test_unified_missions::test_draft_and_unstarted_missions_are_hidden_and_not_submittable`, `test_unified_missions::test_expired_mission_is_listed_as_expired_and_cannot_be_started`, `test_unified_missions::test_full_scenario_create_publish_submit_review_rewards_and_retries`, `test_unified_missions::test_game_api_permissions_csrf_and_org_scope`, `test_unified_missions::test_game_reward_is_frozen_at_submission_time`, `test_unified_missions::test_validation_evidence_answer_and_idempotency_conflict`
 
 ### `PATCH /api/v1/game/profile`
 
@@ -548,9 +598,9 @@ graph LR
 - Handler: `main.game_progress` — access **public** — CSRF not needed (GET)
 - Renders: — · Redirects: —
 - Non-200 status codes (handler and its guards): `303`, `400`, `403`
-- Calls: `game.get_progress`
-- Closures used: `main.conn_dep`, `main.require_api_user`
-- Reads: `game_progress`, `users`
+- Calls: `game.get_progress`, `game_missions.get_progress_v2`
+- Closures used: `main.conn_dep`, `main.require_api_user`, `main.wants_v2`
+- Reads: `game_progress`, `missions`, `submissions`, `users`
 - Writes: `game_progress`
 - Error codes reachable: —
 - Tests (2): `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`
@@ -578,6 +628,18 @@ graph LR
 - Writes: `game_coin_transactions`, `game_progress`, `game_store_purchases`
 - Error codes reachable: —
 - Tests (2): `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_game_store::test_demo_store_rejects_insufficient_balance_and_missing_csrf`
+
+### `GET /api/v1/game/submissions`
+
+- Handler: `main.game_submissions` — access **public** — CSRF not needed (GET)
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `303`, `400`, `403`
+- Calls: `game_missions.list_submissions`
+- Closures used: `main.conn_dep`, `main.require_api_user`
+- Reads: `missions`, `submissions`, `users`
+- Writes: —
+- Error codes reachable: —
+- Tests (0): —
 
 ### `GET /api/v1/tribal/bootstrap`
 
@@ -626,7 +688,7 @@ graph LR
 - Reads: `users`
 - Writes: `audit_logs`
 - Error codes reachable: —
-- Tests (76): `test_admin_demo::test_admin_pages_require_admin`, `test_admin_demo::test_dashboard_numbers_come_from_the_database`, `test_admin_demo::test_demo_env_staff_login_disabled_without_configured_code`, `test_admin_demo::test_demo_env_visitor_login_is_secure_and_staff_needs_code`, `test_admin_demo::test_import_breakdown_matches_ledger_and_reprocess_adds_nothing`, `test_admin_demo::test_points_page_filters_and_labels_corrections`, `test_admin_demo::test_user_pages_are_organization_scoped`, `test_admin_demo::test_user_search_by_name_and_external_id`, `test_corrections::test_a_correction_cannot_be_reversed`, `test_corrections::test_leaderboard_reflects_the_correction`, `test_corrections::test_missing_event_returns_404`, `test_corrections::test_only_admin_can_reverse`, `test_corrections::test_other_organization_event_is_forbidden`, `test_corrections::test_reason_is_required`, `test_corrections::test_reversal_creates_negative_event_and_fixes_projections`, `test_corrections::test_reversal_requires_csrf`, `test_corrections::test_second_reversal_is_rejected`, `test_demo_stability::test_admin_review_screen_can_correct_a_mission_score`, `test_demo_stability::test_approval_rolls_back_when_no_rule_version_is_effective`, `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_operator_navigation_hides_sales_import_link`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_demo_stability::test_sales_score_correction_is_admin_only_and_org_scoped`, `test_demo_stability::test_sample_sales_workbook_download_is_admin_only`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_approve_redirect_keeps_queue_filter`, `test_flow::test_duplicate_request_id_is_idempotent`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_mission_edit_publishes_new_rule_version`, `test_flow::test_mission_respects_max_per_user`, `test_flow::test_mission_window_and_status_filtering`, `test_flow::test_organization_scope_blocks_foreign_submission`, `test_flow::test_reject_requires_reason_and_awards_nothing`, `test_flow::test_visitors_and_operators_have_no_admin_powers`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_game_store::test_demo_store_rejects_insufficient_balance_and_missing_csrf`, `test_hardening::test_admin_queue_carries_token_between_pages`, `test_hardening::test_admin_queue_paginates`, `test_hardening::test_cookie_session_still_works`, `test_hardening::test_forged_csrf_upload_creates_nothing`, `test_hardening::test_forms_render_a_csrf_field`, `test_hardening::test_login_is_rate_limited`, `test_hardening::test_post_with_forged_csrf_is_rejected`, `test_hardening::test_post_without_csrf_is_rejected`, `test_hardening::test_session_token_in_url_works_without_cookies`, `test_hardening::test_token_only_session_can_post_forms`, `test_sales::test_amount_below_one_unit_scores_nothing`, `test_sales::test_detail_page_shows_reconciliation`, `test_sales::test_duplicate_external_id_across_imports_is_skipped`, `test_sales::test_missing_columns_reject_the_file`, `test_sales::test_non_xlsx_is_rejected`, `test_sales::test_only_admin_can_use_sales_import`, `test_sales::test_other_organization_import_is_not_visible`, `test_sales::test_process_creates_each_score_once`, `test_sales::test_processing_failure_rolls_back_all_events`, `test_sales::test_row_errors_do_not_block_valid_rows`, `test_sales::test_same_file_is_rejected_by_fingerprint`, `test_sales::test_upload_requires_csrf`, `test_sales::test_upload_validates_without_scoring`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_gate::test_tribal_bootstrap_is_feature_disabled_by_default`, `test_tribal_org_api::test_org_units_api_is_gated_when_feature_is_off`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated`
+- Tests (88): `test_admin_demo::test_admin_pages_require_admin`, `test_admin_demo::test_dashboard_numbers_come_from_the_database`, `test_admin_demo::test_demo_env_staff_login_disabled_without_configured_code`, `test_admin_demo::test_demo_env_visitor_login_is_secure_and_staff_needs_code`, `test_admin_demo::test_import_breakdown_matches_ledger_and_reprocess_adds_nothing`, `test_admin_demo::test_points_page_filters_and_labels_corrections`, `test_admin_demo::test_user_pages_are_organization_scoped`, `test_admin_demo::test_user_search_by_name_and_external_id`, `test_corrections::test_a_correction_cannot_be_reversed`, `test_corrections::test_leaderboard_reflects_the_correction`, `test_corrections::test_missing_event_returns_404`, `test_corrections::test_only_admin_can_reverse`, `test_corrections::test_other_organization_event_is_forbidden`, `test_corrections::test_reason_is_required`, `test_corrections::test_reversal_creates_negative_event_and_fixes_projections`, `test_corrections::test_reversal_requires_csrf`, `test_corrections::test_second_reversal_is_rejected`, `test_demo_stability::test_admin_review_screen_can_correct_a_mission_score`, `test_demo_stability::test_approval_rolls_back_when_no_rule_version_is_effective`, `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_operator_navigation_hides_sales_import_link`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_demo_stability::test_sales_score_correction_is_admin_only_and_org_scoped`, `test_demo_stability::test_sample_sales_workbook_download_is_admin_only`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_approve_redirect_keeps_queue_filter`, `test_flow::test_duplicate_request_id_is_idempotent`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_mission_edit_publishes_new_rule_version`, `test_flow::test_mission_respects_max_per_user`, `test_flow::test_mission_window_and_status_filtering`, `test_flow::test_organization_scope_blocks_foreign_submission`, `test_flow::test_reject_requires_reason_and_awards_nothing`, `test_flow::test_visitors_and_operators_have_no_admin_powers`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_game_store::test_demo_store_rejects_insufficient_balance_and_missing_csrf`, `test_hardening::test_admin_queue_carries_token_between_pages`, `test_hardening::test_admin_queue_paginates`, `test_hardening::test_cookie_session_still_works`, `test_hardening::test_forged_csrf_upload_creates_nothing`, `test_hardening::test_forms_render_a_csrf_field`, `test_hardening::test_login_is_rate_limited`, `test_hardening::test_post_with_forged_csrf_is_rejected`, `test_hardening::test_post_without_csrf_is_rejected`, `test_hardening::test_session_token_in_url_works_without_cookies`, `test_hardening::test_token_only_session_can_post_forms`, `test_sales::test_amount_below_one_unit_scores_nothing`, `test_sales::test_detail_page_shows_reconciliation`, `test_sales::test_duplicate_external_id_across_imports_is_skipped`, `test_sales::test_missing_columns_reject_the_file`, `test_sales::test_non_xlsx_is_rejected`, `test_sales::test_only_admin_can_use_sales_import`, `test_sales::test_other_organization_import_is_not_visible`, `test_sales::test_process_creates_each_score_once`, `test_sales::test_processing_failure_rolls_back_all_events`, `test_sales::test_row_errors_do_not_block_valid_rows`, `test_sales::test_same_file_is_rejected_by_fingerprint`, `test_sales::test_upload_requires_csrf`, `test_sales::test_upload_validates_without_scoring`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_gate::test_tribal_bootstrap_is_feature_disabled_by_default`, `test_tribal_org_api::test_org_units_api_is_gated_when_feature_is_off`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated`, `test_unified_missions::test_admin_form_validation_and_edit_round_trip`, `test_unified_missions::test_auto_approved_mission_awards_both_economies_once`, `test_unified_missions::test_completion_limit_pending_block_and_rejection_gives_no_rewards`, `test_unified_missions::test_draft_and_unstarted_missions_are_hidden_and_not_submittable`, `test_unified_missions::test_existing_web_flow_and_legacy_forms_still_work`, `test_unified_missions::test_expired_mission_is_listed_as_expired_and_cannot_be_started`, `test_unified_missions::test_full_scenario_create_publish_submit_review_rewards_and_retries`, `test_unified_missions::test_game_api_permissions_csrf_and_org_scope`, `test_unified_missions::test_game_reward_is_frozen_at_submission_time`, `test_unified_missions::test_v1_remains_default_and_v2_hides_unavailable_features`, `test_unified_missions::test_v2_drafts_use_db_missions`, `test_unified_missions::test_validation_evidence_answer_and_idempotency_conflict`
 
 ### `GET /evidence/{evidence_id}`
 
@@ -731,8 +793,8 @@ graph LR
 - Non-200 status codes (handler and its guards): `303`, `403`, `404`, `409`, `422`
 - Calls: `repo.count_user_submissions`, `repo.create_submission`, `repo.get_mission_for_user`, `repo.list_user_submissions`
 - Closures used: `main.conn_dep`, `main.csrf_guard`, `main.go`, `main.page`, `main.require_user`
-- Reads: `missions`, `score_events`, `scoring_rule_versions`, `submissions`, `users`
-- Writes: `audit_logs`, `outbox_events`, `point_transactions`, `point_wallets`, `score_events`, `submission_evidences`, `submissions`
+- Reads: `game_completions`, `game_progress`, `missions`, `score_events`, `scoring_rule_versions`, `submissions`, `users`
+- Writes: `audit_logs`, `game_completions`, `game_progress`, `outbox_events`, `point_transactions`, `point_wallets`, `score_events`, `submission_evidences`, `submissions`
 - Error codes reachable: `DomainError:EVIDENCE_REQUIRED`, `DomainError:MAX_ATTEMPTS_REACHED`, `ScoringError:MISSION_NOT_FOUND`, `ScoringError:NO_ACTIVE_RULE_VERSION`
 - Tests (23): `test_corrections::test_a_correction_cannot_be_reversed`, `test_corrections::test_leaderboard_reflects_the_correction`, `test_corrections::test_only_admin_can_reverse`, `test_corrections::test_other_organization_event_is_forbidden`, `test_corrections::test_reason_is_required`, `test_corrections::test_reversal_creates_negative_event_and_fixes_projections`, `test_corrections::test_reversal_requires_csrf`, `test_corrections::test_second_reversal_is_rejected`, `test_demo_stability::test_admin_review_screen_can_correct_a_mission_score`, `test_demo_stability::test_approval_rolls_back_when_no_rule_version_is_effective`, `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_approve_redirect_keeps_queue_filter`, `test_flow::test_duplicate_request_id_is_idempotent`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_mission_respects_max_per_user`, `test_flow::test_reject_requires_reason_and_awards_nothing`, `test_hardening::test_admin_queue_paginates`, `test_hardening::test_forged_csrf_upload_creates_nothing`, `test_hardening::test_token_only_session_can_post_forms`
 
@@ -771,32 +833,36 @@ graph LR
 | `_http_error` | exception-handler | — | — | — | `main.page` | — |
 | `_login_required` | exception-handler | — | — | — | — | — |
 | `_starlette_error` | exception-handler | — | — | — | `main.page` | — |
-| `conn_dep` | closure | — | — | — | `db.connect` | 50 callers |
+| `conn_dep` | closure | — | — | — | `db.connect` | 54 callers |
 | `create_app` | function | — | — | — | `config.Settings`, `db.init_db`, `jalali.format_jalali` | `conftest::client`, `test_admin_demo::demo_client`, `test_admin_demo::test_demo_env_staff_login_disabled_without_configured_code`, `test_admin_demo::test_prod_like_env_still_blocks_game_demo_login`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`, `test_hardening::test_admin_queue_paginates`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated` |
-| `csrf_guard` | closure | Reject form posts whose CSRF value does not match the session token. | — | — | `main.LoginRequired`, `security.csrf_for`, `security.session_token` | 16 callers |
+| `csrf_guard` | closure | Reject form posts whose CSRF value does not match the session token. | — | — | `main.LoginRequired`, `security.csrf_for`, `security.session_token` | 17 callers |
 | `go` | closure | — | — | — | `main.url_session`, `main.with_token` | 10 callers |
 | `hardening` | middleware | — | — | — | `main.login_rate_limited`, `main.page` | — |
 | `login_rate_limited` | closure | In-memory token bucket. Single-process only (documented limitation). | — | — | — | `main.game_demo_login`, `main.hardening` |
+| `mission_form_options` | closure | — | — | — | `game.catalog` | `main.admin_mission_create`, `main.admin_mission_edit`, `main.admin_mission_new`, `main.admin_mission_update` |
 | `page` | closure | — | — | — | `main.url_session`, `security.csrf_token` | 32 callers |
 | `require_admin` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | 20 callers |
-| `require_api_user` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | 10 callers |
+| `require_api_user` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | 14 callers |
 | `require_staff` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | `main.admin_decide`, `main.admin_missions`, `main.admin_queue`, `main.admin_review` |
 | `require_user` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | 11 callers |
 | `sales_page_context` | closure | — | `sales_user_map`, `scoring_rule_versions`, `users` | — | — | `main.admin_sales_new`, `main.admin_sales_upload` |
 | `tribal_disabled_response` | closure | — | — | — | — | `main.tribal_org_unit`, `main.tribal_org_units` |
 | `url` | closure | — | — | — | `main.with_token` | — |
 | `url_session` | closure | The token to keep in internal links — only when it came from the URL. | — | — | `security.read_token` | `main.go`, `main.page` |
+| `wants_v2` | closure | API v1 (catalog missions) stays the default; v2 (DB missions) is opt-in per request. | — | — | — | `main.game_bootstrap`, `main.game_complete_mission`, `main.game_discard_draft`, `main.game_progress`, `main.game_save_draft` |
 | `with_token` | closure | — | — | — | — | `main.demo_login`, `main.go`, `main.url` |
 
 ### `app/repo.py`
 
 | Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
 |---|---|---|---|---|---|---|
-| `DomainError` | class | Business-rule violation with a stable code for the UI/API. | — | — | — | `repo._parse_day`, `repo._validate_mission_form`, `repo.create_submission`, `repo.process_sales_import`, `repo.publish_mission`, `repo.reverse_score_event`, `repo.review_submission` |
+| `DomainError` | class | Business-rule violation with a stable code for the UI/API. | — | — | — | `repo._int_field`, `repo._parse_day`, `repo._validate_mission_form`, `repo.create_submission`, `repo.process_sales_import`, `repo.publish_mission`, `repo.reverse_score_event`, `repo.review_submission` |
 | `_ensure_rule_version` | function | Publish a same-points version when no published rule is effective at a date. | `scoring_rule_versions` | `scoring_rule_versions` | `repo._new_id`, `scoring.find_rule_version` | `repo.publish_mission`, `repo.update_mission` |
+| `_flag_field` | function | — | — | — | — | `repo._validate_mission_form` |
+| `_int_field` | function | — | — | — | `repo.DomainError` | `repo._validate_mission_form` |
 | `_new_id` | function | — | — | — | — | `repo._ensure_rule_version`, `repo.audit`, `repo.create_mission`, `repo.create_submission`, `repo.update_mission` |
 | `_parse_day` | function | — | — | — | `repo.DomainError` | `repo._validate_mission_form` |
-| `_validate_mission_form` | function | — | — | — | `repo.DomainError`, `repo._parse_day` | `repo.create_mission`, `repo.update_mission` |
+| `_validate_mission_form` | function | — | — | — | `game.catalog`, `repo.DomainError`, `repo._flag_field`, `repo._int_field`, `repo._parse_day` | `repo.create_mission`, `repo.update_mission` |
 | `active_competition` | function | — | `competitions` | — | `repo.now_iso` | `main.leaderboard_page`, `repo.leaderboard` |
 | `archive_mission` | function | — | — | `missions` | `repo.audit` | `main.admin_mission_archive` |
 | `audit` | function | — | — | `audit_logs` | `repo._new_id`, `repo.now_iso` | `main.demo_login`, `repo.archive_mission`, `repo.create_mission`, `repo.create_submission`, `repo.publish_mission`, `repo.review_submission`, `repo.update_mission` |
@@ -804,7 +870,7 @@ graph LR
 | `count_user_submissions` | function | — | `submissions` | — | — | `main.submit_mission`, `repo.create_submission` |
 | `create_mission` | function | — | — | `missions`, `scoring_rule_versions` | `repo._new_id`, `repo._validate_mission_form`, `repo.audit`, `repo.now_iso` | `main.admin_mission_create` |
 | `create_sales_import` | function | Store the upload and its rows; never scores anything. | `sales_imports` | `sales_imports`, `sales_records` | `repo.now_iso` | `main.admin_sales_upload` |
-| `create_submission` | function | Create a submission once per request_id. Returns (submission, created). | `submissions` | `submission_evidences`, `submissions` | `repo.DomainError`, `repo._new_id`, `repo.audit`, `repo.count_user_submissions`, `repo.now_iso`, `scoring.award_mission_approval` | `main.submit_mission` |
+| `create_submission` | function | Create a submission once per request_id. Returns (submission, created). | `submissions` | `submission_evidences`, `submissions` | `game_rewards.grant_game_reward`, `repo.DomainError`, `repo._new_id`, `repo.audit`, `repo.count_user_submissions`, `repo.now_iso`, `scoring.award_mission_approval` | `game_missions.submit`, `main.submit_mission` |
 | `evidence` | function | — | `missions`, `submission_evidences`, `submissions` | — | — | `main.evidence_file` |
 | `get_mission_for_user` | function | — | `missions` | — | `repo.now_iso` | `main.mission_page`, `main.submit_mission` |
 | `leaderboard` | function | — | `score_events`, `users` | — | `repo.active_competition` | `main.admin_leaderboard`, `main.home`, `main.leaderboard_page` |
@@ -819,7 +885,7 @@ graph LR
 | `publish_mission` | function | — | — | `missions` | `repo.DomainError`, `repo._ensure_rule_version`, `repo.audit`, `repo.now_iso` | `main.admin_mission_publish` |
 | `reversal_for` | function | — | `score_events` | — | — | `main.admin_review`, `main.submission_page` |
 | `reverse_score_event` | function | Correct an event with a negative event; maps scoring codes to domain codes. | — | — | `repo.DomainError`, `scoring.reverse_event` | `main.admin_reverse_score` |
-| `review_submission` | function | Approve or reject. Approval may create a score event (idempotent). | `submissions` | `submissions` | `repo.DomainError`, `repo.audit`, `repo.now_iso`, `scoring.award_mission_approval` | `main.admin_decide` |
+| `review_submission` | function | Approve or reject. Approval may create a score event (idempotent). | `submissions` | `submissions` | `game_rewards.grant_game_reward`, `repo.DomainError`, `repo.audit`, `repo.now_iso`, `scoring.award_mission_approval` | `main.admin_decide` |
 | `sales_external_ids` | function | — | `sales_records` | — | — | `main.admin_sales_upload` |
 | `sales_import` | function | — | `sales_imports`, `users` | — | — | `main.admin_sale_detail`, `main.admin_sales_process` |
 | `sales_import_by_fingerprint` | function | — | `sales_imports` | — | — | `main.admin_sales_upload` |
@@ -910,35 +976,36 @@ graph LR
 | `apply_migrations` | function | Run each ``db/migrations/NNNN_*.sql`` exactly once, in filename order. | `schema_migrations` | `schema_migrations` | `db.now_iso` | `db.init_db` |
 | `connect` | function | — | — | — | — | `db.init_db`, `main.conn_dep`, `maintenance.purge_evidence`, `test_hardening::test_admin_queue_paginates` |
 | `init_db` | function | — | `users` | — | `db.apply_migrations`, `db.connect`, `seed.seed_demo` | `main.create_app`, `seed.main` |
-| `now_iso` | function | — | — | — | — | `db.apply_migrations`, `game._save`, `maintenance._audit` |
+| `now_iso` | function | — | — | — | — | `db.apply_migrations`, `game._save`, `game_missions._visible_row`, `game_missions.build_views`, `game_missions.get_mission`, `game_missions.save_draft`, `game_missions.submit`, `maintenance._audit` |
 
 ### `app/game.py`
 
 | Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
 |---|---|---|---|---|---|---|
-| `GameError` | class | — | — | — | — | `game._clean_answers`, `game.complete_mission`, `game.discard_draft`, `game.list_history`, `game.purchase_store_offer`, `game.save_draft`, `game.update_profile`, `main.game_demo_login` |
+| `GameError` | class | — | — | — | — | 14 callers |
 | `_all_missions` | function | — | — | — | `game.catalog`, `game.store_catalog` | `game._mission_map`, `game._mission_views` |
 | `_clean_answers` | function | — | — | — | `game.GameError` | `game.complete_mission`, `game.save_draft` |
 | `_collect_flags` | function | — | — | — | — | `game.complete_mission` |
 | `_daily_mission` | function | — | — | — | `game._lock_reason`, `game.catalog` | `game._ensure_daily` |
-| `_date_diff` | function | — | — | — | — | `game.complete_mission` |
-| `_day_key` | function | — | — | — | — | `game.bootstrap`, `game.complete_mission`, `game.discard_draft`, `game.get_progress`, `game.save_draft` |
+| `_date_diff` | function | — | — | — | — | `game.complete_mission`, `game_rewards.grant_game_reward` |
+| `_day_key` | function | — | — | — | — | `game.bootstrap`, `game.complete_mission`, `game.discard_draft`, `game.get_progress`, `game.save_draft`, `game_missions.projection`, `game_rewards.grant_game_reward` |
 | `_ensure_daily` | function | — | — | — | `game._daily_mission`, `game._mission_map` | `game.bootstrap`, `game.complete_mission`, `game.get_progress` |
-| `_history` | function | — | `game_completions` | — | — | `game.complete_mission` |
+| `_history` | function | — | `game_completions` | — | — | `game.complete_mission`, `game_rewards.grant_game_reward` |
 | `_initial_progress` | function | — | — | — | `game._now` | `game._initialize` |
-| `_initialize` | function | — | `game_progress` | — | `game._initial_progress`, `game._save` | `game.bootstrap`, `game.complete_mission`, `game.discard_draft`, `game.get_progress`, `game.get_store`, `game.purchase_store_offer`, `game.save_draft`, `game.update_profile` |
-| `_level` | function | — | — | — | `game.catalog` | `game._lock_reason`, `game._new_achievements`, `game.complete_mission` |
+| `_initialize` | function | — | `game_progress` | — | `game._initial_progress`, `game._save` | 18 callers |
+| `_level` | function | — | — | — | `game.catalog` | `game._lock_reason`, `game._new_achievements`, `game.complete_mission`, `game_rewards.grant_game_reward` |
 | `_load_daily_before` | function | — | `game_progress` | — | — | `game.bootstrap` |
 | `_lock_reason` | function | — | — | — | `game._level`, `game._mission_map` | `game._daily_mission`, `game._mission_views`, `game.complete_mission`, `game.save_draft` |
-| `_mission_map` | function | — | — | — | `game._all_missions` | `game._ensure_daily`, `game._lock_reason`, `game.complete_mission`, `game.discard_draft`, `game.get_store`, `game.save_draft` |
+| `_mission_map` | function | — | — | — | `game._all_missions` | `game._ensure_daily`, `game._lock_reason`, `game.complete_mission`, `game.discard_draft`, `game.get_store`, `game.save_draft`, `main.game_discard_draft`, `main.game_save_draft` |
 | `_mission_views` | function | — | — | — | `game._all_missions`, `game._lock_reason`, `game.catalog` | `game._special_mission_views`, `game.bootstrap`, `game.complete_mission`, `game.discard_draft`, `game.get_progress`, `game.save_draft` |
-| `_new_achievements` | function | — | — | — | `game._level`, `game.catalog` | `game.complete_mission` |
-| `_now` | function | — | — | — | — | `game._initial_progress`, `game.bootstrap`, `game.complete_mission`, `game.discard_draft`, `game.get_progress`, `game.purchase_store_offer`, `game.save_draft` |
-| `_public_progress` | function | — | — | — | — | `game.bootstrap`, `game.complete_mission`, `game.discard_draft`, `game.get_progress`, `game.save_draft`, `game.update_profile` |
-| `_save` | function | — | — | `game_progress` | `db.now_iso` | `game._initialize`, `game.bootstrap`, `game.complete_mission`, `game.discard_draft`, `game.get_progress`, `game.purchase_store_offer`, `game.save_draft`, `game.update_profile` |
-| `_special_mission_views` | function | — | — | — | `game._mission_views` | `game.bootstrap`, `game.complete_mission`, `game.discard_draft`, `game.get_progress`, `game.save_draft` |
+| `_new_achievements` | function | — | — | — | `game._level`, `game.catalog` | `game.complete_mission`, `game_rewards.grant_game_reward` |
+| `_now` | function | — | — | — | — | 11 callers |
+| `_public_progress` | function | — | — | — | — | `game.bootstrap`, `game.complete_mission`, `game.discard_draft`, `game.get_progress`, `game.save_draft`, `game.update_profile`, `game_missions.projection` |
+| `_save` | function | — | — | `game_progress` | `db.now_iso` | 12 callers |
+| `_special_ids` | function | Mission ids of the demo-store specials (still completed through the catalog route). | — | — | `game.store_catalog` | `main.game_complete_mission` |
+| `_special_mission_views` | function | — | — | — | `game._mission_views` | `game.bootstrap`, `game.complete_mission`, `game.discard_draft`, `game.get_progress`, `game.save_draft`, `game_missions.projection` |
 | `bootstrap` | function | — | — | — | `game._day_key`, `game._ensure_daily`, `game._initialize`, `game._load_daily_before`, `game._mission_views`, `game._now`, `game._public_progress`, `game._save`, `game._special_mission_views`, `game.catalog`, `game.store_catalog` | `main.game_bootstrap` |
-| `catalog` | function | — | — | — | — | `game._all_missions`, `game._daily_mission`, `game._level`, `game._mission_views`, `game._new_achievements`, `game.bootstrap`, `game.complete_mission` |
+| `catalog` | function | — | — | — | — | 11 callers |
 | `complete_mission` | function | — | `game_completions` | `game_completions` | `game.GameError`, `game._clean_answers`, `game._collect_flags`, `game._date_diff`, `game._day_key`, `game._ensure_daily`, `game._history`, `game._initialize`, `game._level`, `game._lock_reason`, `game._mission_map`, `game._mission_views`, `game._new_achievements`, `game._now`, `game._public_progress`, `game._save`, `game._special_mission_views`, `game.catalog` | `main.game_complete_mission` |
 | `discard_draft` | function | — | — | — | `game.GameError`, `game._day_key`, `game._initialize`, `game._mission_map`, `game._mission_views`, `game._now`, `game._public_progress`, `game._save`, `game._special_mission_views` | `main.game_discard_draft` |
 | `get_progress` | function | — | — | — | `game._day_key`, `game._ensure_daily`, `game._initialize`, `game._mission_views`, `game._now`, `game._public_progress`, `game._save`, `game._special_mission_views` | `main.game_progress` |
@@ -946,8 +1013,37 @@ graph LR
 | `list_history` | function | — | `game_completions` | — | `game.GameError` | `main.game_history` |
 | `purchase_store_offer` | function | — | `game_store_purchases` | `game_coin_transactions`, `game_store_purchases` | `game.GameError`, `game._initialize`, `game._now`, `game._save`, `game.store_catalog` | `main.game_store_purchase` |
 | `save_draft` | function | — | — | — | `game.GameError`, `game._clean_answers`, `game._day_key`, `game._initialize`, `game._lock_reason`, `game._mission_map`, `game._mission_views`, `game._now`, `game._public_progress`, `game._save`, `game._special_mission_views` | `main.game_save_draft` |
-| `store_catalog` | function | — | — | — | — | `game._all_missions`, `game.bootstrap`, `game.get_store`, `game.purchase_store_offer` |
+| `store_catalog` | function | — | — | — | — | `game._all_missions`, `game._special_ids`, `game.bootstrap`, `game.get_store`, `game.purchase_store_offer`, `game_missions.bootstrap_v2` |
 | `update_profile` | function | — | — | — | `game.GameError`, `game._initialize`, `game._public_progress`, `game._save` | `main.game_profile` |
+
+### `app/game_missions.py`
+
+| Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
+|---|---|---|---|---|---|---|
+| `_check_key` | function | — | — | — | `game.GameError` | `game_missions.submit` |
+| `_required_steps` | function | — | — | — | — | `game_missions._view` |
+| `_response` | function | — | — | — | `game._initialize`, `game_missions.projection` | `game_missions.submit` |
+| `_status` | function | Return (status, blocked_reason). blocked_reason is set when the visitor cannot start. | — | — | — | `game_missions._view`, `game_missions.save_draft` |
+| `_steps` | function | — | — | — | — | `game_missions._view`, `game_missions.save_draft` |
+| `_user_submissions` | function | — | `submissions` | — | — | `game_missions.build_views`, `game_missions.get_mission`, `game_missions.save_draft`, `game_missions.submit` |
+| `_view` | function | — | — | — | `game_missions._required_steps`, `game_missions._status`, `game_missions._steps` | `game_missions.build_views`, `game_missions.get_mission` |
+| `_visible_row` | function | — | `missions` | — | `db.now_iso`, `game.GameError` | `game_missions.discard_draft`, `game_missions.get_mission`, `game_missions.save_draft`, `game_missions.submit` |
+| `bootstrap_v2` | function | — | — | — | `game._initialize`, `game._now`, `game.catalog`, `game.store_catalog`, `game_missions.projection` | `main.game_bootstrap` |
+| `build_views` | function | — | `missions` | — | `db.now_iso`, `game_missions._user_submissions`, `game_missions._view` | `game_missions.projection` |
+| `discard_draft` | function | — | — | — | `game._initialize`, `game._save`, `game_missions._visible_row`, `game_missions.projection` | `main.game_discard_draft` |
+| `get_mission` | function | — | — | — | `db.now_iso`, `game._initialize`, `game_missions._user_submissions`, `game_missions._view`, `game_missions._visible_row` | `main.game_mission_detail` |
+| `get_progress_v2` | function | — | — | — | `game._initialize`, `game_missions.projection` | `main.game_discard_draft`, `main.game_progress`, `main.game_save_draft` |
+| `list_submissions` | function | — | `missions`, `submissions` | — | — | `main.game_submissions` |
+| `projection` | function | — | — | — | `game._day_key`, `game._now`, `game._public_progress`, `game._special_mission_views`, `game_missions.build_views` | `game_missions._response`, `game_missions.bootstrap_v2`, `game_missions.discard_draft`, `game_missions.get_progress_v2`, `game_missions.save_draft`, `main.game_complete_mission`, `main.game_missions_list` |
+| `save_draft` | function | — | — | — | `db.now_iso`, `game.GameError`, `game._initialize`, `game._now`, `game._save`, `game_missions._status`, `game_missions._steps`, `game_missions._user_submissions`, `game_missions._visible_row`, `game_missions.projection` | `main.game_save_draft` |
+| `submit` | function | Create a game submission once per Idempotency-Key. Returns (response, replayed). | `submission_evidences`, `submissions` | — | `db.now_iso`, `game.GameError`, `game._initialize`, `game._save`, `game_missions._check_key`, `game_missions._response`, `game_missions._user_submissions`, `game_missions._visible_row`, `repo.create_submission` | `main.game_submit_mission` |
+
+### `app/game_rewards.py`
+
+| Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
+|---|---|---|---|---|---|---|
+| `grant_game_reward` | function | Credit game XP/coins once for an approved submission. Returns True only when it granted. | `users` | `game_completions` | `game._date_diff`, `game._day_key`, `game._history`, `game._initialize`, `game._level`, `game._new_achievements`, `game._now`, `game._save`, `game.catalog`, `game_rewards.reward_values` | `repo.create_submission`, `repo.review_submission`, `test_unified_missions::test_full_scenario_create_publish_submit_review_rewards_and_retries` |
+| `reward_values` | function | XP/coins frozen at submit time; legacy rows fall back to the mission's current values. | `missions` | — | — | `game_rewards.grant_game_reward` |
 
 ### `app/jalali.py`
 
@@ -1035,7 +1131,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Indexes: `ix_game_completions_user_time` (user_id, completed_at DESC, id DESC) — db/migrations/0004_game_progress.sql
 - References: `users`
 - Read by: `admin_queries.game_overview`, `game._history`, `game.complete_mission`, `game.list_history`
-- INSERT by: `game.complete_mission`
+- INSERT by: `game.complete_mission`, `game_rewards.grant_game_reward`
 
 ### `game_progress`
 
@@ -1044,6 +1140,16 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - References: `users`
 - Read by: `admin_queries.game_overview`, `game._initialize`, `game._load_daily_before`
 - INSERT by: `game._save`
+
+### `game_reward_events`
+
+- Defined in: `db/migrations/0007_unified_missions.sql`
+- Columns: `id` TEXT PRIMARY KEY; `user_id` TEXT NOT NULL REFERENCES users(id); `source_type` TEXT NOT NULL CHECK (source_type IN ('mission_submission')); `source_id` TEXT NOT NULL REFERENCES submissions(id); `mission_id` TEXT NOT NULL REFERENCES missions(id); `xp` INTEGER NOT NULL CHECK (xp >= 0); `coins` INTEGER NOT NULL CHECK (coins >= 0); `created_at` TEXT NOT NULL
+- Table constraints: UNIQUE (source_type, source_id)
+- Indexes: `ix_game_reward_events_user_time` (user_id, created_at DESC, id DESC) — db/migrations/0007_unified_missions.sql
+- References: `missions`, `submissions`, `users`
+- Read by: —
+- Written by: —
 
 ### `game_store_purchases`
 
@@ -1058,9 +1164,9 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 ### `missions`
 
 - Defined in: `db/migrations/0001_init.sql`
-- Columns: `id` TEXT PRIMARY KEY; `organization_id` TEXT NOT NULL REFERENCES organizations(id); `title` TEXT NOT NULL; `description` TEXT NOT NULL; `mission_type` TEXT NOT NULL DEFAULT 'photo_submission'; `points` INTEGER NOT NULL DEFAULT 0; `starts_at` TEXT NOT NULL; `ends_at` TEXT NOT NULL; `max_per_user` INTEGER NOT NULL DEFAULT 1; `requires_review` INTEGER NOT NULL DEFAULT 1 CHECK (requires_review IN (0, 1)); `status` TEXT NOT NULL CHECK (status IN ('draft', 'active', 'archived')); `rule_code` TEXT NOT NULL; `created_at` TEXT NOT NULL
+- Columns: `id` TEXT PRIMARY KEY; `organization_id` TEXT NOT NULL REFERENCES organizations(id); `title` TEXT NOT NULL; `description` TEXT NOT NULL; `mission_type` TEXT NOT NULL DEFAULT 'photo_submission'; `points` INTEGER NOT NULL DEFAULT 0; `starts_at` TEXT NOT NULL; `ends_at` TEXT NOT NULL; `max_per_user` INTEGER NOT NULL DEFAULT 1; `requires_review` INTEGER NOT NULL DEFAULT 1 CHECK (requires_review IN (0, 1)); `status` TEXT NOT NULL CHECK (status IN ('draft', 'active', 'archived')); `rule_code` TEXT NOT NULL; `created_at` TEXT NOT NULL; `instructions` TEXT NOT NULL DEFAULT '' — added in db/migrations/0007_unified_missions.sql; `category` TEXT NOT NULL DEFAULT 'customer_visit' — added in db/migrations/0007_unified_missions.sql; `difficulty` TEXT NOT NULL DEFAULT 'easy' — added in db/migrations/0007_unified_missions.sql; `estimated_minutes` INTEGER NOT NULL DEFAULT 5 — added in db/migrations/0007_unified_missions.sql; `game_xp` INTEGER NOT NULL DEFAULT 0 — added in db/migrations/0007_unified_missions.sql; `game_coins` INTEGER NOT NULL DEFAULT 0 — added in db/migrations/0007_unified_missions.sql; `requires_evidence` INTEGER NOT NULL DEFAULT 1 — added in db/migrations/0007_unified_missions.sql; `updated_at` TEXT — added in db/migrations/0007_unified_missions.sql
 - References: `organizations`
-- Read by: `admin_queries.user_detail`, `repo.count_queue`, `repo.evidence`, `repo.get_mission_for_user`, `repo.list_active_missions`, `repo.list_missions_admin`, `repo.list_queue`, `repo.list_user_submissions`, `repo.mission_by_id`, `repo.score_event_detail`, `repo.score_history`, `repo.submission_detail`, `scoring.award_mission_approval`
+- Read by: `admin_queries.user_detail`, `game_missions._visible_row`, `game_missions.build_views`, `game_missions.list_submissions`, `game_rewards.reward_values`, `repo.count_queue`, `repo.evidence`, `repo.get_mission_for_user`, `repo.list_active_missions`, `repo.list_missions_admin`, `repo.list_queue`, `repo.list_user_submissions`, `repo.mission_by_id`, `repo.score_event_detail`, `repo.score_history`, `repo.submission_detail`, `scoring.award_mission_approval`
 - INSERT by: `repo.create_mission`, `seed.seed_demo`
 - UPDATE by: `repo.archive_mission`, `repo.publish_mission`, `repo.update_mission`
 
@@ -1196,18 +1302,18 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Defined in: `db/migrations/0001_init.sql`
 - Columns: `id` TEXT PRIMARY KEY; `submission_id` TEXT NOT NULL REFERENCES submissions(id); `file_name` TEXT NOT NULL; `content_type` TEXT NOT NULL; `storage_path` TEXT NOT NULL; `sha256` TEXT NOT NULL; `created_at` TEXT NOT NULL
 - References: `submissions`
-- Read by: `maintenance.purge_evidence`, `repo.evidence`, `repo.list_queue`, `repo.submission_evidences`
+- Read by: `game_missions.submit`, `maintenance.purge_evidence`, `repo.evidence`, `repo.list_queue`, `repo.submission_evidences`
 - INSERT by: `repo.create_submission`, `seed.seed_demo`
 - DELETE by: `maintenance.purge_evidence`
 
 ### `submissions`
 
 - Defined in: `db/migrations/0001_init.sql`
-- Columns: `id` TEXT PRIMARY KEY; `mission_id` TEXT NOT NULL REFERENCES missions(id); `user_id` TEXT NOT NULL REFERENCES users(id); `status` TEXT NOT NULL CHECK (status IN ('submitted', 'approved', 'rejected')); `note` TEXT NOT NULL DEFAULT ''; `request_id` TEXT NOT NULL; `created_at` TEXT NOT NULL; `reviewed_at` TEXT; `reviewed_by` TEXT REFERENCES users(id); `rejection_reason` TEXT
+- Columns: `id` TEXT PRIMARY KEY; `mission_id` TEXT NOT NULL REFERENCES missions(id); `user_id` TEXT NOT NULL REFERENCES users(id); `status` TEXT NOT NULL CHECK (status IN ('submitted', 'approved', 'rejected')); `note` TEXT NOT NULL DEFAULT ''; `request_id` TEXT NOT NULL; `created_at` TEXT NOT NULL; `reviewed_at` TEXT; `reviewed_by` TEXT REFERENCES users(id); `rejection_reason` TEXT; `source` TEXT NOT NULL DEFAULT 'web' — added in db/migrations/0007_unified_missions.sql; `game_xp_snapshot` INTEGER — added in db/migrations/0007_unified_missions.sql; `game_coins_snapshot` INTEGER — added in db/migrations/0007_unified_missions.sql
 - Table constraints: UNIQUE (user_id, request_id)
 - Indexes: `ix_submissions_status` (status, created_at) — db/migrations/0001_init.sql; `ix_submissions_user_mission` (user_id, mission_id) — db/migrations/0001_init.sql
 - References: `missions`, `users`
-- Read by: `admin_queries.user_detail`, `repo.count_queue`, `repo.count_user_submissions`, `repo.create_submission`, `repo.evidence`, `repo.list_active_missions`, `repo.list_queue`, `repo.list_user_submissions`, `repo.review_submission`, `repo.score_event_detail`, `repo.score_history`, `repo.submission_detail`, `seed.seed_demo`
+- Read by: `admin_queries.user_detail`, `game_missions._user_submissions`, `game_missions.list_submissions`, `game_missions.submit`, `repo.count_queue`, `repo.count_user_submissions`, `repo.create_submission`, `repo.evidence`, `repo.list_active_missions`, `repo.list_queue`, `repo.list_user_submissions`, `repo.review_submission`, `repo.score_event_detail`, `repo.score_history`, `repo.submission_detail`, `seed.seed_demo`
 - INSERT by: `repo.create_submission`, `seed.seed_demo`
 - UPDATE by: `repo.review_submission`
 
@@ -1218,7 +1324,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Table constraints: UNIQUE (organization_id, mobile)
 - Indexes: UNIQUE `ux_users_id_organization` (id, organization_id) — db/migrations/0005_tribal_org_foundation.sql
 - References: `organizations`
-- Read by: `admin_queries.audit`, `admin_queries.count_score_events`, `admin_queries.game_overview`, `admin_queries.import_user_breakdown`, `admin_queries.metrics`, `admin_queries.score_events`, `admin_queries.top_visitors`, `admin_queries.users`, `db.init_db`, `main.demo_login`, `main.game_demo_login`, `main.game_demo_users`, `main.login_page`, `main.sales_page_context`, `repo.count_queue`, `repo.leaderboard`, `repo.list_queue`, `repo.list_sales_imports`, `repo.sales_import`, `repo.score_event_detail`, `repo.submission_detail`, `security.current_user`
+- Read by: `admin_queries.audit`, `admin_queries.count_score_events`, `admin_queries.game_overview`, `admin_queries.import_user_breakdown`, `admin_queries.metrics`, `admin_queries.score_events`, `admin_queries.top_visitors`, `admin_queries.users`, `db.init_db`, `game_rewards.grant_game_reward`, `main.demo_login`, `main.game_demo_login`, `main.game_demo_users`, `main.login_page`, `main.sales_page_context`, `repo.count_queue`, `repo.leaderboard`, `repo.list_queue`, `repo.list_sales_imports`, `repo.sales_import`, `repo.score_event_detail`, `repo.submission_detail`, `security.current_user`
 - INSERT by: `seed.seed_demo`
 
 ## 6. Templates
@@ -1425,8 +1531,25 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_org_tree_and_membership_are_generic_and_tenant_scoped` | — | — | — |
 | `test_org_membership_cannot_cross_organization_boundary` | — | — | — |
 
-100 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
-Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::row_id`, `conftest::settings`, `test_admin_demo::_count`, `test_admin_demo::_user_id`, `test_admin_demo::demo_client`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_game_store::csrf_header`, `test_game_store::set_game_coins`, `test_hardening::token_csrf`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`.
+### `tests/test_unified_missions.py` (12 tests)
+
+| Test | Routes exercised | Direct domain calls | IDs |
+|---|---|---|---|
+| `test_full_scenario_create_publish_submit_review_rewards_and_retries` | `GET /admin/submissions`, `GET /api/v1/game/bootstrap`, `GET /api/v1/game/history`, `POST /admin/missions/new`, `POST /admin/missions/{mission_id}/publish`, `POST /admin/submissions/{submission_id}/review`, `POST /api/v1/game/missions/{mission_id}/submissions`, `POST /demo-login` | `game_rewards.grant_game_reward`, `security.csrf_for` | — |
+| `test_draft_and_unstarted_missions_are_hidden_and_not_submittable` | `GET /api/v1/game/bootstrap`, `GET /api/v1/game/missions/{mission_id}`, `POST /admin/missions/new`, `POST /admin/missions/{mission_id}/publish`, `POST /api/v1/game/missions/{mission_id}/submissions`, `POST /demo-login` | `security.csrf_for` | — |
+| `test_expired_mission_is_listed_as_expired_and_cannot_be_started` | `GET /api/v1/game/bootstrap`, `POST /admin/missions/new`, `POST /admin/missions/{mission_id}/publish`, `POST /api/v1/game/missions/{mission_id}/submissions`, `POST /demo-login` | `security.csrf_for` | — |
+| `test_completion_limit_pending_block_and_rejection_gives_no_rewards` | `GET /api/v1/game/bootstrap`, `POST /admin/missions/new`, `POST /admin/missions/{mission_id}/publish`, `POST /admin/submissions/{submission_id}/review`, `POST /api/v1/game/missions/{mission_id}/submissions`, `POST /demo-login` | `security.csrf_for` | — |
+| `test_game_reward_is_frozen_at_submission_time` | `GET /api/v1/game/bootstrap`, `POST /admin/missions/new`, `POST /admin/missions/{mission_id}`, `POST /admin/missions/{mission_id}/publish`, `POST /admin/submissions/{submission_id}/review`, `POST /api/v1/game/missions/{mission_id}/submissions`, `POST /demo-login` | `security.csrf_for` | — |
+| `test_auto_approved_mission_awards_both_economies_once` | `GET /api/v1/game/bootstrap`, `POST /admin/missions/new`, `POST /admin/missions/{mission_id}/publish`, `POST /api/v1/game/missions/{mission_id}/submissions`, `POST /demo-login` | `security.csrf_for` | — |
+| `test_validation_evidence_answer_and_idempotency_conflict` | `GET /api/v1/game/bootstrap`, `POST /admin/missions/new`, `POST /admin/missions/{mission_id}/publish`, `POST /api/v1/game/missions/{mission_id}/submissions`, `POST /demo-login` | `security.csrf_for` | — |
+| `test_game_api_permissions_csrf_and_org_scope` | `GET /api/v1/game/bootstrap`, `GET /api/v1/game/missions`, `POST /admin/missions/new`, `POST /admin/missions/{mission_id}/publish`, `POST /api/v1/game/missions/{mission_id}/submissions`, `POST /demo-login` | `security.csrf_for` | — |
+| `test_v1_remains_default_and_v2_hides_unavailable_features` | `GET /api/v1/game/bootstrap`, `POST /admin/missions/new`, `POST /admin/missions/{mission_id}/publish`, `POST /api/v1/game/missions/{mission_id}/completions`, `POST /demo-login` | `security.csrf_for` | — |
+| `test_v2_drafts_use_db_missions` | `GET /api/v1/game/bootstrap`, `POST /admin/missions/new`, `POST /admin/missions/{mission_id}/publish`, `POST /demo-login` | `security.csrf_for` | — |
+| `test_admin_form_validation_and_edit_round_trip` | `GET /admin/missions/{mission_id}`, `POST /admin/missions/new`, `POST /admin/missions/{mission_id}/publish`, `POST /demo-login` | `security.csrf_for` | — |
+| `test_existing_web_flow_and_legacy_forms_still_work` | `POST /admin/missions/new`, `POST /demo-login` | `security.csrf_for` | — |
+
+112 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
+Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::row_id`, `conftest::settings`, `test_admin_demo::_count`, `test_admin_demo::_user_id`, `test_admin_demo::demo_client`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_game_store::csrf_header`, `test_game_store::set_game_coins`, `test_hardening::token_csrf`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`, `test_unified_missions::_boot`, `test_unified_missions::_create`, `test_unified_missions::_day`, `test_unified_missions::_form`, `test_unified_missions::_game_events`, `test_unified_missions::_mission`, `test_unified_missions::_org_points`, `test_unified_missions::_review`, `test_unified_missions::_sub_id`, `test_unified_missions::_submit`.
 
 ## 8. Error codes
 
@@ -1450,8 +1573,11 @@ Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db
 | `IMPORT_BUSY` | DomainError | `repo.process_sales_import` |
 | `IMPORT_FAILED` | DomainError | `repo.process_sales_import` |
 | `IMPORT_REJECTED` | DomainError | `repo.process_sales_import` |
+| `INSTRUCTIONS_TOO_LONG` | DomainError | `repo._validate_mission_form` |
+| `INVALID_CATEGORY` | DomainError | `repo._validate_mission_form` |
 | `INVALID_DATE` | DomainError | `repo._parse_day` |
 | `INVALID_DECISION` | DomainError | `repo.review_submission` |
+| `INVALID_DIFFICULTY` | DomainError | `repo._validate_mission_form` |
 | `INVALID_MAX` | DomainError | `repo._validate_mission_form` |
 | `INVALID_POINTS` | DomainError | `repo._validate_mission_form` |
 | `INVALID_UNIT_SIZE` | ScoringError | `scoring.award_sales_record` |
@@ -1497,6 +1623,7 @@ Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db
 
 | Value | Written in |
 |---|---|
+| `approval:<id>` | `game_rewards.grant_game_reward` |
 | `mission.approved:<id>` | `scoring.award_mission_approval` |
 | `sales.record:<id>` | `scoring.award_sales_record` |
 | `score.reversed:<id>` | `scoring.reverse_event` |

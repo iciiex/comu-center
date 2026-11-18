@@ -54,6 +54,11 @@ def _all_missions() -> list[dict[str, Any]]:
     return missions
 
 
+def _special_ids() -> set[str]:
+    """Mission ids of the demo-store specials (still completed through the catalog route)."""
+    return {offer["mission"]["id"] for offer in store_catalog()["offers"]}
+
+
 def _now() -> datetime:
     return datetime.now(UTC).replace(microsecond=0)
 

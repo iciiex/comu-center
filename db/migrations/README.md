@@ -6,6 +6,7 @@ Prototype policy (MODE: P):
   (`app/db.py::apply_migrations`). Applied file names are recorded in `schema_migrations`.
 - Current files: `0001_init.sql` (base schema), `0002_score_corrections.sql` (one correction per
   score event), `0003_sales_import.sql` (sales import tables and `scoring_rule_versions.unit_size`).
+- `0004`–`0006` add the game projection/completions, the Tribal org foundation and the demo store; `0007_unified_missions.sql` adds mission game fields, submission reward snapshots and `game_reward_events` (additive only).
 - The runner wraps each file in one transaction. Do not write `BEGIN` or `COMMIT` inside a file.
 - Never edit or rename an applied file; add the next number. The runner has no checksums and no
   downgrades: it is a prototype stopgap.

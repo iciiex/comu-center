@@ -13,18 +13,19 @@
   <div class="card card--flat">
     <table class="table">
       <thead>
-        <tr><th>عنوان</th><th>وضعیت</th><th>امتیاز</th><th>بازه</th><th></th></tr>
+        <tr><th>عنوان</th><th>وضعیت</th><th>امتیاز سازمانی</th><th>پاداش بازی</th><th>بازه</th><th></th></tr>
       </thead>
       <tbody>
         {% for mission in missions %}
           <tr>
             <td>{{ mission['title'] }}</td>
             <td>
-              {% if mission['status'] == 'active' %}<span class="pill pill--green">فعال</span>
+              {% if mission['status'] == 'active' %}<span class="pill pill--green">منتشر شده</span>
               {% elif mission['status'] == 'draft' %}<span class="pill pill--amber">پیش‌نویس</span>
-              {% else %}<span class="pill pill--gray">آرشیو</span>{% endif %}
+              {% else %}<span class="pill pill--gray">بایگانی</span>{% endif %}
             </td>
             <td>{{ mission['points']|fa }}</td>
+            <td class="small">{{ mission['game_xp']|fa }} XP · {{ mission['game_coins']|fa }} سکه</td>
             <td class="tiny muted">{{ mission['starts_at']|jdate }} — {{ mission['ends_at']|jdate }}</td>
             <td>
               {% if user.is_admin %}

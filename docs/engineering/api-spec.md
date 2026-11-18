@@ -194,3 +194,45 @@ Mission form fields: `title`, `description`, `points` (0–10000), `max_per_user
 - Mission/leaderboard lists are unpaginated (queue is paginated); sales rows are capped at 200 per view.
 - Sales import accepts one XLSX contract (SAMPLE) — no column mapping UI, no CSV, no scheduled import.
 - No CSP report collector; policy is applied but unmonitored.
+
+## Unified missions: game API v2 (D-009 PROPOSED)
+
+The `missions` table is the single source of truth for missions. The game reads DB missions through the BFF;
+organizational points stay in `score_events`, game XP/coins in `game_reward_events` (never mixed).
+
+**Version negotiation.** `api_version` is `"1"` by default (the six catalog missions, `/completions`, daily bonus) and
+`"2"` when the request carries `X-Game-Api: 2` (or `?api=2`). v1 is kept only so an old frontend survives a deploy gap;
+v2 is the contract going forward. Every route below uses the cookie session (`require_api_user`, visitors only), the
+`X-CSRF-Token` header on writes and JSON errors `{"error": {code, message}}`.
+
+| Route | Notes |
+|---|---|
+| `GET /api/v1/game/bootstrap` (v2) | `missions` = DB missions visible to the visitor; `progress.daily` is `null`; `achievements_catalog[].available` is `false` for `daily_hero` / `trailblazer`. |
+| `GET /api/v1/game/progress` (v2) | Same projection shape. |
+| `GET /api/v1/game/missions` | `{missions, date_key}`. |
+| `GET /api/v1/game/missions/{id}` | `{mission}`; 404 `MISSION_NOT_FOUND` for draft/archived/not-started/other-organization. |
+| `PUT/DELETE /api/v1/game/missions/{id}/draft` (v2) | Text-answer draft (`answers` may contain `answer` only). |
+| `POST /api/v1/game/missions/{id}/submissions` | multipart `answer` (text) + optional `evidence` (JPEG/PNG/WEBP, ≤ 4 MiB); header `Idempotency-Key` required. `201` created, `200` + `Idempotent-Replay: true` on replay. Body: `{submission{id,status,...}, mission, progress, missions, special_missions, date_key}`. |
+| `GET /api/v1/game/submissions` | The visitor's game submissions with status and rejection reason. |
+
+Mission view (v2) fields beyond the catalog shape: `instructions, orgPoints, xpReward, coinReward, requiresReview,
+requiresEvidence, maxPerUser, remaining, startsAt, endsAt, source:"server", status, canStart, blockedReason,
+latestSubmission`. `status ∈ available | in_progress | pending_review | approved | rejected | expired`;
+`blockedReason ∈ pending_review | expired | limit_reached`. Expired missions stay listed for 30 days, then disappear.
+
+Submission checks, in order: key format (400) → idempotent replay (same key + different content = 409
+`IDEMPOTENCY_KEY_REUSED`) → mission visible (404) → `MISSION_EXPIRED` (409) → `SUBMISSION_PENDING` (409) →
+`MAX_ATTEMPTS_REACHED` (409, rejected attempts count, B6-1) → `EVIDENCE_REQUIRED` / `ANSWER_REQUIRED` (422; text ≥ 2
+chars when the image is optional) → `INVALID_EVIDENCE_TYPE` / `EVIDENCE_TOO_LARGE` / `EVIDENCE_EMPTY` (422).
+`POST /missions/{id}/completions` in v2 only accepts the demo-store special missions (404 for catalog missions).
+
+Rewards: nothing is granted at submission for review-required missions. On approval, in the same transaction as the
+status change and the organizational score event, `game_rewards.grant_game_reward` inserts one `game_reward_events` row
+(`UNIQUE(source_type, source_id)`) and updates the `game_progress` projection + `/history`. XP/coins are the values
+frozen in `submissions.game_xp_snapshot/game_coins_snapshot` at submit time. Rejection and repeated approval grant nothing.
+Missions with `requires_review = 0` are approved and rewarded at submit time, once.
+
+**Admin mission form** (`POST /admin/missions/new`, `POST /admin/missions/{id}`) accepts, besides the original fields:
+`instructions` (≤ 4000), `category`, `difficulty` (`easy|medium|hard`), `estimated_minutes` (1–600), `game_xp`,
+`game_coins` (0–10 000), `requires_evidence` / `requires_review` (`1`/`0`). Missing fields default to the pre-0007
+behaviour (evidence and review required, 0 XP/coins). Publish/archive routes are unchanged; "published" = `active`.

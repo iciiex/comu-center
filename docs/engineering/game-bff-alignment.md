@@ -95,3 +95,15 @@ DoD for the integrated slice: contract version is explicit; server ignores/rejec
 - Production login (OD-01), real org/team model, live CRM-verified visits/orders, approved reward economics and competition rules are not settled by this integration.
 - A client-reported `order_received` choice is an in-game claim, not verified sales evidence. It must not award organizational sales points.
 - This contract does not implement admin configuration, team competitions, notifications, or production deployment.
+
+## Unified missions (D-009 PROPOSED, 2026-11-18)
+
+The frontend's six hard-coded missions are no longer the server-mode player list. With `X-Game-Api: 2` the BFF returns
+DB missions (`app/game_missions.py`) and the frontend (`feat/kiloos-backend-demo`) renders them with the existing
+cards/detail/play screens, a new image-evidence step, the `pending_review / approved / rejected / expired` statuses and a
+separate «امتیاز سازمانی» chip. `app/game_catalog.json` still supplies config, categories, achievements and the demo-store
+templates. Device-only mode is untouched. Demo login is also available in `KILOOS_ENV=demo` (D-006), not only dev/test.
+Contract details: [api-spec.md](api-spec.md#unified-missions-game-api-v2-d-009-proposed).
+
+Deploy order and compatibility: the backend ships first and keeps answering v1 to the old frontend; the new frontend asks
+for v2 and still accepts a v1 response. v1 bootstrap is retired only after the hosted v2 scenario passes.

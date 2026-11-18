@@ -12,6 +12,7 @@
 - Change history: `CHANGELOG.md`
 
 ## Working features
+- **Unified missions (2026-11-18, D-009 PROPOSED, migration 0007):** the `missions` table is the single source for the game. Admin form: title, description, instructions, category, difficulty, minutes, window, per-user cap, org points, game XP/coins, evidence/approval switches, draft→published→archived. Game API v2 (`X-Game-Api: 2`; v1 default for the deploy gap) lists DB missions, takes multipart submissions (text + image, idempotent) into the existing operator queue; approval writes org points to `score_events` and XP/coins (snapshot taken at submit time) to `game_reward_events`, once. Details: `docs/engineering/api-spec.md` (Unified missions).
 - Demo login with 5 seeded users (visitor ×3, operator, admin) and role-aware redirect.
 - Cookie-less session fallback: signed token in `?s=` propagated through links/forms/redirects (D-002, demo only).
 - CSRF guard on every state-changing route except `/demo-login`, rate-limited demo login, security headers,
@@ -69,6 +70,8 @@
 - Partial corrections (correcting part of an award) are not implemented.
 
 ## Mocked / Demo-only
+- **Game rewards per mission:** XP/coins are SAMPLE numbers entered by the admin; no approved reward matrix (OD-13). Exit: approved policy.
+- **Daily challenge and achievements `daily_hero`/`trailblazer`:** disabled in server mode (no catalog missions). Exit: OD-13.
 - **Auth:** demo user picker instead of OTP/SMS (OD-01). Exit: approved login method + provider.
 - **Tenant:** one organization; multi-company not exposed (OD-02). Exit: approved org model.
 - **Points:** all seeded values (10/15/5/20) are `SAMPLE` (OD-04/05). Exit: approved rule matrix.
@@ -108,6 +111,7 @@
 - Four business-rule questions surfaced on 2026-11-11 are still **not registered** as open decisions (backlog B4/B6).
 
 ## Recent migrations / API changes
+- Added `0007_unified_missions.sql` (additive): mission game fields, `submissions.source/game_xp_snapshot/game_coins_snapshot`, `game_reward_events`. New game routes: `GET /api/v1/game/missions[/{id}]`, `POST /api/v1/game/missions/{id}/submissions`, `GET /api/v1/game/submissions`; v2 bootstrap/progress/draft behind `X-Game-Api: 2`.
 - Added `0004_game_progress.sql`: per-user game projection and append-only idempotent game completions, separate from score ledger.
 - New route: `GET /admin/sales/sample` (admin-only) downloads the SAMPLE workbook.
 - `POST /admin/score-events/{id}/reverse` now redirects sales-record corrections to `/admin/sales/{import_id}?reversed=1`.
@@ -117,6 +121,8 @@
   `/api/v1/game` uses JSON errors/401 and cookie sessions only; URL session tokens are rejected.
 
 ## Tests and verification
+Run on 2026-11-18 (unified missions): `ruff check app tests` → All checks passed; `pytest` → **112 passed** (12 new in `tests/test_unified_missions.py`: full acceptance scenario, draft/expired/limit/reject/auto-approve/snapshot/permissions/org-scope/v1-compat); `.agent/tools/doctor.py --strict` → 8 ok · 0 warn · 0 fail; `make docs` regenerated. Frontend (`mrkavousi/sales-quest-arena`, `feat/kiloos-backend-demo`): `tsc --noEmit` clean, `vitest` 64 passed, and the cross-repo browser scenario `node e2e/bff.mjs` (real BFF + Vite proxy + Chromium) passed: create → publish → visitor sees it → submit → operator queue → pending (no rewards) → approve → «تأیید شد» → 20 org points + 100 XP / 20 coins → retries and repeat approval grant nothing → lost-response retry creates one submission → rejection grants nothing.
+
 Run on 2026-11-12 after the A1/A2/A4/A6 slice:
 - `.venv/bin/ruff check app tests` → **All checks passed!**
 - `.venv/bin/pytest -q` → **81 passed, 1 warning** (Starlette `TestClient`/`httpx` deprecation notice):
