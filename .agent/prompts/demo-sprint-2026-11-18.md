@@ -8,7 +8,7 @@ Mode: P (prototype)
 
 ## Mission
 
-Deliver a polished, functional, publicly reachable demo today. Do not rewrite the platform. Reuse the existing FastAPI application, database, XLSX import, scoring engine, game APIs and React game. Inspect the current source before making assumptions.
+Deliver a polished, functional, publicly reachable demo today. Do not rewrite the platform. Reuse the existing FastAPI application, XLSX import, scoring engine, game APIs and React game. Target architecture: FastAPI on Render + Neon PostgreSQL as the authoritative hosted database. Preserve SQLite for local development/tests if practical. Inspect the current source before making assumptions.
 
 ## Read first
 
@@ -20,7 +20,7 @@ Deliver a polished, functional, publicly reachable demo today. Do not rewrite th
 - docs/engineering/sales-import.md
 - docs/engineering/game-bff-alignment.md
 - docs/delivery/demo-script.md
-- app/main.py, app/repo.py, app/sales.py, app/scoring.py, app/game.py
+- app/main.py, app/db.py, app/config.py, app/repo.py, app/sales.py, app/scoring.py, app/game.py
 - app/game_catalog.json and app/game_store_catalog.json
 - tests/, app/templates/, app/static/
 
@@ -88,26 +88,42 @@ The documented sample workbook contract is:
 
 This is the SAMPLE rule, not an approved business policy. Keep it labeled as sample.
 
-### 145–170 min: Render deployment
-Deploy the FastAPI service from this GitHub repository to Render. Use a Python Web Service and a paid plan if persistent disk is required. The app uses SQLite and private uploaded evidence, so ephemeral filesystem is NOT acceptable.
+### 145–170 min: Neon PostgreSQL + Render deployment
+The hosted demo MUST use Neon PostgreSQL as its authoritative application database. Do not deploy hosted demo data to SQLite. Keep SQLite as the local dev/test adapter if feasible; do not break existing local workflows.
+
+#### Database migration requirements
+The current codebase is SQLite-specific (sqlite3 connections, qmark placeholders, sqlite.Row assumptions and SQLite schema initialization). This is a real compatibility migration, not just changing an environment variable.
+- Inspect app/db.py, schema, all SQL call sites, tests and transaction boundaries first.
+- Implement the smallest safe dual-backend design: DATABASE_URL selects PostgreSQL in hosted demo; absent DATABASE_URL uses existing SQLite locally.
+- Prefer psycopg 3 with dict_row (or a small, tested compatibility adapter) and add the dependency to pyproject.toml. Keep SQL parameterization; never interpolate user input.
+- Handle placeholder differences, row access, transaction/commit semantics, integrity errors, generated IDs, schema DDL, indexes and constraints explicitly. Do not use brittle global SQL string replacement without tests.
+- Add an idempotent PostgreSQL schema initialization/migration path. It must be safe on repeated deploys and must not drop, truncate, or reset existing data.
+- Keep domain logic backend-neutral where practical. If a full PostgreSQL port cannot be completed safely in this timebox, report exactly what remains and do not ship a broken deployment.
+- Add tests for PostgreSQL adapter behavior and run integration smoke tests against a real Neon branch if credentials are available. Do not fabricate integration results.
+- Never print DATABASE_URL or credentials in logs, test output, issue comments or docs.
+
+#### Neon setup
+Use an existing Neon project/branch only if it is clearly the intended project for this app. Otherwise report that a Neon project/branch and connection string must be supplied; do not create or modify an unrelated project.
+- Render environment variable DATABASE_URL = Neon pooled connection string (use the pooled hostname / -pooler endpoint for the app runtime).
+- Use a separate direct Neon connection string for schema migration only if the migration tooling requires it; do not expose it to the browser.
+- Require SSL (sslmode=require) and verify the actual connection settings.
+- Do not commit secrets, .env files or connection strings.
+- Set KILOOS_ENV=demo and KILOOS_SECRET as a generated secret.
+- Set KILOOS_EVIDENCE_DIR under durable storage.
+- Configure appropriate CORS/session trusted origins if frontend is cross-origin and set the health check path based on the actual route.
+
+#### Evidence file storage
+Neon PostgreSQL stores relational data, not uploaded evidence files. Existing private evidence uploads must remain durable and private:
+- For this demo, use a Render persistent disk mounted at /var/data for KILOOS_EVIDENCE_DIR, OR use a verified private object-storage integration already configured in the repo.
+- Do not remove evidence requirements or expose private evidence as public static assets.
+- If a Render persistent disk is required for evidence, note that it may require a paid Render service. The database itself must not depend on that disk.
 
 Inspect the actual app factory and settings before choosing commands. Existing known start command candidate:
 `uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT`
 Only use this if it matches the actual app structure.
 
-Configure:
-- KILOOS_ENV=demo
-- KILOOS_DB under persistent disk
-- KILOOS_EVIDENCE_DIR under persistent disk
-- KILOOS_SECRET as a generated secret
-- appropriate CORS/session trusted origins if frontend is cross-origin
-- health check path based on actual route
-
-Persistent disk mount: use /var/data and ensure BOTH SQLite and evidence files are written under it. Do not expose private evidence as public static assets.
-
-Render service must deploy from branch demo/2026-11-18-three-hour-sprint initially. Do not auto-deploy main or merge without verification. Use Render GitHub integration. If integration, billing, permissions or required credentials are missing, stop and report the exact manual step; never claim it is deployed.
-
-If a render.yaml is appropriate, create it with non-secret environment configuration and generateValue for secrets where supported. Do not put credentials in YAML.
+Render service must deploy from branch demo/2026-11-18-three-hour-sprint initially. Do not auto-deploy main or merge without verification. Use Render GitHub integration. If integration, billing, permissions, Neon credentials or required permissions are missing, stop and report the exact manual step; never claim it is deployed.
+If a render.yaml is appropriate, create it with non-secret environment configuration and generateValue for secrets where supported. DATABASE_URL must be configured as a secret in Render dashboard, never hardcoded in YAML or repository.
 
 ### 170–180 min: handoff
 Update docs/handoffs/current-state.md, docs/delivery/demo-script.md and CHANGELOG.md. Report:
