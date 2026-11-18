@@ -17,6 +17,13 @@ exists, move them under a dated heading with its number
 
 ## [Unreleased]
 
+MS-01 demo sprint (2026-11-18, MODE: P). Read-only admin panel (dashboard, users, points ledger, game overview,
+leaderboard, audit) with organization scope; sales import detail now shows expected points per row, per-user
+award breakdown and paging; process asks for confirmation. Hosted-demo hardening: `KILOOS_ENV=demo` allows the visitor-only
+JSON game login, `Secure` cookies outside dev/test, staff login behind `KILOOS_DEMO_STAFF_CODE` (D-006, D-008, PROPOSED).
+`Dockerfile` + `render.yaml` for Render with a persistent disk (D-007, PROPOSED). No migration. Frontend repo: Vercel
+same-origin rewrite + server-mode default (separate repository).
+
 Sales Quest demo store: two sample coin-priced special missions with idempotent purchases; game coin economy remains separate from organizational/Tribal points.
 
 Tribal Gamification architecture/API proposal, fail-closed default-off bootstrap gate, tenant-scoped read-only org-unit APIs, and additive generic organization/membership schema foundation added; no scoring, RBAC, report workflow or product decision status changed.

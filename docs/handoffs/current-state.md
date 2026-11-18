@@ -1,11 +1,11 @@
 # Current Project State
 
-- Last updated: 2026-11-12 (۲۱ آبان ۱۴۰۵)
+- Last updated: 2026-11-18 (۲۷ آبان ۱۴۰۵)
 - Updated by: Kiloos engineering agent
 - Mode: P
 - Current phase: Prototype
 - Current milestone: MS-01 — Prototype Delivery (2026-11-18)
-- Main branch / working branch: `main` / `arena/1757fdf5-comu-center`
+- Main branch / working branch: `main` / `arena/demo-sprint`
 - Prioritised backlog: `docs/delivery/backlog.md` (PROPOSED)
 - Project handover (dated snapshot, Persian): `docs/handoffs/handover.md`
 - Agent guide: `docs/agent-guide/README.md`
@@ -33,6 +33,11 @@
 - **A6 fixed (four unambiguous items):** sales navigation is admin-only; submission/review badges show recorded
   event points after a mission points change; the sales list counts pending `valid` rows; processing banner typo fixed.
   The rejected-attempt cap display remains open under B6-1/C6.
+- **MS-01 sprint (2026-11-18):** read-only admin panel (`/admin` dashboard, `/admin/users`, `/admin/points`,
+  `/admin/game`, `/admin/leaderboard`, `/admin/activity`) via `app/admin_queries.py`, all org-scoped and admin-only;
+  import detail has expected points per row, per-user breakdown, paging and a process confirmation. Hosted-demo
+  hardening (D-006/D-008 PROPOSED): `KILOOS_ENV=demo` visitor-only game login, Secure cookies, staff access code.
+  `Dockerfile`/`render.yaml` (D-007 PROPOSED). Tests: 100 passing (`tests/test_admin_demo.py` added).
 - Server-side authorization: visitor / operator / admin + same-organization scope (negative tests exist).
 - Documentation tooling: `make docs`, `make docs-check`, `make graph`, `make doctor`.
 
@@ -53,6 +58,10 @@
   now list two sample coin-priced special missions and atomically charge game coins with idempotency; special missions are
   returned separately so the original six remain unchanged. UI integration remains open: the React frontend is not wired
   to the API; its localStorage seam is synchronous and completion logic remains client-side.
+- **Deployment (2026-11-18):** deploy files exist but no public HTTPS URL has been verified yet; see
+  `docs/operations/deploy-render.md`. Frontend repo `mrkavousi/sales-quest-arena` branch `feat/kiloos-backend-demo`
+  has the Vercel rewrite and server-mode default; its server-mode store and leaderboard are still not connected.
+  Neon/PostgreSQL is deferred to the Harden phase (D-007).
 - A4: the demo script has an automated replay (`tests/test_demo_stability.py`) and a live local preview was smoke-tested
   on uvicorn. **Browser rehearsal on the final demo host is still not done.**
 - Sales import is XLSX-only with the SAMPLE contract; a real export (OD-03) may add columns or a mapping UI.

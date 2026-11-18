@@ -167,3 +167,51 @@ SameSite=None، ذخیره‌سازی محلی) در iframe قابل اتکا ن
 `docs/quality/qa-test-strategy.md`، `docs/handoffs/current-state.md`
 
 **Exit condition:** Replace the SAMPLE contract and scoring parameters when OD-03 and OD-04 are approved; revisit access, mapping and rule timing with the production import design.
+
+## D-006 — ورود نمایشی بازی در محیط hosted با `KILOOS_ENV=demo` (فقط ویزیتور)
+
+- Status: PROPOSED
+- Date: 2026-11-18
+- Owners: Engineering / DevOps
+- Related: D-002 / OD-01 / C9
+
+**Decision (موقت، ASSUMPTION):** مسیرهای JSON `GET /api/v1/game/demo-users` و `POST /api/v1/game/demo-login`
+علاوه بر `dev`/`test` در `KILOOS_ENV=demo` هم فعال‌اند؛ هر محیط دیگر ۴۰۴ می‌دهد. فهرست و ورود فقط
+برای نقش `visitor` است (admin/operator همچنان ۴۰۴). در هر محیطی غیر از dev/test کوکی جلسه `Secure` است.
+
+**Rationale:** دمو عمومی باید از ظاهر شدن حساب‌های مدیریتی در انتخابگر جلوگیری کند و کوکی روی HTTPS امن باشد.
+
+**Affected docs:** `docs/engineering/game-bff-alignment.md`، `docs/operations/deploy-render.md`
+
+**Exit condition:** جایگزینی با احراز هویت واقعی (OD-01) یا غیرفعال‌سازی ورود نمایشی پیش از هر کاربر واقعی.
+
+## D-007 — میزبانی دمو: Render (Docker + دیسک پایدار) با SQLite و Vercel rewrite برای فرانت
+
+- Status: PROPOSED
+- Date: 2026-11-18
+- Owners: DevOps / Engineering
+- Related: D-001 / backlog D1, D3
+
+**Decision (موقت):** بک‌اند FastAPI + SQLite روی Render با دیسک پایدار (`/var/data`) و یک worker اجرا می‌شود
+(`Dockerfile`، `render.yaml`). فرانت Sales Quest Arena با rewrite همان‌مبدأ روی Vercel به `/api/v1/game/*` وصل می‌شود.
+مهاجرت به PostgreSQL (Neon) از محدوده‌ی این sprint خارج و به فاز Harden موکول شد.
+
+**Rationale:** Vercel/Workers فایل‌سیستم پایدار برای SQLite و شواهد ندارند؛ تغییر پایگاه‌داده بدون شواهد ممنوع است (AGENTS §6.12).
+
+**Exit condition:** تصمیم میزبان نهایی (hosting در تصمیم‌های معماری باز) و PostgreSQL/object storage پیش از کاربر واقعی.
+
+## D-008 — ورود کارکنان (operator/admin) در دموی hosted با کد دسترسی
+
+- Status: PROPOSED
+- Date: 2026-11-18
+- Owners: Engineering
+- Related: D-002 / OD-01 / C9
+
+**Decision (موقت، ASSUMPTION):** در هر محیط غیر dev/test، فرم HTML `POST /demo-login` برای حساب غیر visitor فقط
+با `access_code` برابر `KILOOS_DEMO_STAFF_CODE` (مقایسه ثابت‌زمان) کار می‌کند؛ نبودن مقدار یعنی ورود کارکنان غیرفعال.
+شکست ۴۰۳ است، audit می‌شود و رده‌بندی نرخ ورود اعمال می‌شود. انتخابگر اصلی فقط ویزیتورها را نشان می‌دهد.
+
+**Rationale:** حساب admin نباید از طریق انتخابگر عمومی قابل انتخاب باشد. این احراز هویت واقعی نیست.
+
+**Exit condition:** OD-01 (روش ورود واقعی).
+

@@ -29,6 +29,7 @@ This is destructive and only for dev/demo. Never run against real data.
 | `KILOOS_LOGIN_RATE_LIMIT` / `KILOOS_LOGIN_RATE_WINDOW` | `10` / `60` | demo-login attempts per IP per window |
 | `KILOOS_EVIDENCE_RETENTION_DAYS` | `90` (SAMPLE, D-003) | purging window for evidence |
 | `KILOOS_QUEUE_PAGE_SIZE` | `20` | review queue page size |
+| `KILOOS_DEMO_STAFF_CODE` | empty | hosted demo (env not dev/test): access code for operator/admin demo login (D-008); empty disables staff login |
 | `KILOOS_SALES_MAX_BYTES` / `KILOOS_SALES_MAX_ROWS` | `5242880` / `5000` | sales XLSX upload limits |
 
 Changing `KILOOS_SECRET` invalidates every session (including `?s=` links already open).

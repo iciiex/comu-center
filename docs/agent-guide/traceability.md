@@ -104,6 +104,9 @@ lists the files to revisit when the decision is made.
 | **D-003** | سیاست نگهداری شاهد تصویری (پیش‌فرض نمونه) | PROPOSED | `docs/decisions/decision-log.md` | `app/maintenance.py` |
 | **D-004** | اصلاح امتیاز با رخداد منفی (بدون ویرایش تاریخچه) | PROPOSED | `docs/decisions/decision-log.md` | — |
 | **D-005** | ورود داده فروش با XLSX، نگاشت صریح و قاعده‌ی مبلغی SAMPLE | PROPOSED | `docs/decisions/decision-log.md` | — |
+| **D-006** | ورود نمایشی بازی در محیط hosted با `KILOOS_ENV=demo` (فقط ویزیتور) | PROPOSED | `docs/decisions/decision-log.md` | `app/config.py` |
+| **D-007** | میزبانی دمو: Render (Docker + دیسک پایدار) با SQLite و Vercel rewrite برای فرانت | PROPOSED | `docs/decisions/decision-log.md` | — |
+| **D-008** | ورود کارکنان (operator/admin) در دموی hosted با کد دسترسی | PROPOSED | `docs/decisions/decision-log.md` | `app/config.py`, `app/main.py` |
 | **ADR-0001** | FastAPI + SQLite for the prototype | PROPOSED | `docs/architecture/decisions/0001-fastapi-sqlite-prototype.md` | `db/migrations/0001_init.sql` |
 
 ## 6. Milestones
@@ -223,8 +226,9 @@ Use this list when a decision changes: these are the files to re-read and update
 | **D-003** | `docs/decisions/decision-log.md` | 8 | `CHANGELOG.md`, `README.md`, `app/maintenance.py`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md`, `docs/delivery/demo-script.md`, `docs/handoffs/current-state.md`, `docs/operations/runbook.md` |
 | **D-004** | `docs/decisions/decision-log.md` | 10 | `CHANGELOG.md`, `README.md`, `docs/agent-guide/01-start.md`, `docs/agent-guide/knowledge-graph.md`, `docs/architecture/technical-design.md`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md`, `docs/delivery/demo-script.md`, `docs/delivery/execution-plan.md`, `docs/engineering/scoring-engine.md` |
 | **D-005** | `docs/decisions/decision-log.md` | 15 | `CHANGELOG.md`, `README.md`, `docs/README.md`, `docs/agent-guide/01-start.md`, `docs/agent-guide/03-deliver.md`, `docs/architecture/technical-design.md`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md`, `docs/delivery/demo-script.md`, `docs/delivery/execution-plan.md`, `docs/engineering/api-spec.md`, `docs/engineering/sales-import.md`, `docs/engineering/scoring-engine.md`, `docs/handoffs/current-state.md`, `docs/handoffs/handover.md` |
-| **D-006** | not defined in this repository | 1 | `app/config.py` |
-| **D-008** | not defined in this repository | 2 | `app/config.py`, `app/main.py` |
+| **D-006** | `docs/decisions/decision-log.md` | 4 | `CHANGELOG.md`, `app/config.py`, `docs/decisions/decision-log.md`, `docs/handoffs/current-state.md` |
+| **D-007** | `docs/decisions/decision-log.md` | 4 | `CHANGELOG.md`, `docs/decisions/decision-log.md`, `docs/handoffs/current-state.md`, `docs/operations/deploy-render.md` |
+| **D-008** | `docs/decisions/decision-log.md` | 6 | `CHANGELOG.md`, `app/config.py`, `app/main.py`, `docs/decisions/decision-log.md`, `docs/handoffs/current-state.md`, `docs/operations/runbook.md` |
 | **ADR-0001** | `docs/architecture/decisions/0001-fastapi-sqlite-prototype.md` | 10 | `CHANGELOG.md`, `README.md`, `db/migrations/0001_init.sql`, `docs/README.md`, `docs/agent-guide/knowledge-graph.md`, `docs/architecture/database-erd.md`, `docs/architecture/decisions/0001-fastapi-sqlite-prototype.md`, `docs/architecture/solution-architecture.md`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md` |
 | **ADR-0002** | not defined in this repository | 4 | `docs/architecture/decisions/0001-fastapi-sqlite-prototype.md`, `docs/architecture/solution-architecture.md`, `docs/decisions/decision-log.md`, `docs/delivery/backlog.md` |
 | **ADR-0010** | not defined in this repository | 2 | `CHANGELOG.md`, `docs/delivery/backlog.md` |
