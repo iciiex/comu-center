@@ -24,7 +24,7 @@ Deliver a polished, functional, publicly reachable demo today. Do not rewrite th
 - app/game_catalog.json and app/game_store_catalog.json
 - tests/, app/templates/, app/static/
 
-The Sales Quest Arena React 18 + TypeScript + Vite frontend may live in a separate repository. Find its actual source and integration target; do not assume it is in this repo.
+The Sales Quest Arena frontend is confirmed in the separate public repository https://github.com/mrkavousi/sales-quest-arena (default branch main). Its README and docs/bff-integration.md already document the BFF integration; npm run test:bff runs a cross-repository integration test. You have confirmed read/write access to this repository. Clone it into a sibling folder and work on a dedicated feature branch; do not copy the app into the backend repo or build a competing Jinja game UI. Keep the separate React/Vite frontend as the actual player-facing game.
 
 ## Non-negotiable correctness
 
@@ -55,7 +55,7 @@ Build or complete a Persian RTL admin experience using existing FastAPI routes/t
 Keep the UI focused on the demo. Label sample-derived values clearly. Never show hardcoded KPIs as real metrics.
 
 ### 65–115 min: game integration
-Read docs/engineering/game-bff-alignment.md. Replace localStorage as authoritative game state with backend API state:
+Work across BOTH repositories: backend iciiex/comu-center and frontend mrkavousi/sales-quest-arena. Read backend docs/engineering/game-bff-alignment.md AND frontend docs/bff-integration.md. The frontend already contains a server API client and integration proposal; validate and complete that existing integration rather than reimplementing it. Use the frontend's existing API client and same-origin relative paths. Replace localStorage as authoritative game state with backend API state:
 - Existing demo visitor login/session and CSRF.
 - Bootstrap profile, missions, config and persisted progress.
 - Show XP, coins, level, mission list, completion and leaderboard from backend.
@@ -67,7 +67,9 @@ Read docs/engineering/game-bff-alignment.md. Replace localStorage as authoritati
 - Preserve the existing mission catalog and content_version.
 - Include loading, empty, retry and error states.
 
-If frontend is in another repo, locate it and work in its actual repository. If unavailable, clearly report the integration as blocked; do not fake completion.
+Use the existing React repository at https://github.com/mrkavousi/sales-quest-arena. Build and test the frontend from that repository on a separate feature branch. Ensure the deployment plan configures a same-origin reverse proxy for `/api/v1/game/*` to the FastAPI service and preserves HttpOnly Set-Cookie, CSRF headers and idempotency headers. A static Vercel deployment alone does not provide this proxy; document the exact production routing configuration. Do not fall back to a duplicate Jinja game UI.
+
+
 
 ### 115–145 min: QA
 Run:
