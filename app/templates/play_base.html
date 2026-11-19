@@ -1,0 +1,40 @@
+{% import 'play_bits.html' as b with context %}
+<!doctype html><html lang="fa" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="color-scheme" content="light"><meta name="csrf-token" content="{{ csrf }}">
+<title>{% block title %}{{ nav[current][0] if current in nav else area_label }} | کیلوس‌پلی{% endblock %}</title>
+<link rel="icon" href="/static/play-favicon.svg"><link rel="stylesheet" href="/static/play.css"><script src="/static/play.js" defer></script>{% block head %}{% endblock %}</head>
+<body class="play theme-{{ area }}" data-authenticated>
+<a class="skip" href="#main">رفتن به محتوای اصلی</a>
+<div class="app-shell">
+<aside id="play-sidebar" class="sidebar" aria-label="منوی اصلی">
+  <div class="side-head">{{ b.brand('/play/' ~ area ~ '/' ~ ('dashboard' if area=='admin' else 'home')) }}<button class="btn btn-icon close-sidebar" type="button" data-nav-toggle aria-label="بستن منو">{{ b.icon('close') }}</button></div>
+  {% if area=='admin' %}<div class="workspace"><span class="symbol mint">{{ b.icon('shield') }}</span><div><strong>میز مدیریت</strong><small>فضای کاری نمایشی</small></div></div>{% endif %}
+  <nav class="side-navigation">
+  {% for name, keys in groups %}<div class="nav-group"><div>{{ name }}</div>{% for key in keys %}<a href="/play/{{ area }}/{{ key }}" class="nav-link {{ 'active' if current==key }}" {% if current==key %}aria-current="page"{% endif %}>{{ b.icon(nav[key][1]) }}<span>{{ nav[key][0] }}</span>{% if current==key %}<span class="active-dot"></span>{% endif %}</a>{% endfor %}</div>{% endfor %}
+  </nav>
+  <div class="side-bottom"><a class="side-switch" href="/play/entrance">{{ b.icon('flask') }}<span>حساب‌های نمایشی</span>{{ b.icon('chevron') }}</a>
+    <div class="side-account">{{ b.avatar(actor.avatar) }}<div><strong>{{ actor.name }}</strong><small>{{ 'مدیر سیستم' if area=='admin' else 'ویزیتور فروش' if area=='visitor' else 'بازیکن خانواده' }}</small></div><form method="post" action="/play/action">{{ b.hidden('logout') }}<button class="btn btn-icon subtle" type="submit" title="خروج" aria-label="خروج از حساب">{{ b.icon('logout') }}</button></form></div>
+  </div>
+</aside>
+<button class="nav-backdrop" type="button" data-nav-toggle aria-label="بستن منو" hidden></button>
+<div class="play-main">
+<header class="topbar">
+  <div class="top-start"><button class="btn btn-icon mobile-menu" type="button" data-nav-toggle aria-label="باز کردن منو" aria-expanded="false" aria-controls="play-sidebar">{{ b.icon('menu') }}</button>
+  <a href="/play/{{ area }}/{{ 'dashboard' if area=='admin' else 'home' }}" class="crumb-root">{{ area_label }}</a><span class="crumb-slash">{{ b.icon('chevron') }}</span><span class="crumb-current">{{ nav[current][0] if current in nav else 'جزئیات' }}</span></div>
+  <div class="top-actions">
+    <a class="role-switch" href="/play/entrance" aria-label="تغییر حساب">{{ b.icon('switch') }}<span>تغییر حساب</span></a>
+    {% if family %}<span class="top-divider"></span><a class="balance-pill" href="/play/{{ area }}/wallet" aria-label="کیف توکن خانواده">{{ b.icon('coin') }}<b data-balance>{{ wallet_balance|num }}</b><span>توکن</span></a>
+      <a class="btn btn-icon notification {{ 'has-unread' if unread }}" data-notices href="/play/{{ area }}/notices" title="اعلان‌ها" aria-label="اعلان‌ها">{{ b.icon('bell') }}<i></i></a>{% endif %}
+    <a class="top-avatar" href="{{ '/play/entrance' if area=='admin' else '/play/'~area~'/profile' }}" aria-label="حساب کاربری">{{ b.avatar(actor.avatar) }}</a>
+  </div>
+</header>
+{{ b.demo(true) }}
+<main id="main" class="main-content">
+{% if family %}<div class="flash info" role="status" data-wallet-status data-account="{{ actor.id }}" hidden></div>{% endif %}
+{% if flash %}<div class="flash success" role="status">{{ b.icon('check') }}<span>{{ flash }}</span><button type="button" class="btn btn-icon subtle" data-dismiss aria-label="بستن پیام">{{ b.icon('close') }}</button></div>{% endif %}
+{% block content %}{% endblock %}
+<footer class="app-footer"><span>{{ b.icon('game') }} کیلوس‌پلی <i>·</i> باشگاه بازی خانواده</span><a href="/play/entrance">حساب‌های نمایشی {{ b.icon('arrow-left') }}</a></footer>
+</main></div></div>
+{% if phone %}<nav class="phone-navigation" aria-label="دسترسی سریع">{% for key in phone %}<a href="/play/{{ area }}/{{ key }}" class="{{ 'active' if current==key }}" {% if current==key %}aria-current="page"{% endif %}>{{ b.icon(nav[key][1]) }}<span>{{ 'کیف توکن' if key=='wallet' else 'خانه' if key=='home' else 'اتاق‌ها' if key=='rooms' else nav[key][0] }}</span></a>{% endfor %}<button type="button" data-nav-toggle>{{ b.icon('menu') }}<span>بیشتر</span></button></nav>{% endif %}
+<div id="live-toast" class="toast" role="status" hidden></div>
+</body></html>

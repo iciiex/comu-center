@@ -6,6 +6,27 @@ make run     # uvicorn on 0.0.0.0:8000
 # stop: Ctrl+C or kill the uvicorn process
 ```
 
+`make run` reads the process environment, not a `.env` file by itself. Demo access is **off by default**.
+For a local Play rehearsal, set the following in the shell or use your environment/secret manager:
+
+```bash
+export KILOOS_ENV=dev KILOOS_DEMO_MODE=play
+export KILOOS_DB="$(mktemp -d)/isolated-legacy.sqlite3"
+# Enter a separate random 32+ character credential saved securely by the demo operator.
+read -rs KILOOS_DEMO_OPERATOR_KEY; export KILOOS_DEMO_OPERATOR_KEY
+make run
+```
+
+Open `http://localhost:8000/play/admin/login` for direct local rehearsal. Use HTTPS for other
+hosts, with a trusted proxy passing the original Host and scheme. Do not log credentials or
+share the operator key with participants. Use the admin’s demo account chooser to issue a one-use
+code per participant, and open each account in a separate browser profile. A room link does not
+sign anyone in. Rotate the operator key and restart to invalidate demo sessions/codes as needed.
+
+For **legacy Club** rehearsal instead, use a separate process/host and synthetic database/evidence
+paths, set `KILOOS_DEMO_MODE=legacy`, and use a different operator key. `/login` in this mode shows
+only the seed set; staff need the key. Play and the old login are never enabled on the same process.
+
 ## Health
 ```bash
 curl -s localhost:8000/health
@@ -16,13 +37,15 @@ Expect `{"status":"ok","mode":"P",...}`.
 ```bash
 make seed    # deletes var/kiloos.db, reseeds on next start
 ```
-This is destructive and only for dev/demo. Never run against real data.
+This is destructive and only for the legacy dev/demo. Never run against existing customer data. Play reset uses the authenticated control center/confirmation and only its marked Play store; do not use `make seed` for Play.
 
 ## Configuration (environment)
 | Variable | Default | Meaning |
 |---|---|---|
 | `KILOOS_ENV` | `dev` | `dev`/`test` allow the fallback secret; anything else requires `KILOOS_SECRET` |
-| `KILOOS_SECRET` | dev fallback | HMAC key for session + CSRF tokens (must be stable, ≥32 chars) |
+| `KILOOS_SECRET` | dev fallback | Stable signing/CSRF configuration; use ≥32 random characters |
+| `KILOOS_DEMO_MODE` | `off` | `play` or `legacy` enables one isolated demo in dev/test only |
+| `KILOOS_DEMO_OPERATOR_KEY` | unset | Demo operator access/control; separate random 32+ chars required when a demo is enabled |
 | `KILOOS_DB` | `var/kiloos.db` | SQLite file |
 | `KILOOS_EVIDENCE_DIR` | `var/evidence` | private evidence storage |
 | `KILOOS_SESSION_TTL` | `43200` (12h) | session/token lifetime in seconds |
@@ -31,7 +54,7 @@ This is destructive and only for dev/demo. Never run against real data.
 | `KILOOS_QUEUE_PAGE_SIZE` | `20` | review queue page size |
 | `KILOOS_SALES_MAX_BYTES` / `KILOOS_SALES_MAX_ROWS` | `5242880` / `5000` | sales XLSX upload limits |
 
-Changing `KILOOS_SECRET` invalidates every session (including `?s=` links already open).
+Changing `KILOOS_DEMO_OPERATOR_KEY` invalidates demo cookies and unused Play entry codes. Changing `KILOOS_SECRET` invalidates legacy sessions and previously rendered Play CSRF forms.
 
 ## Evidence retention (manual, D-003)
 ```bash
@@ -71,8 +94,9 @@ one mission, and one score record.
 ## Common issues
 | Symptom | Cause | Action |
 |---|---|---|
-| `401`/redirect loop | cookie secret changed | re-login; keep `KILOOS_SECRET` stable |
-| login lands back on `/login` in an embedded preview | third-party cookie blocked | expected: the `?s=` fallback handles it (D-002); check the URL carries `?s=` |
+| `401` at `/login` | no mode or active authenticated session | enable only the required isolated demo for rehearsal; do not enable either mode on a live non-demo host |
+| Login `403` on alternate hostname | credential transport/origin mismatch | use HTTPS, preserve the public Host and scheme in the trusted proxy, or open direct loopback locally |
+| login lands back on `/login` in an embedded preview | third-party cookie blocked | in the isolated `legacy` demo only, check `?s=` (D-002); for Play use the partitioned HTTPS cookie or open the host top-level |
 | `403` «اعتبار فرم منقضی شده» | CSRF token missing/stale (form from an old tab or another session) | reload the page and resubmit |
 | `429` on login | rate limit hit | wait one window (`KILOOS_LOGIN_RATE_WINDOW`) or raise the limit in dev |
 | `no such table` | DB path points to a new file | restart (init creates schema + seed) |

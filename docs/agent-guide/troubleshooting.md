@@ -61,6 +61,8 @@ are in [`docs/operations/runbook.md`](../operations/runbook.md) § Common issues
 | Reversing a sales score event returns 403 | `repo.score_event_detail` reads the organization through `submissions`, which a sales event does not have | Known defect, backlog A2 |
 | Times on screen are 3:30 behind | Stored UTC is rendered without conversion to Asia/Tehran | Known defect, backlog A3; store UTC, convert only for display |
 | Leaderboard title changed to «رتبه‌بندی» and totals look different | The seeded competition period ended (it runs from 7 days before to 7 days after seeding) | `make seed`; a period management screen is backlog C2 |
+| `/login` returns 401 or `/play/` returns 404 in dev | No explicit demo selected (safe default) | See [runbook](../operations/runbook.md) for `KILOOS_DEMO_MODE=play` or `legacy` on synthetic data only |
+| The app refuses to start: `KILOOS_DEMO_OPERATOR_KEY` | Demo enabled without a separate credential | Configure a securely generated random value of 32+ characters, never in repo or URL |
 | The app refuses to start: `KILOOS_SECRET must be set outside dev/test` | `KILOOS_ENV` is neither `dev` nor `test` and no secret is set | Set `KILOOS_SECRET` to at least 32 random characters |
 | Every session is invalid after a restart | `KILOOS_SECRET` changed | Keep it stable; sign in again |
 | A new migration did not run | The file name does not sort after the applied ones, or the name is already in `schema_migrations` | Use the next `NNNN_` number; never rename an applied file |

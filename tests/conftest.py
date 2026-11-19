@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Iterator
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,8 @@ from app.config import Settings
 from app.main import create_app
 from app.security import COOKIE_NAME, csrf_for
 
+TEST_OPERATOR_KEY = "synthetic-fixture-authorized-operator-key-only"
+
 
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
@@ -19,13 +22,26 @@ def settings(tmp_path: Path) -> Settings:
         db_path=tmp_path / "kiloos.db",
         evidence_dir=tmp_path / "evidence",
         secret="test-secret-that-is-long-enough-1234567890",
+        demo_mode="legacy",
+        demo_operator_key=TEST_OPERATOR_KEY,
     )
+
+
+@pytest.fixture
+def play_settings(settings: Settings) -> Settings:
+    return replace(settings, demo_mode="play")
+
+
+@pytest.fixture
+def play_client(play_settings):
+    with TestClient(create_app(play_settings), base_url="https://play.test") as client:
+        yield client
 
 
 @pytest.fixture
 def client(settings: Settings) -> Iterator[TestClient]:
     app = create_app(settings)
-    with TestClient(app) as test_client:
+    with TestClient(app, base_url="https://legacy.test") as test_client:
         yield test_client
 
 
@@ -43,7 +59,7 @@ def csrf(client: TestClient, settings: Settings) -> str:
     """CSRF value for the session currently held by the test client."""
     token = (client.cookies.get(COOKIE_NAME) or "").strip('"')
     assert token, "no session cookie; call login() first"
-    return csrf_for(token, settings.secret)
+    return csrf_for(token, settings.legacy_session_secret)
 
 
 def post(
@@ -72,7 +88,9 @@ def login(client: TestClient, settings: Settings, mobile: str) -> None:
         user_id = row["id"]
     finally:
         conn.close()
-    response = client.post("/demo-login", data={"user_id": user_id})
+    response = client.post(
+        "/demo-login", data={"user_id": user_id, "operator_key": settings.demo_operator_key}
+    )
     assert response.status_code == 200
 
 

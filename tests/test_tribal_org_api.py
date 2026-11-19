@@ -24,7 +24,7 @@ def test_org_units_api_is_gated_when_feature_is_off(client: TestClient, settings
 def test_org_units_api_is_tenant_scoped_and_paginated(settings) -> None:
     enabled_settings = replace(settings, tribal_gamification_enabled=True)
     app = create_app(enabled_settings)
-    with TestClient(app) as client:
+    with TestClient(app, base_url="https://legacy.test") as client:
         login(client, enabled_settings, VISITOR)
         conn = sqlite3.connect(enabled_settings.db_path)
         try:

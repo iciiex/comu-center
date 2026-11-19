@@ -167,3 +167,15 @@ SameSite=None، ذخیره‌سازی محلی) در iframe قابل اتکا ن
 `docs/quality/qa-test-strategy.md`، `docs/handoffs/current-state.md`
 
 **Exit condition:** Replace the SAMPLE contract and scoring parameters when OD-03 and OD-04 are approved; revisit access, mapping and rule timing with the production import design.
+
+## D-006 — جداسازی دموی خانوادگی کیلوس‌پلی
+
+- Status: PROPOSED
+- Date: 2026-11-18
+- Mode: P
+- Scope: کیلوس‌پلی؛ این تصمیم الگوی امتیاز یا کاربران کیلوس کلاب را عوض نمی‌کند.
+- Context: در دمو باید فروش، خرج توکن و بازی چندنفره روی هم اثر بگذارند، بدون آنکه بازنشانی به دادهٔ بیرون از دمو برسد.
+- Decision: برنامهٔ FastAPI/Jinja فعلی حفظ شود؛ Play در محیط توسعه/تست با SQLite جدا، دفتر توکن تراکنشی، هویت نمونهٔ مستقل و polling اتاق خصوصی اجرا شود. توکن، امتیاز و نشان به یکدیگر تبدیل نمی‌شوند. مقادیر فرمول، ظرفیت و وزن رقابت SAMPLE هستند.
+- Consequences: زمان‌سنج در سرور معتبر است؛ تسویهٔ اتاق بی‌اتصال در نخستین درخواست مرتبط انجام می‌شود. این تصمیم نسخهٔ تولید، سیاست کودک یا مقدار نهایی پاداش را تأیید نمی‌کند؛ OD-01/04/07/08/09 باز می‌مانند.
+- Auth hardening (ASSUMPTION, UAT-01/04/05): دمو پیش‌فرض خاموش است. در Play ایزوله کلید جداگانه برای مدیر و کد یک‌بارمصرف برای بازیکن یا ویزیتور لازم است؛ فهرست حساب در ورود عمومی یا دعوت اتاق نمایش داده نمی‌شود. اجرای قدیمی فقط در حالت نمونهٔ مجزا باقی می‌ماند. روش ورود واقعی (OD-01) مصوب نشده است.
+- Evidence: [قرارداد مهندسی](../engineering/kilos-play.md) · [سناریوی دمو](../delivery/kilos-play-demo.md) · `tests/test_kilos_play.py`.

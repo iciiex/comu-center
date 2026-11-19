@@ -18,6 +18,16 @@ PNG_1PX = base64.b64decode(
 )
 
 
+DEMO_ORGANIZATION = "گلرنگ — شبکه فروش مویرگی (نمونه)"
+DEMO_PEOPLE = (
+    ("سارا محمدی", "09120000001", "visitor"),
+    ("امیر رضایی", "09120000002", "visitor"),
+    ("مریم کاظمی", "09120000003", "visitor"),
+    ("حسین کریمی", "09120000004", "operator"),
+    ("نگار تهرانی", "09120000005", "admin"),
+)
+
+
 def _iso(delta: timedelta) -> str:
     return (datetime.now(tz=UTC) + delta).isoformat(timespec="seconds")
 
@@ -32,18 +42,11 @@ def seed_demo(conn: sqlite3.Connection, evidence_dir=None) -> None:
     org_id = _id()
     conn.execute(
         "INSERT INTO organizations (id, name, created_at) VALUES (?, ?, ?)",
-        (org_id, "گلرنگ — شبکه فروش مویرگی (نمونه)", _iso(timedelta())),
+        (org_id, DEMO_ORGANIZATION, _iso(timedelta())),
     )
 
-    people = [
-        ("سارا محمدی", "09120000001", "visitor"),
-        ("امیر رضایی", "09120000002", "visitor"),
-        ("مریم کاظمی", "09120000003", "visitor"),
-        ("حسین کریمی", "09120000004", "operator"),
-        ("نگار تهرانی", "09120000005", "admin"),
-    ]
     user_ids: dict[str, str] = {}
-    for full_name, mobile, role in people:
+    for full_name, mobile, role in DEMO_PEOPLE:
         user_id = _id()
         user_ids[mobile] = user_id
         conn.execute(

@@ -1,0 +1,13 @@
+{% extends 'play_base.html' %}
+{% import 'play_bits.html' as b with context %}
+{% block title %}اتاق {{ room.title }} | کیلوس‌پلی{% endblock %}
+{% block head %}<script src="/static/play-room.js" defer></script>{% endblock %}
+{% block content %}
+<template id="room-initial">{{ room|tojson }}</template>
+<a class="text-link back-link" href="/play/family/rooms">{{ b.icon('arrow-right') }} همهٔ اتاق‌ها</a>
+<div id="game-room" class="online-room theme-{{ art[room.game].color }}" data-code="{{ room.code }}">
+  <div class="room-top"><div><span class="eyebrow">{{ b.icon(art[room.game].icon) }} اتاق خصوصی خانواده</span><h1>{{ room.title }}</h1></div><div class="room-connect"><span class="online-pill" id="room-connection"><i></i> اتصال به اتاق</span><span class="room-id" dir="ltr">{{ room.code }}</span></div></div>
+  <div id="room-sync" class="flash info" role="status" hidden></div><div id="room-alert" class="flash error" role="alert" hidden></div><div class="room-layout"><section id="game-stage" class="panel spaced stage-panel"><p role="status">در حال دریافت وضعیت اتاق…</p></section><aside class="room-side"><div id="room-players" class="panel spaced"></div><div id="room-settings" class="panel spaced"></div></aside></div>
+  <noscript><div class="flash info">نمایش زندهٔ اتاق به جاوااسکریپت نیاز دارد. آن را فعال و صفحه را دوباره باز کنید.</div></noscript>
+</div>
+{% endblock %}

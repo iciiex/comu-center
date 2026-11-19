@@ -1,0 +1,23 @@
+{% import 'play_bits.html' as b with context %}
+<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ورود نمایشی | کیلوس‌پلی</title><link rel="icon" href="/static/play-favicon.svg"><link rel="stylesheet" href="/static/play.css"><script src="/static/play.js" defer></script></head><body class="play standalone">{{ b.demo() }}
+<main class="standalone-wrap login-wrap"><header>{{ b.brand() }}{% if landing %}<a class="btn btn-quiet" href="{{ landing }}">{{ b.icon('arrow-right') }} بازگشت</a>{% endif %}</header>
+<div class="login-layout"><div class="login-cover"><div><span class="featured-chip">{{ b.icon('sparkles') }} بازی کنار هم، حتی از دور</span><strong>هر فروش،<br> یک ماجرای خانوادگی</strong><p>به باشگاه بازی خانواده خوش آمدید.</p></div></div><section class="panel login-panel">
+{% if admin_login %}
+  <span class="eyebrow">{{ b.icon('shield') }} دسترسی کارکنان</span><h1>ورود مدیر دمو</h1><p>کلید مدیر را وارد کنید. کد حساب بازیکنان اینجا معتبر نیست.</p>
+  <form class="form-grid" method="post" action="/play/admin/login"><input type="hidden" name="csrf" value="{{ csrf }}"><label class="wide"><span>کلید مدیر</span><input type="password" name="operator_key" required autocomplete="current-password" dir="ltr"></label><button class="btn btn-primary" type="submit">ورود به مدیریت</button></form>
+{% elif issued_code %}
+  <span class="eyebrow">{{ b.icon('shield') }} تحویل حساب نمایشی</span><h1>کد ورود یک‌بارمصرف</h1><p>این کد برای «{{ issued_name }}» است؛ فقط در نمایهٔ همان بازیکن یا ویزیتور وارد کنید. کد تا ده دقیقه اعتبار دارد.</p>
+  <label class="label"><span>کد ورود صادرشده</span><input readonly dir="ltr" value="{{ issued_code }}" data-issued-code></label><button class="btn btn-mint" type="button" data-copy="{{ issued_code }}">{{ b.icon('copy') }} کپی کد ورود</button>
+{% elif invitation_code %}
+  <span class="eyebrow">{{ b.icon('link') }} دعوت خصوصی</span><h1>پذیرش دعوت خانوادگی</h1><p>با پذیرش این دعوت یک حساب نمایشی مستقل ساخته می‌شود.</p>
+  <form class="form-grid" method="post" action="/play/invitation/{{ invitation_code }}"><input type="hidden" name="csrf" value="{{ csrf }}"><label><span>نام نمایشی</span><input name="name" required maxlength="55" autocomplete="nickname"></label><label><span>آواتار</span><select name="avatar">{% for key,label in avatars.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label><button class="btn btn-primary" type="submit">پذیرش دعوت {{ b.icon('arrow-left') }}</button></form>
+{% else %}
+  <span class="eyebrow">{{ b.icon('flask') }} میز ورود نمایشی</span><h1>{{ 'ورود برای پیوستن به اتاق' if room else 'ورود به کیلوس‌پلی' }}</h1><p>{{ 'کد اتاق مجوز ورود به حساب نیست. با کد حساب خود وارد شوید تا دسترسی اتاق بررسی شود.' if room else 'برای ورود در دستگاه جداگانه، کد یک‌بارمصرف حساب خود را از مسئول دمو بگیرید.' }}</p>
+  {% if people and actor.role=='admin' %}
+    <form class="form-grid" method="post" action="/play/entry-code"><input type="hidden" name="csrf" value="{{ csrf }}"><label class="wide"><span>انتخاب حساب نمایشی</span><select name="account" required><option value="">یک حساب انتخاب کنید</option>{% for u in people %}<option value="{{ u.id }}">{{ u.name }} · {{ 'ویزیتور' if u.role=='visitor' else u.family }}</option>{% endfor %}</select></label><div class="actions wide"><button class="btn btn-primary" type="submit">ساخت کد ورود</button><button class="btn btn-quiet" type="submit" formaction="/play/enter">ورود در این مرورگر</button></div></form>
+  {% elif people %}
+    <div class="personas">{% for u in people %}<form method="post" action="/play/enter"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="account" value="{{ u.id }}"><button type="submit" class="persona">{{ b.avatar(u.avatar) }}<span><strong>{{ u.name }}</strong><small>{{ 'بازیکن کودک' if u.age=='child' else 'بازیکن خانواده' }}</small></span>{{ b.icon('arrow-left') }}</button></form>{% endfor %}</div>
+  {% endif %}
+  {% if not actor or actor.role!='admin' or room %}<form class="form-grid" method="post" action="/play/enter"><input type="hidden" name="csrf" value="{{ csrf }}">{% if room %}<input type="hidden" name="room" value="{{ room }}">{% endif %}<label class="wide"><span>کد ورود حساب</span><input name="entry_code" type="password" required minlength="43" maxlength="43" autocomplete="off" dir="ltr"></label><button class="btn btn-primary" type="submit">ورود با کد</button></form>{% endif %}
+  {% if not room and (not actor or actor.role!='admin') %}<div class="block-gap"><a class="text-link" href="/play/admin/login">{{ b.icon('shield') }} ورود مدیر دمو</a></div>{% endif %}
+{% endif %}</section></div></main></body></html>

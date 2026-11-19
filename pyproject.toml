@@ -27,7 +27,7 @@ dev = [
 include = ["app*"]
 
 [tool.setuptools.package-data]
-app = ["game_catalog.json", "game_store_catalog.json", "templates/*.html", "static/*"]
+app = ["game_catalog.json", "game_store_catalog.json", "templates/*.html", "static/*", "play_migrations/*.sql"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -44,3 +44,4 @@ ignore = ["S101", "S106", "S107"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
 "app/main.py" = ["B008"]  # FastAPI dependency-injection idiom
+"app/play.py" = ["B008"]
