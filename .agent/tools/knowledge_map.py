@@ -44,6 +44,7 @@ BUILD_INFO = GRAPH_OUT / "BUILD_INFO.json"
 GRAPHIFY_PIN = "0.9.106"
 GRAPH_TITLE = "kiloos-club"
 
+APP_FACTORIES = {"create_app", "make_play"}
 HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
 ACCESS = {"require_admin": "admin", "require_staff": "staff", "require_user": "user"}
 ID_RE = re.compile(
@@ -78,6 +79,11 @@ def rel(path: Path) -> str:
 
 def read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def migration_files() -> list[Path]:
+    return (sorted((ROOT / "db" / "migrations").glob("*.sql"))
+            + sorted((ROOT / "app" / "play_migrations").glob("*.sql")))
 
 
 # ----------------------------------------------------------------------------- model
@@ -300,7 +306,7 @@ class Module:
                     self.consts[target.id] = value
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
                 self.local[node.name] = (node, False)
-                if node.name == "create_app":
+                if node.name in APP_FACTORIES:
                     for inner in node.body:
                         if isinstance(inner, ast.FunctionDef | ast.AsyncFunctionDef):
                             self.local[inner.name] = (inner, True)
@@ -337,7 +343,7 @@ def kind_of(module: Module, node: ast.AST, nested: bool) -> str:
 
 
 def analyze(module: Module, node: ast.AST, nested: bool, tables: set[str]) -> Sym:
-    skip = node.name == "create_app"
+    skip = node.name in APP_FACTORIES
     sym = Sym(
         path=module.path,
         name=node.name,
@@ -486,7 +492,7 @@ def parse_tables(text: str, source: str, tables: dict[str, Table]) -> None:
 
 
 def collect_tables(model: Model) -> None:
-    for path in sorted((ROOT / "db" / "migrations").glob("*.sql")):
+    for path in migration_files():
         parse_tables(read(path), rel(path), model.tables)
     for path in sorted((ROOT / "app").glob("*.py")):
         tree = ast.parse(read(path))
@@ -522,34 +528,50 @@ def collect_python(model: Model) -> dict[str, Module]:
 
 
 def collect_routes(model: Model, modules: dict[str, Module]) -> None:
-    module = modules["app/main.py"]
-    for name, (node, _nested) in module.local.items():
-        for method, call in decorator_calls(node):
-            if method not in HTTP_METHODS or call is None or not call.args:
-                continue
-            owner = call.func.value
-            if not (isinstance(owner, ast.Name) and owner.id == "app"):
-                continue
-            path = pattern(call.args[0])
-            if path is None:
-                continue
-            csrf = any(
-                isinstance(item, ast.Name) and item.id == "csrf_guard"
-                for keyword in call.keywords
-                if keyword.arg == "dependencies"
-                for item in ast.walk(keyword.value)
-            )
-            access = "public"
-            defaults = [*node.args.defaults, *[d for d in node.args.kw_defaults if d is not None]]
-            for default in defaults:
-                for item in ast.walk(default):
-                    if isinstance(item, ast.Name) and item.id in ACCESS:
-                        access = ACCESS[item.id]
-            if access == "public" and csrf:
-                access = "token"
-            model.routes.append(
-                Route(method.upper(), path, f"{module.path}::{name}", access, csrf, node.lineno)
-            )
+    play_access = {
+        "index": "demo entry", "entrance": "demo entry", "enter": "code or scoped session",
+        "admin_login_page": "demo entry", "admin_login": "operator credential",
+        "issue_entry_code": "admin",
+        "invitation": "invitation", "invite_accept": "invitation",
+        "game_page": "role", "result_page": "role + family", "generic": "role",
+        "state": "member + family", "room_page": "member + family", "export": "admin",
+        "action": "role + session", "pulse": "session",
+    }
+    for file, prefix in (("app/main.py", ""), ("app/play.py", "/play")):
+        module = modules[file]
+        for name, (node, _nested) in module.local.items():
+            for method, call in decorator_calls(node):
+                if method not in HTTP_METHODS or call is None or not call.args:
+                    continue
+                owner = call.func.value
+                if not (isinstance(owner, ast.Name) and owner.id == "app"):
+                    continue
+                path = pattern(call.args[0])
+                if path is None:
+                    continue
+                csrf = any(
+                    isinstance(item, ast.Name) and item.id == "csrf_guard"
+                    for keyword in call.keywords
+                    if keyword.arg == "dependencies"
+                    for item in ast.walk(keyword.value)
+                )
+                if prefix:
+                    access = play_access.get(name, "session")
+                    csrf = any(isinstance(item, ast.Call) and isinstance(item.func, ast.Name)
+                               and item.func.id == "csrf" for item in ast.walk(node))
+                else:
+                    access = "public"
+                    defaults = [*node.args.defaults, *[d for d in node.args.kw_defaults if d is not None]]
+                    for default in defaults:
+                        for item in ast.walk(default):
+                            if isinstance(item, ast.Name) and item.id in ACCESS:
+                                access = ACCESS[item.id]
+                    if access == "public" and csrf:
+                        access = "token"
+                model.routes.append(Route(
+                    method.upper(), prefix + path, f"{module.path}::{name}", access, csrf,
+                    node.lineno,
+                ))
     model.routes.sort(key=lambda route: (route.path, route.method))
 
 
@@ -699,7 +721,7 @@ def collect_ids(model: Model) -> None:
 
     scan = sorted((ROOT / "app").glob("*.py")) + sorted((ROOT / "tests").glob("*.py"))
     scan += sorted((ROOT / "app" / "templates").glob("*.html"))
-    scan += sorted((ROOT / "db" / "migrations").glob("*.sql")) + doc_files()
+    scan += migration_files() + doc_files()
     for path in scan:
         for number, line in enumerate(read(path).splitlines(), start=1):
             for found in ID_RE.findall(line):
@@ -940,6 +962,8 @@ def render_code_map(model: Model) -> str:
         "",
         f"{len(model.routes)} routes. FastAPI also serves `/api/docs`, `/openapi.json` and the",
         "`/static` mount; they are framework-provided and not listed.",
+        "`/play` is mounted in dev/test only; sign-in and invitation acceptance require CSRF",
+        "when a Play session already exists, and same-origin checks even without a session.",
         "",
         "## 3. Route details",
         "",
@@ -947,8 +971,9 @@ def render_code_map(model: Model) -> str:
     for route in model.routes:
         handler = model.syms[route.handler]
         reads, writes, errors = effects(model, route.handler)
-        domain = {key for key in handler.calls if not key.startswith("app/main.py::")}
-        helpers = {key for key in handler.calls if key.startswith("app/main.py::")}
+        source = handler.path + "::"
+        domain = {key for key in handler.calls if not key.startswith(source)}
+        helpers = {key for key in handler.calls if key.startswith(source)}
         out.append(f"### `{route.label}`")
         out.append("")
         csrf = "yes" if route.csrf else ("exempt" if route.method != "GET" else "not needed (GET)")
@@ -957,7 +982,7 @@ def render_code_map(model: Model) -> str:
             out.append(f"- Purpose: {handler.doc}")
         out.append(f"- Renders: {code(handler.templates)} · Redirects: {code(handler.redirects)}")
         statuses = set(handler.statuses)
-        for member in closure(model, route.handler, only="app/main.py"):
+        for member in closure(model, route.handler, only=handler.path):
             statuses |= model.syms[member].statuses
         out.append(
             f"- Non-200 status codes (handler and its guards): {code(str(s) for s in statuses)}"
@@ -1005,7 +1030,7 @@ def render_code_map(model: Model) -> str:
         out += table(headers, rows)
         out.append("")
     out += [
-        'Route handlers of `app/main.py` are listed in section 3. "Reads" and "Writes" here are',
+        'Route handlers of `app/main.py` and `app/play.py` are listed in section 3. "Reads" and "Writes" here are',
         'the SQL statements written in that function only; follow "Calls" for the rest of the',
         'chain. "Called by" shows direct callers; `Depends(...)` counts as a call.',
         "",
@@ -1355,7 +1380,7 @@ def graph_inputs() -> list[Path]:
     """Product knowledge only: code, tests, schema and prose. Tooling, empty templates and the
     licence are left out because they add nodes without adding answers."""
     files = sorted((ROOT / "app").glob("*.py")) + sorted((ROOT / "tests").glob("*.py"))
-    files += sorted((ROOT / "db" / "migrations").glob("*.sql"))
+    files += migration_files()
     skipped = (ROOT / ".agent" / "templates", ROOT / ".agent" / "tools")
     for path in doc_files():
         if path.name == "LICENSE.md" or any(parent in path.parents for parent in skipped):
@@ -1524,11 +1549,12 @@ def semantic_layer(model: Model, ast_nodes: list[dict]) -> tuple[list[dict], lis
     # routes
     route_nodes: dict[str, str] = {}
     for route in model.routes:
+        source = model.syms[route.handler].path
         node_id = add_node(
             f"route_{slug(route.label)}",
             route.label,
             "code",
-            "app/main.py",
+            source,
             route.line,
             access=route.access,
             csrf=route.csrf,
@@ -1538,7 +1564,7 @@ def semantic_layer(model: Model, ast_nodes: list[dict]) -> tuple[list[dict], lis
             node_id,
             symbol(route.handler),
             "calls",
-            "app/main.py",
+            source,
             route.line,
             context="route_handler",
         )

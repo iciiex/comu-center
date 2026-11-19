@@ -30,9 +30,11 @@
         "tests/test_hardening.py::test_session_token_in_url_works_without_cookies",
         "tests/test_hardening.py::test_expired_token_is_rejected",
         "tests/test_hardening.py::test_login_is_rate_limited",
-        "tests/test_hardening.py::test_cookie_session_still_works"
+        "tests/test_hardening.py::test_cookie_session_still_works",
+        "tests/test_uat_legacy_auth.py::test_uat05_off_and_prod_have_no_demo_picker_or_url_auth",
+        "tests/test_uat_legacy_auth.py::test_uat05_explicit_legacy_demo_only_allows_seed_identities_and_staff_key"
       ],
-      "note": "Demo user picker without credentials (OD-01 open). Signed token, expiry, CSRF and role checks are real. Demo login is not disabled outside dev/test, and a `?s=` link keeps working after logout.",
+      "note": "Demo issuers default off. Mode legacy requires dev/test and permits only seeded identities; staff require a credential. Signed HTML URL fallback is isolated to legacy demo; a previously issued URL survives logout until expiry or key rotation. OD-01 remains open.",
       "backlog": [
         "B2",
         "C9"
@@ -653,6 +655,27 @@
         "D4",
         "D6"
       ]
+    },
+    "D-006": {
+      "state": "demo-only",
+      "code": [
+        "app/play.py::make_play",
+        "app/play_data.py::initialize",
+        "app/play_data.py::reset",
+        "app/play_ops.py::approve_sale",
+        "app/play_rooms.py::play_action"
+      ],
+      "tests": [
+        "tests/test_kilos_play.py::test_adjustment_is_idempotent_and_reset_is_isolated",
+        "tests/test_kilos_play.py::test_sales_ledger_connected_and_versioned",
+        "tests/test_kilos_play.py::test_shir_three_independent_accounts_to_result_and_replay",
+        "tests/test_kilos_play.py::test_uat01_admin_requires_credential_and_old_passwordless_sessions_are_invalid",
+        "tests/test_kilos_play.py::test_uat02_pulse_tracks_one_approved_sale_and_game_debits",
+        "tests/test_kilos_play.py::test_uat03_uncommitted_move_can_retry_but_committed_guess_cannot_duplicate",
+        "tests/test_kilos_play.py::test_uat04_room_links_hide_account_catalogue_and_entry_checks_family",
+        "tests/test_uat_legacy_auth.py::test_uat05_play_never_dispatches_legacy_routes_or_reads_legacy_db"
+      ],
+      "note": "Opted-in Play only, separate store and credential-controlled roles. Wallet projections and room recovery reuse the committed ledger and room state. UAT repair is not host or production sign-off."
     }
   }
 }

@@ -1,19 +1,30 @@
 # Current Project State
 
-- Last updated: 2026-11-12 (۲۱ آبان ۱۴۰۵)
+- Last updated: 2026-11-18 (۲۷ آبان ۱۴۰۵)
 - Updated by: Kiloos engineering agent
 - Mode: P
 - Current phase: Prototype
 - Current milestone: MS-01 — Prototype Delivery (2026-11-18)
-- Main branch / working branch: `main` / `arena/1757fdf5-comu-center`
+- Main branch / working branch: `main` / `arena/32ab96d7-comu-center`
 - Prioritised backlog: `docs/delivery/backlog.md` (PROPOSED)
 - Project handover (dated snapshot, Persian): `docs/handoffs/handover.md`
 - Agent guide: `docs/agent-guide/README.md`
 - Change history: `CHANGELOG.md`
 
+## Kilos Play family demo — UAT remediation, 2026-11-18
+
+- **MODE: P · TASK:** only UAT-01/02/03/04/05. **STATUS:** Done in local lab; final-host/device UAT remains **OPEN**. Original run `0f6700e5`: 26 PASS / 5 FAIL. Remediation run `495fe784`: the same 31 checks PASS, 0 FAIL, 0 browser runtime errors. [Remediation report and runbook](../delivery/kilos-play-uat-remediation.md) · [Original UAT (historical)](../delivery/kilos-play-uat.md).
+- **CHANGED:** `app/config.py`, `app/main.py`, `app/security.py`, `app/seed.py`, Play auth/privacy, wallet templates/pulse, and room reconciliation (`app/play{,_data,_ops,_rooms}.py`, `app/static/play*.js`, `app/templates/play_*.html`). FastAPI/Jinja/SQLite and successful workflows remain. `tests/test_kilos_play.py` and `tests/test_uat_legacy_auth.py` cover the fixes with separate fixtures.
+- **CONTRACT:** default login mode `off`; `play` and `legacy` are mutually exclusive, dev/test-only, requiring a separate randomly generated operator credential. `/play/admin/login` verifies the key; participant entry codes are role-scoped and single-use. Player names are never listed from an unauthenticated room link. Play redirects `/login` without a token, blocks legacy routes, and never opens the legacy store. Pulse returns a session-scoped read snapshot; `room_move` requires `move_seq` in addition to `phase_key`. No schema or token/score rule changes.
+- **VERIFIED:** `make check` 112 passed (102 original + 10), Ruff clean; `make doctor` 8 OK. Three Chromium processes on local HTTPS: working admin/visitor/family sessions; 22m sale → one credit +44 and notice, 78%→100% target and 128→172→148 balance on already-open pages; three-player Shir room/result/rankings/ledger with offline before/after commit, join/offer concurrency and no partial debits; private invite/legacy route protection; reset/old-session invalidation and embedded Chromium smoke. Original DBs/PDF and legacy evidence SHA-256 unchanged. All mutations ran on disposable synthetic fixtures. No commits, pushes or deployment.
+- **DECISIONS/RISKS:** D-006 demo credential restriction is an **ASSUMPTION**; OD-01 (actual identity provider) remains OPEN. Contained legacy `?s=` support is not suitable for public hosting; use only synthetic data and a controlled HTTPS host. No physical devices, venue network/browser matrix, final TLS/iframe host, production auth or load sign-off.
+- **NEXT:** [configure a fresh isolated instance](../operations/runbook.md), issue participant codes from the authorized manager desk, and repeat the acceptance path on the final HTTPS host with three physical devices. Do not use the original databases. Evidence: `var/kilos-play-remediation/` (15 captures, observations, log, integrity comparison and reproducible harness); original `var/kilos-play-uat/` untouched.
+
+The sections below record the legacy Kiloos Club prototype and its prior milestones.
+
 ## Working features
-- Demo login with 5 seeded users (visitor ×3, operator, admin) and role-aware redirect.
-- Cookie-less session fallback: signed token in `?s=` propagated through links/forms/redirects (D-002, demo only).
+- Explicit `legacy` demo only: five seeded users (visitor ×3, operator, admin), role-aware redirect and separate key for staff.
+- Cookie-less session fallback: signed `?s=` propagated only by legacy demo HTML (D-002); neither Play nor non-demo servers use it.
 - CSRF guard on every state-changing route except `/demo-login`, rate-limited demo login, security headers,
   Persian 404/403/422 pages, paginated review queue.
 - Mission list/detail filtered by `status=active`, date window, and organization (BR-001).
@@ -49,7 +60,7 @@
 - Sales Quest Arena integration: public frontend reviewed; BFF prototype routes and migration `0004_game_progress.sql`
   are implemented. Contract/source snapshot: `docs/engineering/game-bff-alignment.md` + `app/game_catalog.json`.
   Agreed direction: server-authoritative game progress/rewards, with game XP/coins separate from organizational score events.
-  A dev/test-only visitor picker/login/logout API now sets an HttpOnly cookie and bootstrap CSRF header. Demo store APIs
+  The visitor picker/login API is available only in the explicit legacy demo. It issues an HttpOnly cookie and bootstrap CSRF header. Demo store APIs
   now list two sample coin-priced special missions and atomically charge game coins with idempotency; special missions are
   returned separately so the original six remain unchanged. UI integration remains open: the React frontend is not wired
   to the API; its localStorage seam is synchronous and completion logic remains client-side.
@@ -60,7 +71,7 @@
 - Partial corrections (correcting part of an award) are not implemented.
 
 ## Mocked / Demo-only
-- **Auth:** demo user picker instead of OTP/SMS (OD-01). Exit: approved login method + provider.
+- **Auth:** restricted seeded identities, no OTP/SMS (OD-01). Exit: approved login method + provider.
 - **Tenant:** one organization; multi-company not exposed (OD-02). Exit: approved org model.
 - **Points:** all seeded values (10/15/5/20) are `SAMPLE` (OD-04/05). Exit: approved rule matrix.
 - **Wallet:** non-redeemable, display only (OD-08). Exit: approved wallet policy.
@@ -85,11 +96,11 @@
 - **C5** Evidence content type is trusted from the client, identical images are not flagged, orphan files can remain.
 - **C6** An operator can approve their own submission; rejected attempts consume the per-user cap (B6-1).
 - **C8** A correction made after a period ends is subtracted from the current period (BR-008); reversal path uses `float`.
-- **C9** Demo login works under any `KILOOS_ENV`; a `?s=` link keeps working after logout.
+- **C9 (partial):** demo login now defaults off and is forbidden outside dev/test. In separately opted-in legacy mode, a signed `?s=` link is still valid until expiry or key rotation after cookie logout.
 
 ## Decisions approved
 - None yet. D-001…D-005 are all **PROPOSED** (D-005 also carries "Approved by: کارفرما" and needs explicit confirmation).
-- This slice changed no business rule: B6-1 rejected-attempt cap, B6-2 approval-time rule selection, B6-3 staff
+- The Play remediation changed no business rule. Legacy open items remain: B6-1 rejected-attempt cap, B6-2 approval-time rule selection, B6-3 staff
   self-approval and B6-4 period attribution remain open.
 
 ## Open decisions / assumptions

@@ -15,6 +15,19 @@ How to add an entry: write your lines under `[Unreleased]` while you work; when 
 exists, move them under a dated heading with its number
 ([`docs/agent-guide/03-deliver.md`](docs/agent-guide/03-deliver.md) §3 and §4).
 
+## 2026-11-18 — کیلوس‌پلی (نسخهٔ نمایشی)
+
+- اضافه‌شدن محیط‌های مدیریت، ویزیتور و باشگاه خانواده با رابط فارسی راست‌چین.
+- فروش تأییدشده، دفتر توکن مشترک، اعلان، سه بازی آنلاین خانوادگی و رقابت ترکیبی.
+- پایگاه و بازنشانی جدا در محیط نمایشی؛ هیچ مسیر عملیاتی قدیمی حذف نشده است.
+- جزئیات و شیوهٔ ارائه: [راهنمای دمو](docs/delivery/kilos-play-demo.md).
+
+## 2026-11-18 — اصلاح پنج یافتهٔ UAT کیلوس‌پلی
+
+- UAT-01/04/05: حالت نمونهٔ صریح، کلید مستقل مدیر، کد ورود یک‌بارمصرف، دعوت اتاق بدون فهرست حساب، و بستن مسیرهای قدیمی در Play.
+- UAT-02/03: موجودی/دفتر/هدف زنده از سرور و بازیابی اتاق با ترتیب حرکت هر بازیکن؛ بدون تغییر اسکیما یا قواعد توکن و امتیاز.
+- ۱۰ رگرسیون جدید در کنار ۱۰۲ تست قبلی. اجرای دمو با تنظیمات جدید در runbook؛ تأیید میزبان نهایی جداست.
+
 ## [Unreleased]
 
 Sales Quest demo store: two sample coin-priced special missions with idempotent purchases; game coin economy remains separate from organizational/Tribal points.

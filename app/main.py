@@ -14,6 +14,7 @@ import threading
 import time
 import uuid
 from collections.abc import Iterator
+from contextlib import closing
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
@@ -23,7 +24,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app import db, game, repo, sales, tribal
+from app import db, game, play, repo, sales, tribal
 from app.config import Settings
 from app.jalali import format_jalali, to_persian_digits
 from app.repo import DomainError
@@ -31,14 +32,17 @@ from app.sample_sales import sample_workbook_bytes
 from app.security import (
     CurrentUser,
     clear_session,
+    credential_transport,
+    cross_origin,
     csrf_for,
     csrf_token,
     current_user,
     make_token,
-    read_token,
     session_token,
     set_session,
+    url_session_token,
 )
+from app.seed import DEMO_ORGANIZATION, DEMO_PEOPLE
 
 APP_DIR = Path(__file__).resolve().parent
 MAX_EVIDENCE_BYTES = 4 * 1024 * 1024
@@ -56,7 +60,8 @@ class LoginRequired(Exception):
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     settings.validate()
-    db.init_db(settings.db_path, settings.evidence_dir)
+    if not settings.play_enabled:
+        db.init_db(settings.db_path, settings.evidence_dir)
 
     app = FastAPI(title="Kiloos Club", docs_url="/api/docs", redoc_url=None)
     app.state.settings = settings
@@ -67,15 +72,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     templates.env.filters["jdate"] = format_jalali
     templates.env.filters["jdatetime"] = lambda v: format_jalali(v, with_time=True)
     app.state.templates = templates
-
-    def url_session(request: Request) -> str | None:
-        """The token to keep in internal links — only when it came from the URL."""
-        candidate = request.query_params.get("s")
-        if candidate and read_token(
-            candidate, settings.secret, ttl_seconds=settings.session_ttl_seconds
-        ):
-            return candidate
-        return None
+    if settings.play_enabled:
+        app.mount("/play", play.make_play(settings, templates), name="kilos-play")
 
     def with_token(path: str, token: str | None) -> str:
         if not token:
@@ -90,7 +88,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     templates.env.globals["url"] = url
 
     def go(path: str, request: Request) -> RedirectResponse:
-        return RedirectResponse(with_token(path, url_session(request)), status_code=303)
+        return RedirectResponse(with_token(path, url_session_token(request)), status_code=303)
 
     def page(
         request: Request,
@@ -105,7 +103,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "user": user,
             "active": context.pop("active", ""),
             "demo": True,
-            "s": url_session(request),
+            "s": url_session_token(request),
             "csrf": csrf_token(request),
         }
         base.update(context)
@@ -230,7 +228,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # ---------------------------------------------------------- hardening
     SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
-    CSRF_EXEMPT = {"/demo-login"}  # no session exists yet; documented in api-spec
 
     app.state.login_attempts: dict[str, list[float]] = {}
     app.state.login_lock = threading.Lock()
@@ -253,7 +250,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         Implemented as a route dependency (not middleware) so the parsed form is
         cached and multipart uploads stay intact for the handler.
         """
-        if request.method in SAFE_METHODS or request.url.path in CSRF_EXEMPT:
+        if request.method in SAFE_METHODS:
             return
         token = session_token(request)
         if token is None:
@@ -263,7 +260,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         else:
             form = await request.form()
             supplied = str(form.get("csrf") or "")
-        if not hmac.compare_digest(supplied, csrf_for(token, settings.secret)):
+        expected = csrf_for(token, settings.legacy_session_secret)
+        if not hmac.compare_digest(supplied.encode(), expected.encode()):
             raise HTTPException(
                 status_code=403,
                 detail="اعتبار فرم منقضی شده است؛ صفحه را دوباره بارگذاری کنید.",
@@ -271,22 +269,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.middleware("http")
     async def hardening(request: Request, call_next):
-        if request.method == "POST" and request.url.path == "/demo-login":
+        path = request.url.path
+        # Play is a separate server surface, even when a real legacy DB file sits beside it.
+        # Do not dispatch legacy handlers (or dependencies which open that DB) in this mode.
+        if settings.play_enabled and path == "/login" and request.method in {"GET", "HEAD"}:
+            response = RedirectResponse("/play/entrance", status_code=303)
+        elif settings.play_enabled and not (
+            path in {"/", "/health", "/play"} or path.startswith(("/play/", "/static/"))
+        ):
+            response = await _starlette_error(request, StarletteHTTPException(404))
+        elif request.method == "POST" and path == "/demo-login":
             client_ip = request.client.host if request.client else "unknown"
-            if login_rate_limited(client_ip):
-                return page(
-                    request,
-                    "error.html",
-                    {
-                        "code": 429,
-                        "message": (
-                            "تلاش‌های ورود بیش از حد مجاز است؛ یک دقیقه بعد دوباره امتحان کنید."
-                        ),
-                    },
-                    status_code=429,
+            if not settings.legacy_demo_enabled:
+                response = await _starlette_error(request, StarletteHTTPException(404))
+            elif cross_origin(request):
+                response = await _starlette_error(request, StarletteHTTPException(403))
+            elif login_rate_limited(client_ip):
+                response = await _starlette_error(
+                    request, StarletteHTTPException(429, ERROR_MESSAGES[429])
                 )
-
-        response = await call_next(request)
+            else:
+                response = await call_next(request)
+        else:
+            response = await call_next(request)
+        if path.rstrip("/") in {
+            "/login",
+            "/demo-login",
+            "/api/v1/game/demo-users",
+            "/api/v1/game/demo-login",
+        }:
+            response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
@@ -378,28 +390,37 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return disabled
         return JSONResponse(tribal.get_unit(conn, user.organization_id, unit_id))
 
+    def legacy_demo_users(conn):
+        if not settings.legacy_demo_enabled:
+            raise HTTPException(status_code=404, detail="Demo login is disabled.")
+        users = conn.execute(
+            """SELECT u.id, u.full_name, u.mobile, u.role FROM users u
+               JOIN organizations o ON o.id=u.organization_id
+               WHERE o.name=? AND u.is_active=1 ORDER BY u.role DESC, u.full_name""",
+            (DEMO_ORGANIZATION,),
+        ).fetchall()
+        return [u for u in users if (u["full_name"], u["mobile"], u["role"]) in DEMO_PEOPLE]
+
     @app.get("/api/v1/game/demo-users")
     def game_demo_users(conn: sqlite3.Connection = Depends(conn_dep)) -> JSONResponse:
-        if settings.env not in {"dev", "test"}:
-            raise HTTPException(
-                status_code=404, detail="Demo login is disabled in this environment."
-            )
-        users = conn.execute(
-            """SELECT id, full_name FROM users
-               WHERE role = 'visitor' AND is_active = 1 ORDER BY full_name"""
-        ).fetchall()
         return JSONResponse(
-            {"users": [{"id": row["id"], "name": row["full_name"]} for row in users]}
+            {
+                "users": [
+                    {"id": u["id"], "name": u["full_name"]}
+                    for u in legacy_demo_users(conn)
+                    if u["role"] == "visitor"
+                ]
+            }
         )
 
     @app.post("/api/v1/game/demo-login")
     async def game_demo_login(
         request: Request, conn: sqlite3.Connection = Depends(conn_dep)
     ) -> JSONResponse:
-        if settings.env not in {"dev", "test"}:
-            raise HTTPException(
-                status_code=404, detail="Demo login is disabled in this environment."
-            )
+        if not settings.legacy_demo_enabled:
+            raise HTTPException(status_code=404, detail="Demo login is disabled.")
+        if cross_origin(request):
+            raise HTTPException(status_code=403, detail="Cross-origin login denied.")
         client_ip = request.client.host if request.client else "unknown"
         if login_rate_limited(client_ip):
             raise game.GameError(
@@ -414,17 +435,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         user_id = payload["user_id"]
         if not isinstance(user_id, str):
             raise HTTPException(status_code=422, detail="user_id must be a string.")
-        row = conn.execute(
-            """SELECT id, full_name, role FROM users
-               WHERE id = ? AND role = 'visitor' AND is_active = 1""",
-            (user_id,),
-        ).fetchone()
+        row = next(
+            (u for u in legacy_demo_users(conn) if u["id"] == user_id and u["role"] == "visitor"),
+            None,
+        )
         if row is None:
             raise HTTPException(status_code=404, detail="Demo visitor not found.")
         response = JSONResponse({"user": {"id": row["id"], "name": row["full_name"]}})
-        token = set_session(response, row["id"], settings.secret)
-        response.headers["Cache-Control"] = "no-store"
-        response.headers["X-CSRF-Token"] = csrf_for(token, settings.secret)
+        token = set_session(
+            response,
+            row["id"],
+            settings.legacy_session_secret,
+            secure=request.url.scheme == "https",
+            ttl_seconds=settings.session_ttl_seconds,
+        )
+        response.headers["X-CSRF-Token"] = csrf_for(token, settings.legacy_session_secret)
         return response
 
     @app.post("/api/v1/game/logout", dependencies=[Depends(csrf_guard)])
@@ -552,34 +577,49 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return JSONResponse(result, headers={"Idempotent-Replay": "true" if replayed else "false"})
 
     @app.get("/", response_class=HTMLResponse)
-    def root(request: Request, conn: sqlite3.Connection = Depends(conn_dep)):
-        user = current_user(request, conn)
-        return go("/home" if user else "/login", request)
+    def root(request: Request):
+        if settings.play_enabled:
+            return RedirectResponse("/play/", status_code=303)
+        with closing(db.connect(settings.db_path)) as conn:
+            return go("/home" if current_user(request, conn) else "/login", request)
 
     @app.get("/login", response_class=HTMLResponse)
     def login_page(request: Request, conn: sqlite3.Connection = Depends(conn_dep)):
-        users = conn.execute(
-            """SELECT id, full_name, role FROM users
-               WHERE role IN ('visitor', 'operator', 'admin') AND is_active = 1
-               ORDER BY CASE role WHEN 'visitor' THEN 0 WHEN 'operator' THEN 1 ELSE 2 END,
-                        full_name"""
-        ).fetchall()
-        return page(request, "login.html", {"people": users})
+        if not settings.legacy_demo_enabled:
+            if current_user(request, conn):
+                return go("/home", request)
+            return page(request, "login.html", {"login_disabled": True}, status_code=401)
+        return page(request, "login.html", {"people": legacy_demo_users(conn)})
 
     @app.post("/demo-login")
     def demo_login(
+        request: Request,
         user_id: str = Form(...),
+        operator_key: str = Form(""),
         conn: sqlite3.Connection = Depends(conn_dep),
     ) -> RedirectResponse:
-        row = conn.execute(
-            "SELECT id, role FROM users WHERE id = ? AND is_active = 1", (user_id,)
-        ).fetchone()
+        row = next((u for u in legacy_demo_users(conn) if u["id"] == user_id), None)
         if row is None:
             raise HTTPException(status_code=404, detail="کاربر نمایشی یافت نشد.")
-        target = "/admin/submissions" if row["role"] in {"operator", "admin"} else "/home"
-        token = make_token(row["id"], settings.secret)
+        staff = row["role"] in {"operator", "admin"}
+        if staff and not credential_transport(request):
+            raise HTTPException(status_code=403, detail="ورود کارکنان به ارتباط امن نیاز دارد.")
+        if staff and not hmac.compare_digest(
+            operator_key.encode(), settings.demo_operator_key.encode()
+        ):
+            raise HTTPException(status_code=401, detail="کلید ورود کارکنان معتبر نیست.")
+        target = "/admin/submissions" if staff else "/home"
+        signer = settings.legacy_session_secret
+        token = make_token(row["id"], signer)
         response = RedirectResponse(with_token(target, token), status_code=303)
-        set_session(response, row["id"], settings.secret, token)
+        set_session(
+            response,
+            row["id"],
+            signer,
+            token,
+            secure=request.url.scheme == "https",
+            ttl_seconds=settings.session_ttl_seconds,
+        )
         return response
 
     @app.post("/logout", dependencies=[Depends(csrf_guard)])

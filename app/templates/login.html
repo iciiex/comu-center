@@ -1,11 +1,16 @@
 {% extends "base.html" %}
 {% block title %}ورود نمایشی · کیلوس کلاب{% endblock %}
 {% block content %}
+  {% if login_disabled %}
+  <div class="card"><h1 class="card__title">ورود نمایشی غیرفعال است</h1>
+    <p class="card__meta">برای دسترسی با مسئول سامانه هماهنگ کنید.</p>
+  </div>
+  {% else %}
   <div class="card">
     <h1 class="card__title">ورود به نسخه نمایشی</h1>
     <p class="card__meta">
       روش ورود واقعی (OTP / شناسه پرسنلی) هنوز تأیید نشده است (OD-01).
-      در این نسخه، یکی از کاربران نمونه را انتخاب کنید.
+      در محیط ایزوله، یکی از کاربران نمونه را انتخاب کنید.
     </p>
     <form method="post" action="/demo-login" class="stack mt-2">
       <div class="field">
@@ -19,6 +24,10 @@
           {% endfor %}
         </select>
         <p class="field__hint">همه حساب‌ها و داده‌ها نمونه‌اند؛ هیچ پیامک واقعی ارسال نمی‌شود.</p>
+      </div>
+      <div class="field">
+        <label for="operator_key">کلید ورود کارکنان (مدیر یا اپراتور)</label>
+        <input id="operator_key" type="password" name="operator_key" autocomplete="current-password">
       </div>
       <button class="btn btn--block" type="submit">ورود</button>
     </form>
@@ -34,4 +43,5 @@
       <li>کیف امتیاز و رتبه‌بندی دوره</li>
     </ul>
   </div>
+  {% endif %}
 {% endblock %}

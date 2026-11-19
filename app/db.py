@@ -26,7 +26,9 @@ def connect(db_path: Path) -> sqlite3.Connection:
     return conn
 
 
-def apply_migrations(conn: sqlite3.Connection) -> list[str]:
+def apply_migrations(
+    conn: sqlite3.Connection, directory: Path = MIGRATIONS_DIR
+) -> list[str]:
     """Run each ``db/migrations/NNNN_*.sql`` exactly once, in filename order.
 
     ``schema_migrations`` records what has run. The first version of the
@@ -42,7 +44,7 @@ def apply_migrations(conn: sqlite3.Connection) -> list[str]:
     )
     done = {row["name"] for row in conn.execute("SELECT name FROM schema_migrations")}
     applied: list[str] = []
-    for path in sorted(MIGRATIONS_DIR.glob("*.sql")):
+    for path in sorted(directory.glob("*.sql")):
         if path.name in done:
             continue
         # executescript otherwise commits each statement separately, leaving an

@@ -34,13 +34,19 @@ Contents: [1 Modules](#1-modules) · [2 Routes](#2-routes) · [3 Route details](
 | `app/db.py` | 4 | `config`, `seed` |
 | `app/game.py` | 32 | `db` |
 | `app/jalali.py` | 3 | — |
-| `app/main.py` | 66 | `config`, `db`, `game`, `jalali`, `repo`, `sales`, `sample_sales`, `security`, `tribal` |
+| `app/main.py` | 66 | `config`, `db`, `game`, `jalali`, `play`, `repo`, `sales`, `sample_sales`, `security`, `seed`, `tribal` |
 | `app/maintenance.py` | 3 | `config`, `db` |
+| `app/play.py` | 36 | `config`, `db`, `jalali`, `play_data`, `play_ops`, `play_rooms`, `play_views`, `security` |
+| `app/play_data.py` | 41 | `db`, `jalali`, `play_seed` |
+| `app/play_ops.py` | 24 | `play_data` |
+| `app/play_rooms.py` | 22 | `play_data`, `play_ops` |
+| `app/play_seed.py` | 1 | `play_data` |
+| `app/play_views.py` | 17 | `play_data`, `play_ops`, `play_rooms` |
 | `app/repo.py` | 42 | `scoring` |
 | `app/sales.py` | 11 | — |
 | `app/sample_sales.py` | 3 | `config` |
 | `app/scoring.py` | 9 | — |
-| `app/security.py` | 11 | — |
+| `app/security.py` | 14 | — |
 | `app/seed.py` | 4 | `config`, `db`, `scoring` |
 | `app/tribal.py` | 4 | — |
 
@@ -53,13 +59,33 @@ graph LR
     main --> db
     main --> game
     main --> jalali
+    main --> play
     main --> repo
     main --> sales
     main --> sample_sales
     main --> security
+    main --> seed
     main --> tribal
     maintenance --> config
     maintenance --> db
+    play --> config
+    play --> db
+    play --> jalali
+    play --> play_data
+    play --> play_ops
+    play --> play_rooms
+    play --> play_views
+    play --> security
+    play_data --> db
+    play_data --> jalali
+    play_data --> play_seed
+    play_ops --> play_data
+    play_rooms --> play_data
+    play_rooms --> play_ops
+    play_seed --> play_data
+    play_views --> play_data
+    play_views --> play_ops
+    play_views --> play_rooms
     repo --> scoring
     sample_sales --> config
     seed --> config
@@ -71,7 +97,7 @@ graph LR
 
 | Method | Path | Access | CSRF | Handler | Templates | Tests |
 |---|---|---|---|---|---|---|
-| GET | `/` | public | — | `main.root` | — | 0 |
+| GET | `/` | public | — | `main.root` | — | 4 |
 | GET | `/admin/missions` | staff | — | `main.admin_missions` | `admin_missions.html` | 0 |
 | GET | `/admin/missions/new` | admin | — | `main.admin_mission_new` | `admin_mission_form.html` | 1 |
 | POST | `/admin/missions/new` | admin | yes | `main.admin_mission_create` | `admin_mission_form.html` | 2 |
@@ -79,7 +105,7 @@ graph LR
 | POST | `/admin/missions/{mission_id}` | admin | yes | `main.admin_mission_update` | `admin_mission_form.html` | 6 |
 | POST | `/admin/missions/{mission_id}/archive` | admin | yes | `main.admin_mission_archive` | — | 0 |
 | POST | `/admin/missions/{mission_id}/publish` | admin | yes | `main.admin_mission_publish` | — | 2 |
-| GET | `/admin/sales` | admin | — | `main.admin_sales` | `admin_sales.html` | 4 |
+| GET | `/admin/sales` | admin | — | `main.admin_sales` | `admin_sales.html` | 6 |
 | POST | `/admin/sales` | admin | yes | `main.admin_sales_upload` | `admin_sales_new.html` | 17 |
 | GET | `/admin/sales/new` | admin | — | `main.admin_sales_new` | `admin_sales_new.html` | 2 |
 | GET | `/admin/sales/sample` | admin | — | `main.admin_sales_sample` | — | 1 |
@@ -90,8 +116,8 @@ graph LR
 | GET | `/admin/submissions/{submission_id}` | staff | — | `main.admin_review` | `admin_review.html` | 2 |
 | POST | `/admin/submissions/{submission_id}/review` | staff | yes | `main.admin_decide` | `admin_review.html` | 18 |
 | GET | `/api/v1/game/bootstrap` | public | — | `main.game_bootstrap` | — | 11 |
-| POST | `/api/v1/game/demo-login` | public | exempt | `main.game_demo_login` | — | 2 |
-| GET | `/api/v1/game/demo-users` | public | — | `main.game_demo_users` | — | 2 |
+| POST | `/api/v1/game/demo-login` | public | exempt | `main.game_demo_login` | — | 4 |
+| GET | `/api/v1/game/demo-users` | public | — | `main.game_demo_users` | — | 4 |
 | GET | `/api/v1/game/history` | public | — | `main.game_history` | — | 1 |
 | POST | `/api/v1/game/logout` | token | yes | `main.game_logout` | — | 1 |
 | POST | `/api/v1/game/missions/{mission_id}/completions` | token | yes | `main.game_complete_mission` | — | 5 |
@@ -104,35 +130,54 @@ graph LR
 | GET | `/api/v1/tribal/bootstrap` | user | — | `main.tribal_bootstrap` | — | 2 |
 | GET | `/api/v1/tribal/org-units` | user | — | `main.tribal_org_units` | — | 2 |
 | GET | `/api/v1/tribal/org-units/{unit_id}` | user | — | `main.tribal_org_unit` | — | 1 |
-| POST | `/demo-login` | public | exempt | `main.demo_login` | — | 68 |
+| POST | `/demo-login` | public | exempt | `main.demo_login` | — | 70 |
 | GET | `/evidence/{evidence_id}` | user | — | `main.evidence_file` | — | 0 |
 | GET | `/health` | public | — | `main.health` | — | 2 |
 | GET | `/home` | user | — | `main.home` | `home.html` | 3 |
 | GET | `/leaderboard` | user | — | `main.leaderboard_page` | `leaderboard.html` | 2 |
-| GET | `/login` | public | — | `main.login_page` | `login.html` | 1 |
+| GET | `/login` | public | — | `main.login_page` | `login.html` | 5 |
 | POST | `/logout` | token | yes | `main.logout` | — | 26 |
 | GET | `/missions` | user | — | `main.missions_page` | `missions.html` | 1 |
 | GET | `/missions/{mission_id}` | user | — | `main.mission_page` | `mission.html` | 3 |
 | POST | `/missions/{mission_id}/submissions` | user | yes | `main.submit_mission` | `mission.html` | 23 |
+| GET | `/play/` | demo entry | — | `play.index` | — | 2 |
+| POST | `/play/action` | role + session | yes | `play.action` | — | 16 |
+| GET | `/play/admin/export` | admin | — | `play.export` | — | 3 |
+| GET | `/play/admin/game/{key}` | role | — | `play.game_page` | `play_game.html` | 0 |
+| GET | `/play/admin/login` | demo entry | — | `play.admin_login_page` | `play_login.html` | 0 |
+| POST | `/play/admin/login` | operator credential | yes | `play.admin_login` | — | 16 |
+| POST | `/play/enter` | code or scoped session | yes | `play.enter` | — | 16 |
+| GET | `/play/entrance` | demo entry | — | `play.entrance` | `play_login.html` | 1 |
+| POST | `/play/entry-code` | admin | yes | `play.issue_entry_code` | `play_login.html` | 16 |
+| GET | `/play/family/game/{key}` | role | — | `play.game_page` | `play_game.html` | 0 |
+| GET | `/play/family/room/{code}` | member + family | — | `play.room_page` | `play_room.html` | 0 |
+| GET | `/play/invitation/{code}` | invitation | — | `play.invitation` | `play_login.html` | 1 |
+| POST | `/play/invitation/{code}` | invitation | yes | `play.invite_accept` | — | 1 |
+| GET | `/play/pulse` | session | — | `play.pulse` | `play_bits.html` | 5 |
+| GET | `/play/state/{code}` | member + family | — | `play.state` | — | 16 |
+| GET | `/play/{area}/result/{result_id}` | role + family | — | `play.result_page` | `play_result.html` | 1 |
+| GET | `/play/{area}/{page}` | role | — | `play.generic` | — | 9 |
 | GET | `/score` | user | — | `main.score_page` | `score.html` | 3 |
 | GET | `/submissions/{submission_id}` | user | — | `main.submission_page` | `submission.html` | 4 |
 
-45 routes. FastAPI also serves `/api/docs`, `/openapi.json` and the
+62 routes. FastAPI also serves `/api/docs`, `/openapi.json` and the
 `/static` mount; they are framework-provided and not listed.
+`/play` is mounted in dev/test only; sign-in and invitation acceptance require CSRF
+when a Play session already exists, and same-origin checks even without a session.
 
 ## 3. Route details
 
 ### `GET /`
 
 - Handler: `main.root` — access **public** — CSRF not needed (GET)
-- Renders: — · Redirects: `/home | /login`
+- Renders: — · Redirects: `/home | /login`, `/play/`
 - Non-200 status codes (handler and its guards): `303`
-- Calls: `security.current_user`
-- Closures used: `main.conn_dep`, `main.go`
+- Calls: `db.connect`, `security.current_user`
+- Closures used: `main.go`
 - Reads: `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (0): —
+- Tests (4): `test_kilos_play::test_fa_routes_and_role_guards`, `test_kilos_play::test_play_is_not_mounted_outside_demo`, `test_uat_legacy_auth::test_uat05_explicit_legacy_demo_only_allows_seed_identities_and_staff_key`, `test_uat_legacy_auth::test_uat05_play_never_dispatches_legacy_routes_or_reads_legacy_db`
 
 ### `GET /admin/missions`
 
@@ -228,7 +273,7 @@ graph LR
 - Reads: `sales_imports`, `sales_records`, `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (4): `test_demo_stability::test_operator_navigation_hides_sales_import_link`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_sales::test_only_admin_can_use_sales_import`
+- Tests (6): `test_demo_stability::test_operator_navigation_hides_sales_import_link`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_sales::test_only_admin_can_use_sales_import`, `test_uat_legacy_auth::test_uat05_explicit_legacy_demo_only_allows_seed_identities_and_staff_key`, `test_uat_legacy_auth::test_uat05_off_and_prod_have_no_demo_picker_or_url_auth`
 
 ### `POST /admin/sales`
 
@@ -356,13 +401,13 @@ graph LR
 
 - Handler: `main.game_demo_login` — access **public** — CSRF exempt
 - Renders: — · Redirects: —
-- Non-200 status codes (handler and its guards): `400`, `404`, `422`
-- Calls: `game.GameError`, `security.csrf_for`, `security.set_session`
-- Closures used: `main.conn_dep`, `main.login_rate_limited`
-- Reads: `users`
+- Non-200 status codes (handler and its guards): `400`, `403`, `404`, `422`
+- Calls: `game.GameError`, `security.cross_origin`, `security.csrf_for`, `security.set_session`
+- Closures used: `main.conn_dep`, `main.legacy_demo_users`, `main.login_rate_limited`
+- Reads: `organizations`, `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (2): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`
+- Tests (4): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`, `test_uat_legacy_auth::test_uat05_explicit_legacy_demo_only_allows_seed_identities_and_staff_key`, `test_uat_legacy_auth::test_uat05_off_and_prod_have_no_demo_picker_or_url_auth`
 
 ### `GET /api/v1/game/demo-users`
 
@@ -370,11 +415,11 @@ graph LR
 - Renders: — · Redirects: —
 - Non-200 status codes (handler and its guards): `404`
 - Calls: —
-- Closures used: `main.conn_dep`
-- Reads: `users`
+- Closures used: `main.conn_dep`, `main.legacy_demo_users`
+- Reads: `organizations`, `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (2): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`
+- Tests (4): `test_game_api::test_api_demo_login_lists_visitors_sets_cookie_and_logout_clears_it`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`, `test_uat_legacy_auth::test_uat05_explicit_legacy_demo_only_allows_seed_identities_and_staff_key`, `test_uat_legacy_auth::test_uat05_off_and_prod_have_no_demo_picker_or_url_auth`
 
 ### `GET /api/v1/game/history`
 
@@ -525,13 +570,13 @@ graph LR
 
 - Handler: `main.demo_login` — access **public** — CSRF exempt
 - Renders: — · Redirects: `/admin/submissions | /home`
-- Non-200 status codes (handler and its guards): `303`, `404`
-- Calls: `security.make_token`, `security.set_session`
-- Closures used: `main.conn_dep`, `main.with_token`
-- Reads: `users`
+- Non-200 status codes (handler and its guards): `303`, `401`, `403`, `404`
+- Calls: `security.credential_transport`, `security.make_token`, `security.set_session`
+- Closures used: `main.conn_dep`, `main.legacy_demo_users`, `main.with_token`
+- Reads: `organizations`, `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (68): `test_corrections::test_a_correction_cannot_be_reversed`, `test_corrections::test_leaderboard_reflects_the_correction`, `test_corrections::test_missing_event_returns_404`, `test_corrections::test_only_admin_can_reverse`, `test_corrections::test_other_organization_event_is_forbidden`, `test_corrections::test_reason_is_required`, `test_corrections::test_reversal_creates_negative_event_and_fixes_projections`, `test_corrections::test_reversal_requires_csrf`, `test_corrections::test_second_reversal_is_rejected`, `test_demo_stability::test_admin_review_screen_can_correct_a_mission_score`, `test_demo_stability::test_approval_rolls_back_when_no_rule_version_is_effective`, `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_operator_navigation_hides_sales_import_link`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_demo_stability::test_sales_score_correction_is_admin_only_and_org_scoped`, `test_demo_stability::test_sample_sales_workbook_download_is_admin_only`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_approve_redirect_keeps_queue_filter`, `test_flow::test_duplicate_request_id_is_idempotent`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_mission_edit_publishes_new_rule_version`, `test_flow::test_mission_respects_max_per_user`, `test_flow::test_mission_window_and_status_filtering`, `test_flow::test_organization_scope_blocks_foreign_submission`, `test_flow::test_reject_requires_reason_and_awards_nothing`, `test_flow::test_visitors_and_operators_have_no_admin_powers`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_game_store::test_demo_store_rejects_insufficient_balance_and_missing_csrf`, `test_hardening::test_admin_queue_carries_token_between_pages`, `test_hardening::test_admin_queue_paginates`, `test_hardening::test_cookie_session_still_works`, `test_hardening::test_forged_csrf_upload_creates_nothing`, `test_hardening::test_forms_render_a_csrf_field`, `test_hardening::test_login_is_rate_limited`, `test_hardening::test_post_with_forged_csrf_is_rejected`, `test_hardening::test_post_without_csrf_is_rejected`, `test_hardening::test_session_token_in_url_works_without_cookies`, `test_hardening::test_token_only_session_can_post_forms`, `test_sales::test_amount_below_one_unit_scores_nothing`, `test_sales::test_detail_page_shows_reconciliation`, `test_sales::test_duplicate_external_id_across_imports_is_skipped`, `test_sales::test_missing_columns_reject_the_file`, `test_sales::test_non_xlsx_is_rejected`, `test_sales::test_only_admin_can_use_sales_import`, `test_sales::test_other_organization_import_is_not_visible`, `test_sales::test_process_creates_each_score_once`, `test_sales::test_processing_failure_rolls_back_all_events`, `test_sales::test_row_errors_do_not_block_valid_rows`, `test_sales::test_same_file_is_rejected_by_fingerprint`, `test_sales::test_upload_requires_csrf`, `test_sales::test_upload_validates_without_scoring`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_gate::test_tribal_bootstrap_is_feature_disabled_by_default`, `test_tribal_org_api::test_org_units_api_is_gated_when_feature_is_off`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated`
+- Tests (70): `test_corrections::test_a_correction_cannot_be_reversed`, `test_corrections::test_leaderboard_reflects_the_correction`, `test_corrections::test_missing_event_returns_404`, `test_corrections::test_only_admin_can_reverse`, `test_corrections::test_other_organization_event_is_forbidden`, `test_corrections::test_reason_is_required`, `test_corrections::test_reversal_creates_negative_event_and_fixes_projections`, `test_corrections::test_reversal_requires_csrf`, `test_corrections::test_second_reversal_is_rejected`, `test_demo_stability::test_admin_review_screen_can_correct_a_mission_score`, `test_demo_stability::test_approval_rolls_back_when_no_rule_version_is_effective`, `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_operator_navigation_hides_sales_import_link`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_sales_list_counts_sub_unit_row_as_not_pending_after_processing`, `test_demo_stability::test_sales_list_uses_pending_valid_count_after_zero_point_processing`, `test_demo_stability::test_sales_score_can_be_corrected_from_import_detail`, `test_demo_stability::test_sales_score_correction_is_admin_only_and_org_scoped`, `test_demo_stability::test_sample_sales_workbook_download_is_admin_only`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_approve_redirect_keeps_queue_filter`, `test_flow::test_duplicate_request_id_is_idempotent`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_mission_edit_publishes_new_rule_version`, `test_flow::test_mission_respects_max_per_user`, `test_flow::test_mission_window_and_status_filtering`, `test_flow::test_organization_scope_blocks_foreign_submission`, `test_flow::test_reject_requires_reason_and_awards_nothing`, `test_flow::test_visitors_and_operators_have_no_admin_powers`, `test_game_api::test_completion_unlocks_next_server_owned_mission`, `test_game_api::test_daily_bonus_is_not_awarded_again_on_a_new_idempotency_key`, `test_game_api::test_game_api_rejects_client_rewards_bad_answers_locks_and_bad_csrf`, `test_game_api::test_game_api_restricts_staff_and_rejects_url_session_token`, `test_game_api::test_game_bootstrap_is_authenticated_json_and_serves_pinned_catalog`, `test_game_api::test_game_completion_is_server_scored_idempotent_and_separate_from_org_points`, `test_game_api::test_game_profile_draft_history_and_user_scope`, `test_game_api::test_idempotency_key_cannot_be_reused_for_different_answers`, `test_game_store::test_demo_store_purchase_is_atomic_idempotent_and_unlocks_special_mission`, `test_game_store::test_demo_store_rejects_insufficient_balance_and_missing_csrf`, `test_hardening::test_admin_queue_carries_token_between_pages`, `test_hardening::test_admin_queue_paginates`, `test_hardening::test_cookie_session_still_works`, `test_hardening::test_forged_csrf_upload_creates_nothing`, `test_hardening::test_forms_render_a_csrf_field`, `test_hardening::test_login_is_rate_limited`, `test_hardening::test_post_with_forged_csrf_is_rejected`, `test_hardening::test_post_without_csrf_is_rejected`, `test_hardening::test_session_token_in_url_works_without_cookies`, `test_hardening::test_token_only_session_can_post_forms`, `test_sales::test_amount_below_one_unit_scores_nothing`, `test_sales::test_detail_page_shows_reconciliation`, `test_sales::test_duplicate_external_id_across_imports_is_skipped`, `test_sales::test_missing_columns_reject_the_file`, `test_sales::test_non_xlsx_is_rejected`, `test_sales::test_only_admin_can_use_sales_import`, `test_sales::test_other_organization_import_is_not_visible`, `test_sales::test_process_creates_each_score_once`, `test_sales::test_processing_failure_rolls_back_all_events`, `test_sales::test_row_errors_do_not_block_valid_rows`, `test_sales::test_same_file_is_rejected_by_fingerprint`, `test_sales::test_upload_requires_csrf`, `test_sales::test_upload_validates_without_scoring`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_gate::test_tribal_bootstrap_is_feature_disabled_by_default`, `test_tribal_org_api::test_org_units_api_is_gated_when_feature_is_off`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated`, `test_uat_legacy_auth::test_uat05_explicit_legacy_demo_only_allows_seed_identities_and_staff_key`, `test_uat_legacy_auth::test_uat05_off_and_prod_have_no_demo_picker_or_url_auth`
 
 ### `GET /evidence/{evidence_id}`
 
@@ -584,14 +629,14 @@ graph LR
 ### `GET /login`
 
 - Handler: `main.login_page` — access **public** — CSRF not needed (GET)
-- Renders: `login.html` · Redirects: —
-- Non-200 status codes (handler and its guards): —
-- Calls: —
-- Closures used: `main.conn_dep`, `main.page`
-- Reads: `users`
+- Renders: `login.html` · Redirects: `/home`
+- Non-200 status codes (handler and its guards): `303`, `401`, `404`
+- Calls: `security.current_user`
+- Closures used: `main.conn_dep`, `main.go`, `main.legacy_demo_users`, `main.page`
+- Reads: `organizations`, `users`
 - Writes: —
 - Error codes reachable: —
-- Tests (1): `test_flow::test_login_page_lists_demo_users`
+- Tests (5): `test_flow::test_login_page_lists_demo_users`, `test_kilos_play::test_fa_routes_and_role_guards`, `test_uat_legacy_auth::test_uat05_explicit_legacy_demo_only_allows_seed_identities_and_staff_key`, `test_uat_legacy_auth::test_uat05_off_and_prod_have_no_demo_picker_or_url_auth`, `test_uat_legacy_auth::test_uat05_play_never_dispatches_legacy_routes_or_reads_legacy_db`
 
 ### `POST /logout`
 
@@ -641,6 +686,210 @@ graph LR
 - Error codes reachable: `DomainError:EVIDENCE_REQUIRED`, `DomainError:MAX_ATTEMPTS_REACHED`, `ScoringError:MISSION_NOT_FOUND`, `ScoringError:NO_ACTIVE_RULE_VERSION`
 - Tests (23): `test_corrections::test_a_correction_cannot_be_reversed`, `test_corrections::test_leaderboard_reflects_the_correction`, `test_corrections::test_only_admin_can_reverse`, `test_corrections::test_other_organization_event_is_forbidden`, `test_corrections::test_reason_is_required`, `test_corrections::test_reversal_creates_negative_event_and_fixes_projections`, `test_corrections::test_reversal_requires_csrf`, `test_corrections::test_second_reversal_is_rejected`, `test_demo_stability::test_admin_review_screen_can_correct_a_mission_score`, `test_demo_stability::test_approval_rolls_back_when_no_rule_version_is_effective`, `test_demo_stability::test_demo_optional_new_rule_version_awards_fifteen_at_approval`, `test_demo_stability::test_demo_script_main_path_and_optional_correction`, `test_demo_stability::test_moving_future_start_back_keeps_approval_and_score_atomic`, `test_demo_stability::test_publish_after_moving_draft_start_back_has_an_effective_rule`, `test_demo_stability::test_submission_badge_shows_recorded_points_after_mission_points_change`, `test_flow::test_approve_redirect_keeps_queue_filter`, `test_flow::test_duplicate_request_id_is_idempotent`, `test_flow::test_full_flow_approval_scores_once`, `test_flow::test_mission_respects_max_per_user`, `test_flow::test_reject_requires_reason_and_awards_nothing`, `test_hardening::test_admin_queue_paginates`, `test_hardening::test_forged_csrf_upload_creates_nothing`, `test_hardening::test_token_only_session_can_post_forms`
 
+### `GET /play/`
+
+- Handler: `play.index` — access **demo entry** — CSRF not needed (GET)
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `303`
+- Calls: `play_views.landing`
+- Closures used: `play.connection`, `play.go`, `play.who`
+- Reads: `play_accounts`, `play_sessions`
+- Writes: —
+- Error codes reachable: —
+- Tests (2): `test_kilos_play::test_play_is_not_mounted_outside_demo`, `test_uat_legacy_auth::test_uat05_off_and_prod_have_no_demo_picker_or_url_auth`
+
+### `POST /play/action`
+
+- Handler: `play.action` — access **role + session** — CSRF yes
+- Renders: — · Redirects: `/play/admin/control`, `/play/entrance`
+- Non-200 status codes (handler and its guards): `303`
+- Calls: `play_data.PlayError`, `play_data.audit`, `play_data.need`, `play_data.now`, `play_data.one`, `play_data.reset`, `play_data.text`, `play_data.writing`, `play_ops.approve_sale`, `play_ops.claim`, `play_ops.family_for`, `play_ops.invite`, `play_ops.profile`, `play_ops.require`, `play_rooms.create`, `play_rooms.join`, `play_rooms.play_action`
+- Closures used: `play.back`, `play.connection`, `play.cookie`, `play.csrf`, `play.digest`, `play.go`, `play.new_session`, `play.read_form`, `play.want_json`, `play.who`
+- Reads: `play_accounts`, `play_badges`, `play_campaign_members`, `play_campaigns`, `play_cards`, `play_claims`, `play_competitions`, `play_families`, `play_games`, `play_meta`, `play_missions`, `play_questions`, `play_results`, `play_rewards`, `play_room_members`, `play_rooms`, `play_sales`, `play_scores`, `play_sessions`, `play_token_rules`, `play_wallet_events`, `play_words`
+- Writes: `play_accounts`, `play_audit`, `play_badges`, `play_campaign_members`, `play_campaigns`, `play_cards`, `play_claims`, `play_competitions`, `play_families`, `play_games`, `play_invites`, `play_meta`, `play_missions`, `play_notices`, `play_questions`, `play_results`, `play_rewards`, `play_room_members`, `play_rooms`, `play_sales`, `play_scores`, `play_sessions`, `play_token_rules`, `play_wallet_events`, `play_words`
+- Error codes reachable: —
+- Tests (16): `test_kilos_play::test_adjustment_is_idempotent_and_reset_is_isolated`, `test_kilos_play::test_admin_manages_resources_and_configuration`, `test_kilos_play::test_fa_routes_and_role_guards`, `test_kilos_play::test_https_preview_uses_http_only_partitioned_session`, `test_kilos_play::test_no_funds_rolls_back_and_timeout_is_projected_by_admin`, `test_kilos_play::test_private_family_invitation_and_child_scope`, `test_kilos_play::test_quiz_answer_privacy_progress_and_score`, `test_kilos_play::test_sales_ledger_connected_and_versioned`, `test_kilos_play::test_shir_three_independent_accounts_to_result_and_replay`, `test_kilos_play::test_uat01_admin_requires_credential_and_old_passwordless_sessions_are_invalid`, `test_kilos_play::test_uat01_entry_codes_are_admin_issued_single_use_and_not_cookies`, `test_kilos_play::test_uat02_pulse_tracks_one_approved_sale_and_game_debits`, `test_kilos_play::test_uat03_uncommitted_move_can_retry_but_committed_guess_cannot_duplicate`, `test_kilos_play::test_uat04_private_invite_never_advertises_family_and_ignores_scope_fields`, `test_kilos_play::test_uat04_room_links_hide_account_catalogue_and_entry_checks_family`, `test_kilos_play::test_word_modes_turn_restrictions_and_results`
+
+### `GET /play/admin/export`
+
+- Handler: `play.export` — access **admin** — CSRF not needed (GET)
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `303`
+- Calls: `play_data.ledger`, `play_data.when`, `play_ops.require`
+- Closures used: `play.connection`, `play.sign_in_required`, `play.who`
+- Reads: `play_accounts`, `play_families`, `play_sessions`, `play_wallet_events`
+- Writes: —
+- Error codes reachable: —
+- Tests (3): `test_kilos_play::test_sales_ledger_connected_and_versioned`, `test_kilos_play::test_uat01_admin_requires_credential_and_old_passwordless_sessions_are_invalid`, `test_uat_legacy_auth::test_uat05_play_never_dispatches_legacy_routes_or_reads_legacy_db`
+
+### `GET /play/admin/game/{key}`
+
+- Handler: `play.game_page` — access **role** — CSRF not needed (GET)
+- Renders: `play_game.html` · Redirects: —
+- Non-200 status codes (handler and its guards): `303`
+- Calls: `play_ops.require`, `play_views.actor_context`, `play_views.categories`, `play_views.game_boards`, `play_views.get_game`
+- Closures used: `play.connection`, `play.render`, `play.sign_in_required`, `play.who`
+- Reads: `play_accounts`, `play_families`, `play_games`, `play_notices`, `play_questions`, `play_results`, `play_scores`, `play_sessions`, `play_wallet_events`
+- Writes: —
+- Error codes reachable: —
+- Tests (0): —
+
+### `GET /play/admin/login`
+
+- Handler: `play.admin_login_page` — access **demo entry** — CSRF not needed (GET)
+- Renders: `play_login.html` · Redirects: —
+- Non-200 status codes (handler and its guards): `303`
+- Calls: `play_data.PlayError`, `play_views.landing`, `security.credential_transport`
+- Closures used: `play.connection`, `play.go`, `play.render`, `play.who`
+- Reads: `play_accounts`, `play_sessions`
+- Writes: —
+- Error codes reachable: —
+- Tests (0): —
+
+### `POST /play/admin/login`
+
+- Handler: `play.admin_login` — access **operator credential** — CSRF yes
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `303`
+- Calls: `play_data.PlayError`, `play_data.need`, `play_data.one`, `play_data.writing`, `play_views.landing`, `security.credential_transport`
+- Closures used: `play.connection`, `play.cookie`, `play.csrf`, `play.go`, `play.new_session`, `play.rate`, `play.read_form`, `play.who`
+- Reads: `play_accounts`, `play_sessions`
+- Writes: `play_sessions`
+- Error codes reachable: —
+- Tests (16): `test_kilos_play::test_adjustment_is_idempotent_and_reset_is_isolated`, `test_kilos_play::test_admin_manages_resources_and_configuration`, `test_kilos_play::test_fa_routes_and_role_guards`, `test_kilos_play::test_https_preview_uses_http_only_partitioned_session`, `test_kilos_play::test_no_funds_rolls_back_and_timeout_is_projected_by_admin`, `test_kilos_play::test_private_family_invitation_and_child_scope`, `test_kilos_play::test_quiz_answer_privacy_progress_and_score`, `test_kilos_play::test_sales_ledger_connected_and_versioned`, `test_kilos_play::test_shir_three_independent_accounts_to_result_and_replay`, `test_kilos_play::test_uat01_admin_requires_credential_and_old_passwordless_sessions_are_invalid`, `test_kilos_play::test_uat01_entry_codes_are_admin_issued_single_use_and_not_cookies`, `test_kilos_play::test_uat02_pulse_tracks_one_approved_sale_and_game_debits`, `test_kilos_play::test_uat03_uncommitted_move_can_retry_but_committed_guess_cannot_duplicate`, `test_kilos_play::test_uat04_private_invite_never_advertises_family_and_ignores_scope_fields`, `test_kilos_play::test_uat04_room_links_hide_account_catalogue_and_entry_checks_family`, `test_kilos_play::test_word_modes_turn_restrictions_and_results`
+
+### `POST /play/enter`
+
+- Handler: `play.enter` — access **code or scoped session** — CSRF yes
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `303`
+- Calls: `play_data.PlayError`, `play_data.need`, `play_data.now`, `play_data.one`, `play_data.writing`, `play_views.landing`, `security.credential_transport`
+- Closures used: `play.connection`, `play.cookie`, `play.csrf`, `play.digest`, `play.go`, `play.new_session`, `play.rate`, `play.read_form`, `play.room_destination`, `play.who`
+- Reads: `play_accounts`, `play_rooms`, `play_sessions`
+- Writes: `play_sessions`
+- Error codes reachable: —
+- Tests (16): `test_kilos_play::test_adjustment_is_idempotent_and_reset_is_isolated`, `test_kilos_play::test_admin_manages_resources_and_configuration`, `test_kilos_play::test_fa_routes_and_role_guards`, `test_kilos_play::test_https_preview_uses_http_only_partitioned_session`, `test_kilos_play::test_no_funds_rolls_back_and_timeout_is_projected_by_admin`, `test_kilos_play::test_private_family_invitation_and_child_scope`, `test_kilos_play::test_quiz_answer_privacy_progress_and_score`, `test_kilos_play::test_sales_ledger_connected_and_versioned`, `test_kilos_play::test_shir_three_independent_accounts_to_result_and_replay`, `test_kilos_play::test_uat01_admin_requires_credential_and_old_passwordless_sessions_are_invalid`, `test_kilos_play::test_uat01_entry_codes_are_admin_issued_single_use_and_not_cookies`, `test_kilos_play::test_uat02_pulse_tracks_one_approved_sale_and_game_debits`, `test_kilos_play::test_uat03_uncommitted_move_can_retry_but_committed_guess_cannot_duplicate`, `test_kilos_play::test_uat04_private_invite_never_advertises_family_and_ignores_scope_fields`, `test_kilos_play::test_uat04_room_links_hide_account_catalogue_and_entry_checks_family`, `test_kilos_play::test_word_modes_turn_restrictions_and_results`
+
+### `GET /play/entrance`
+
+- Handler: `play.entrance` — access **demo entry** — CSRF not needed (GET)
+- Renders: `play_login.html` · Redirects: —
+- Non-200 status codes (handler and its guards): `303`
+- Calls: `play_data.PlayError`, `play_data.rows`, `play_rooms.code_from`, `play_views.landing`, `security.credential_transport`
+- Closures used: `play.connection`, `play.go`, `play.render`, `play.room_destination`, `play.who`
+- Reads: `play_accounts`, `play_families`, `play_rooms`, `play_sessions`
+- Writes: —
+- Error codes reachable: —
+- Tests (1): `test_kilos_play::test_uat04_room_links_hide_account_catalogue_and_entry_checks_family`
+
+### `POST /play/entry-code`
+
+- Handler: `play.issue_entry_code` — access **admin** — CSRF yes
+- Renders: `play_login.html` · Redirects: —
+- Non-200 status codes (handler and its guards): —
+- Calls: `play_data.PlayError`, `play_data.need`, `play_data.now`, `play_data.one`, `play_data.writing`, `play_ops.require`, `security.credential_transport`
+- Closures used: `play.connection`, `play.csrf`, `play.digest`, `play.read_form`, `play.render`, `play.who`
+- Reads: `play_accounts`, `play_sessions`
+- Writes: `play_sessions`
+- Error codes reachable: —
+- Tests (16): `test_kilos_play::test_adjustment_is_idempotent_and_reset_is_isolated`, `test_kilos_play::test_admin_manages_resources_and_configuration`, `test_kilos_play::test_fa_routes_and_role_guards`, `test_kilos_play::test_https_preview_uses_http_only_partitioned_session`, `test_kilos_play::test_no_funds_rolls_back_and_timeout_is_projected_by_admin`, `test_kilos_play::test_private_family_invitation_and_child_scope`, `test_kilos_play::test_quiz_answer_privacy_progress_and_score`, `test_kilos_play::test_sales_ledger_connected_and_versioned`, `test_kilos_play::test_shir_three_independent_accounts_to_result_and_replay`, `test_kilos_play::test_uat01_admin_requires_credential_and_old_passwordless_sessions_are_invalid`, `test_kilos_play::test_uat01_entry_codes_are_admin_issued_single_use_and_not_cookies`, `test_kilos_play::test_uat02_pulse_tracks_one_approved_sale_and_game_debits`, `test_kilos_play::test_uat03_uncommitted_move_can_retry_but_committed_guess_cannot_duplicate`, `test_kilos_play::test_uat04_private_invite_never_advertises_family_and_ignores_scope_fields`, `test_kilos_play::test_uat04_room_links_hide_account_catalogue_and_entry_checks_family`, `test_kilos_play::test_word_modes_turn_restrictions_and_results`
+
+### `GET /play/family/game/{key}`
+
+- Handler: `play.game_page` — access **role** — CSRF not needed (GET)
+- Renders: `play_game.html` · Redirects: —
+- Non-200 status codes (handler and its guards): `303`
+- Calls: `play_ops.require`, `play_views.actor_context`, `play_views.categories`, `play_views.game_boards`, `play_views.get_game`
+- Closures used: `play.connection`, `play.render`, `play.sign_in_required`, `play.who`
+- Reads: `play_accounts`, `play_families`, `play_games`, `play_notices`, `play_questions`, `play_results`, `play_scores`, `play_sessions`, `play_wallet_events`
+- Writes: —
+- Error codes reachable: —
+- Tests (0): —
+
+### `GET /play/family/room/{code}`
+
+- Handler: `play.room_page` — access **member + family** — CSRF not needed (GET)
+- Renders: `play_room.html` · Redirects: —
+- Non-200 status codes (handler and its guards): `303`
+- Calls: `play_rooms.code_from`, `play_rooms.room_state`, `play_views.actor_context`
+- Closures used: `play.connection`, `play.go`, `play.render`, `play.who`
+- Reads: `play_accounts`, `play_badges`, `play_competitions`, `play_families`, `play_games`, `play_notices`, `play_results`, `play_rewards`, `play_room_members`, `play_rooms`, `play_scores`, `play_sessions`, `play_wallet_events`
+- Writes: `play_audit`, `play_badges`, `play_results`, `play_rooms`, `play_scores`
+- Error codes reachable: —
+- Tests (0): —
+
+### `GET /play/invitation/{code}`
+
+- Handler: `play.invitation` — access **invitation** — CSRF not needed (GET)
+- Renders: `play_login.html` · Redirects: —
+- Non-200 status codes (handler and its guards): —
+- Calls: `play_data.PlayError`, `play_ops.available_invite`, `security.credential_transport`
+- Closures used: `play.connection`, `play.render`
+- Reads: `play_invites`
+- Writes: —
+- Error codes reachable: —
+- Tests (1): `test_kilos_play::test_private_family_invitation_and_child_scope`
+
+### `POST /play/invitation/{code}`
+
+- Handler: `play.invite_accept` — access **invitation** — CSRF yes
+- Renders: — · Redirects: `/play/family/home`
+- Non-200 status codes (handler and its guards): `303`
+- Calls: `play_data.PlayError`, `play_data.writing`, `play_ops.accept_invite`, `security.credential_transport`
+- Closures used: `play.connection`, `play.cookie`, `play.csrf`, `play.go`, `play.new_session`, `play.rate`, `play.read_form`, `play.who`
+- Reads: `play_accounts`, `play_invites`, `play_sessions`
+- Writes: `play_accounts`, `play_audit`, `play_invites`, `play_sessions`
+- Error codes reachable: —
+- Tests (1): `test_kilos_play::test_private_family_invitation_and_child_scope`
+
+### `GET /play/pulse`
+
+- Handler: `play.pulse` — access **session** — CSRF not needed (GET)
+- Renders: `play_bits.html` · Redirects: —
+- Non-200 status codes (handler and its guards): —
+- Calls: `play_data.PlayError`, `play_data.balance`, `play_data.ledger`, `play_data.sales_list`, `play_data.visitor_stats`, `play_views.unread`
+- Closures used: `play.connection`, `play.table_revision`, `play.who`
+- Reads: `play_accounts`, `play_campaigns`, `play_families`, `play_notices`, `play_sales`, `play_sessions`, `play_wallet_events`
+- Writes: —
+- Error codes reachable: —
+- Tests (5): `test_kilos_play::test_adjustment_is_idempotent_and_reset_is_isolated`, `test_kilos_play::test_https_preview_uses_http_only_partitioned_session`, `test_kilos_play::test_sales_ledger_connected_and_versioned`, `test_kilos_play::test_uat01_entry_codes_are_admin_issued_single_use_and_not_cookies`, `test_kilos_play::test_uat02_pulse_tracks_one_approved_sale_and_game_debits`
+
+### `GET /play/state/{code}`
+
+- Handler: `play.state` — access **member + family** — CSRF not needed (GET)
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): —
+- Calls: `play_data.PlayError`, `play_rooms.room_state`
+- Closures used: `play.connection`, `play.who`
+- Reads: `play_accounts`, `play_badges`, `play_competitions`, `play_families`, `play_games`, `play_results`, `play_rewards`, `play_room_members`, `play_rooms`, `play_scores`, `play_sessions`
+- Writes: `play_audit`, `play_badges`, `play_results`, `play_rooms`, `play_scores`
+- Error codes reachable: —
+- Tests (16): `test_kilos_play::test_adjustment_is_idempotent_and_reset_is_isolated`, `test_kilos_play::test_admin_manages_resources_and_configuration`, `test_kilos_play::test_fa_routes_and_role_guards`, `test_kilos_play::test_https_preview_uses_http_only_partitioned_session`, `test_kilos_play::test_no_funds_rolls_back_and_timeout_is_projected_by_admin`, `test_kilos_play::test_private_family_invitation_and_child_scope`, `test_kilos_play::test_quiz_answer_privacy_progress_and_score`, `test_kilos_play::test_sales_ledger_connected_and_versioned`, `test_kilos_play::test_shir_three_independent_accounts_to_result_and_replay`, `test_kilos_play::test_uat01_admin_requires_credential_and_old_passwordless_sessions_are_invalid`, `test_kilos_play::test_uat01_entry_codes_are_admin_issued_single_use_and_not_cookies`, `test_kilos_play::test_uat02_pulse_tracks_one_approved_sale_and_game_debits`, `test_kilos_play::test_uat03_uncommitted_move_can_retry_but_committed_guess_cannot_duplicate`, `test_kilos_play::test_uat04_private_invite_never_advertises_family_and_ignores_scope_fields`, `test_kilos_play::test_uat04_room_links_hide_account_catalogue_and_entry_checks_family`, `test_kilos_play::test_word_modes_turn_restrictions_and_results`
+
+### `GET /play/{area}/result/{result_id}`
+
+- Handler: `play.result_page` — access **role + family** — CSRF not needed (GET)
+- Renders: `play_result.html` · Redirects: —
+- Non-200 status codes (handler and its guards): `303`
+- Calls: `play_data.PlayError`, `play_data.need`, `play_data.one`, `play_views.actor_context`
+- Closures used: `play.connection`, `play.render`, `play.sign_in_required`, `play.who`
+- Reads: `play_accounts`, `play_families`, `play_games`, `play_notices`, `play_results`, `play_sessions`, `play_wallet_events`
+- Writes: —
+- Error codes reachable: —
+- Tests (1): `test_kilos_play::test_shir_three_independent_accounts_to_result_and_replay`
+
+### `GET /play/{area}/{page}`
+
+- Handler: `play.generic` — access **role** — CSRF not needed (GET)
+- Renders: — · Redirects: —
+- Non-200 status codes (handler and its guards): `303`
+- Calls: —
+- Closures used: `play.connection`, `play.screen`, `play.sign_in_required`, `play.who`
+- Reads: `play_accounts`, `play_audit`, `play_badges`, `play_campaign_members`, `play_campaigns`, `play_cards`, `play_claims`, `play_competitions`, `play_families`, `play_games`, `play_invites`, `play_missions`, `play_notices`, `play_questions`, `play_results`, `play_rewards`, `play_room_members`, `play_rooms`, `play_sales`, `play_scores`, `play_sessions`, `play_token_rules`, `play_wallet_events`, `play_words`
+- Writes: `play_audit`, `play_badges`, `play_results`, `play_rooms`, `play_scores`
+- Error codes reachable: —
+- Tests (9): `test_kilos_play::test_adjustment_is_idempotent_and_reset_is_isolated`, `test_kilos_play::test_admin_manages_resources_and_configuration`, `test_kilos_play::test_fa_routes_and_role_guards`, `test_kilos_play::test_no_funds_rolls_back_and_timeout_is_projected_by_admin`, `test_kilos_play::test_sales_ledger_connected_and_versioned`, `test_kilos_play::test_shir_three_independent_accounts_to_result_and_replay`, `test_kilos_play::test_uat01_admin_requires_credential_and_old_passwordless_sessions_are_invalid`, `test_kilos_play::test_uat01_entry_codes_are_admin_issued_single_use_and_not_cookies`, `test_kilos_play::test_uat04_private_invite_never_advertises_family_and_ignores_scope_fields`
+
 ### `GET /score`
 
 - Handler: `main.score_page` — access **user** — CSRF not needed (GET)
@@ -675,14 +924,15 @@ graph LR
 | `_game_error` | exception-handler | — | — | — | — | — |
 | `_http_error` | exception-handler | — | — | — | `main.page` | — |
 | `_login_required` | exception-handler | — | — | — | — | — |
-| `_starlette_error` | exception-handler | — | — | — | `main.page` | — |
-| `conn_dep` | closure | — | — | — | `db.connect` | 43 callers |
-| `create_app` | function | — | — | — | `config.Settings`, `db.init_db`, `jalali.format_jalali` | `conftest::client`, `test_game_api::test_game_demo_login_is_disabled_outside_dev_and_test`, `test_hardening::test_admin_queue_paginates`, `test_tribal_gate::test_tribal_bootstrap_does_not_expose_legacy_demo_data`, `test_tribal_org_api::test_org_units_api_is_tenant_scoped_and_paginated` |
+| `_starlette_error` | exception-handler | — | — | — | `main.page` | `main.hardening` |
+| `conn_dep` | closure | — | — | — | `db.connect` | 42 callers |
+| `create_app` | function | — | — | — | `config.Settings`, `db.init_db`, `jalali.format_jalali`, `play.make_play` | 10 callers |
 | `csrf_guard` | closure | Reject form posts whose CSRF value does not match the session token. | — | — | `main.LoginRequired`, `security.csrf_for`, `security.session_token` | 16 callers |
-| `go` | closure | — | — | — | `main.url_session`, `main.with_token` | 10 callers |
-| `hardening` | middleware | — | — | — | `main.login_rate_limited`, `main.page` | — |
+| `go` | closure | — | — | — | `main.with_token`, `security.url_session_token` | 11 callers |
+| `hardening` | middleware | — | — | — | `main._starlette_error`, `main.login_rate_limited`, `security.cross_origin` | — |
+| `legacy_demo_users` | closure | — | `organizations`, `users` | — | — | `main.demo_login`, `main.game_demo_login`, `main.game_demo_users`, `main.login_page` |
 | `login_rate_limited` | closure | In-memory token bucket. Single-process only (documented limitation). | — | — | — | `main.game_demo_login`, `main.hardening` |
-| `page` | closure | — | — | — | `main.url_session`, `security.csrf_token` | 25 callers |
+| `page` | closure | — | — | — | `security.csrf_token`, `security.url_session_token` | 24 callers |
 | `require_admin` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | 13 callers |
 | `require_api_user` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | 10 callers |
 | `require_staff` | closure | — | — | — | `main.LoginRequired`, `main.conn_dep`, `security.current_user` | `main.admin_decide`, `main.admin_missions`, `main.admin_queue`, `main.admin_review` |
@@ -690,7 +940,6 @@ graph LR
 | `sales_page_context` | closure | — | `sales_user_map`, `scoring_rule_versions`, `users` | — | — | `main.admin_sales_new`, `main.admin_sales_upload` |
 | `tribal_disabled_response` | closure | — | — | — | — | `main.tribal_org_unit`, `main.tribal_org_units` |
 | `url` | closure | — | — | — | `main.with_token` | — |
-| `url_session` | closure | The token to keep in internal links — only when it came from the URL. | — | — | `security.read_token` | `main.go`, `main.page` |
 | `with_token` | closure | — | — | — | — | `main.demo_login`, `main.go`, `main.url` |
 
 ### `app/repo.py`
@@ -778,13 +1027,16 @@ graph LR
 | `_sign` | function | — | — | — | — | `security.make_token` |
 | `_unsign` | function | — | — | — | — | `security.read_token` |
 | `clear_session` | function | — | — | — | — | `main.game_logout`, `main.logout` |
-| `csrf_for` | function | Derive a CSRF token from the session token (works without cookies). | — | — | — | `conftest::csrf`, `main.csrf_guard`, `main.game_demo_login`, `security.csrf_token`, `test_hardening::token_csrf` |
+| `credential_transport` | function | Require TLS for credentials, except for direct loopback development. | — | — | — | `main.demo_login`, `play.admin_login`, `play.admin_login_page`, `play.enter`, `play.entrance`, `play.invitation`, `play.invite_accept`, `play.issue_entry_code` |
+| `cross_origin` | function | Reject cross-origin credential posts; normal server clients may omit Origin. | — | — | — | `main.game_demo_login`, `main.hardening`, `play.read_form` |
+| `csrf_for` | function | Derive a CSRF token from the session token (works without cookies). | — | — | — | `conftest::csrf`, `main.csrf_guard`, `main.game_demo_login`, `play.csrf`, `play.render`, `security.csrf_token`, `test_hardening::token_csrf` |
 | `csrf_token` | function | — | — | — | `security.csrf_for`, `security.session_token` | `main.game_bootstrap`, `main.page` |
-| `current_user` | function | — | `users` | — | `security.CurrentUser`, `security.read_token` | `main.require_admin`, `main.require_api_user`, `main.require_staff`, `main.require_user`, `main.root` |
-| `make_token` | function | Return a URL-safe token: base64url("<user_id>.<issued_at>.<hmac>"). | — | — | `security._sign` | `main.demo_login`, `security.set_session`, `test_hardening::test_expired_token_is_rejected` |
-| `read_token` | function | Verify signature and expiry; return the user id or ``None``. | — | — | `security._unsign` | `main.url_session`, `security.current_user`, `security.session_token` |
-| `session_token` | function | Effective session token: ``?s=`` first (iframe fallback), then cookie. | — | — | `security.read_token` | `main.csrf_guard`, `security.csrf_token` |
+| `current_user` | function | — | `users` | — | `security.CurrentUser`, `security.read_token`, `security.session_token` | `main.login_page`, `main.require_admin`, `main.require_api_user`, `main.require_staff`, `main.require_user`, `main.root` |
+| `make_token` | function | Return a URL-safe token: base64url("<user_id>.<issued_at>.<hmac>"). | — | — | `security._sign` | `main.demo_login`, `security.set_session`, `test_hardening::test_expired_token_is_rejected`, `test_uat_legacy_auth::test_uat05_off_and_prod_have_no_demo_picker_or_url_auth`, `test_uat_legacy_auth::test_uat05_play_never_dispatches_legacy_routes_or_reads_legacy_db` |
+| `read_token` | function | Verify signature and expiry; return the user id or ``None``. | — | — | `security._unsign` | `security.current_user`, `security.url_session_token` |
+| `session_token` | function | The URL fallback is restricted to the deliberately isolated legacy demo. | — | — | `security.url_session_token` | `main.csrf_guard`, `security.csrf_token`, `security.current_user` |
 | `set_session` | function | Set the cookie and return the token (reused for the ``?s=`` fallback). | — | — | `security.make_token` | `main.demo_login`, `main.game_demo_login` |
+| `url_session_token` | function | — | — | — | `security.read_token` | `main.go`, `main.page`, `security.session_token` |
 
 ### `app/config.py`
 
@@ -797,9 +1049,9 @@ graph LR
 
 | Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
 |---|---|---|---|---|---|---|
-| `apply_migrations` | function | Run each ``db/migrations/NNNN_*.sql`` exactly once, in filename order. | `schema_migrations` | `schema_migrations` | `db.now_iso` | `db.init_db` |
-| `connect` | function | — | — | — | — | `db.init_db`, `main.conn_dep`, `maintenance.purge_evidence`, `test_hardening::test_admin_queue_paginates` |
-| `init_db` | function | — | `users` | — | `db.apply_migrations`, `db.connect`, `seed.seed_demo` | `main.create_app`, `seed.main` |
+| `apply_migrations` | function | Run each ``db/migrations/NNNN_*.sql`` exactly once, in filename order. | `schema_migrations` | `schema_migrations` | `db.now_iso` | `db.init_db`, `play_data.initialize` |
+| `connect` | function | — | — | — | — | 10 callers |
+| `init_db` | function | — | `users` | — | `db.apply_migrations`, `db.connect`, `seed.seed_demo` | `main.create_app`, `seed.main`, `test_kilos_play::test_adjustment_is_idempotent_and_reset_is_isolated`, `test_uat_legacy_auth::test_uat05_off_and_prod_have_no_demo_picker_or_url_auth`, `test_uat_legacy_auth::test_uat05_play_never_dispatches_legacy_routes_or_reads_legacy_db` |
 | `now_iso` | function | — | — | — | — | `db.apply_migrations`, `game._save`, `maintenance._audit` |
 
 ### `app/game.py`
@@ -843,9 +1095,9 @@ graph LR
 
 | Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
 |---|---|---|---|---|---|---|
-| `format_jalali` | function | Format an ISO string/date as e.g. «۲۷ آبان ۱۴۰۵». | — | — | `jalali.gregorian_to_jalali`, `jalali.to_persian_digits` | `main.create_app`, `test_jalali::test_formatting_uses_persian_digits` |
-| `gregorian_to_jalali` | function | Convert a Gregorian date to the Jalali calendar (arithmetic algorithm). | — | — | — | `jalali.format_jalali`, `test_jalali::test_known_dates` |
-| `to_persian_digits` | function | — | — | — | — | `jalali.format_jalali`, `test_jalali::test_digits` |
+| `format_jalali` | function | Format an ISO string/date as e.g. «۲۷ آبان ۱۴۰۵». | — | — | `jalali.gregorian_to_jalali`, `jalali.to_persian_digits` | `main.create_app`, `play_data.when`, `test_jalali::test_formatting_uses_persian_digits` |
+| `gregorian_to_jalali` | function | Convert a Gregorian date to the Jalali calendar (arithmetic algorithm). | — | — | — | `jalali.format_jalali`, `play_data.month_bounds`, `test_jalali::test_known_dates` |
+| `to_persian_digits` | function | — | — | — | — | `jalali.format_jalali`, `play_data.fmt`, `test_jalali::test_digits` |
 
 ### `app/maintenance.py`
 
@@ -854,6 +1106,161 @@ graph LR
 | `_audit` | function | — | — | `audit_logs` | `db.now_iso` | `maintenance.purge_evidence` |
 | `main` | function | — | — | — | `config.Settings`, `maintenance.purge_evidence` | — |
 | `purge_evidence` | function | Delete evidence older than the retention window; return counters. | `submission_evidences` | `submission_evidences` | `db.connect`, `maintenance._audit` | `maintenance.main`, `test_hardening::test_dry_run_deletes_nothing`, `test_hardening::test_evidence_retention_purges_only_old_files` |
+
+### `app/play.py`
+
+| Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
+|---|---|---|---|---|---|---|
+| `back` | closure | — | — | — | `play_views.landing` | `play.action` |
+| `connection` | closure | — | — | — | `db.connect` | 16 callers |
+| `cookie` | closure | — | — | — | — | `play.action`, `play.admin_login`, `play.enter`, `play.invite_accept` |
+| `csrf` | closure | — | — | — | `play_data.PlayError`, `security.csrf_for` | `play.action`, `play.admin_login`, `play.enter`, `play.invite_accept`, `play.issue_entry_code` |
+| `digest` | closure | — | — | — | — | `play.action`, `play.enter`, `play.issue_entry_code`, `play.new_session`, `play.who` |
+| `go` | closure | — | — | — | — | 9 callers |
+| `make_play` | function | — | — | — | `play_data.initialize` | `main.create_app` |
+| `new_session` | closure | — | — | `play_sessions` | `play.digest`, `play_data.now` | `play.action`, `play.admin_login`, `play.enter`, `play.invite_accept` |
+| `play_error` | exception-handler | — | — | — | `play.render`, `play.want_json` | `play.route_error` |
+| `rate` | closure | — | — | — | `play_data.PlayError`, `play_data.now` | `play.admin_login`, `play.enter`, `play.invite_accept` |
+| `read_form` | closure | — | — | — | `play_data.PlayError`, `security.cross_origin` | `play.action`, `play.admin_login`, `play.enter`, `play.invite_accept`, `play.issue_entry_code` |
+| `render` | closure | — | — | — | `security.csrf_for` | 9 callers |
+| `room_destination` | closure | — | — | — | `play_data.PlayError`, `play_rooms.code_from`, `play_rooms.fetch` | `play.enter`, `play.entrance` |
+| `route_error` | exception-handler | — | — | — | `play.play_error`, `play_data.PlayError` | — |
+| `screen` | closure | — | — | — | `play.render`, `play.table_revision`, `play_data.PlayError`, `play_rooms.settle_due`, `play_views.actor_context`, `play_views.admin_context` | `play.generic` |
+| `sign_in_required` | closure | — | — | — | `play.go`, `play.want_json`, `play_data.PlayError` | `play.export`, `play.game_page`, `play.generic`, `play.result_page` |
+| `table_revision` | closure | — | — | — | `play_data.dump` | `play.pulse`, `play.screen` |
+| `uncached` | middleware | — | — | — | — | — |
+| `want_json` | closure | — | — | — | — | `play.action`, `play.play_error`, `play.sign_in_required` |
+| `who` | closure | — | `play_accounts`, `play_sessions` | — | `play.digest`, `play_data.now`, `play_data.one` | 15 callers |
+
+### `app/play_data.py`
+
+| Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
+|---|---|---|---|---|---|---|
+| `PlayError` | class | — | — | — | — | 43 callers |
+| `achievements` | function | — | `play_accounts`, `play_badges`, `play_rewards` | — | `play_data.rows` | `play_views.family_context` |
+| `add_score` | function | — | — | `play_scores` | `play_data.now`, `play_data.uid` | `play_ops.claim`, `play_rooms.finish`, `play_seed.seed` |
+| `audit` | function | — | — | `play_audit` | `play_data.now`, `play_data.uid` | 21 callers |
+| `balance` | function | — | `play_wallet_events` | — | `play_data.scalar` | 12 callers |
+| `campaigns` | function | — | `play_campaign_members`, `play_campaigns`, `play_missions`, `play_sales` | — | `play_data.day`, `play_data.rows` | `play_views.admin_context`, `play_views.visitor_context` |
+| `choice` | function | — | — | — | `play_data.PlayError` | 14 callers |
+| `competitions` | function | — | `play_competitions`, `play_results`, `play_rewards` | — | `play_data.day`, `play_data.epoch`, `play_data.percent`, `play_data.rank_between`, `play_data.rows`, `play_data.scalar` | `play_ops.grant_community`, `play_ops.set_scenario`, `play_views.admin_context`, `play_views.family_context` |
+| `day` | function | — | — | — | `play_data.now` | 13 callers |
+| `dump` | function | — | — | — | — | `play.table_revision`, `play_ops.save_content`, `play_rooms.create`, `play_rooms.finish`, `play_rooms.save`, `play_seed.seed` |
+| `epoch` | function | — | — | — | — | `play_data.competitions`, `play_data.missions`, `play_data.ranking`, `play_ops.grant_community`, `play_seed.seed`, `play_views.analytics` |
+| `family_members` | function | — | `play_accounts`, `play_badges`, `play_scores` | — | `play_data.rows` | `play_views.admin_context`, `play_views.family_context`, `play_views.visitor_context` |
+| `family_stats` | function | — | `play_results`, `play_scores` | — | `play_data.balance`, `play_data.one`, `play_data.scalar` | `play_views.family_context` |
+| `fmt` | function | — | — | — | `jalali.to_persian_digits` | `play_data.integer`, `play_data.text`, `play_ops.adjust`, `play_ops.approve_sale`, `play_ops.save_content`, `play_ops.save_rule` |
+| `grant_badge` | function | — | `play_rewards` | `play_badges` | `play_data.now`, `play_data.uid` | `play_ops.claim`, `play_ops.grant_community`, `play_rooms.finish`, `play_seed.seed` |
+| `history` | function | — | `play_families`, `play_games`, `play_results`, `play_rooms` | — | `play_data.rows` | `play_views.admin_context`, `play_views.analytics`, `play_views.family_context`, `play_views.visitor_context` |
+| `initialize` | function | — | `play_meta` | — | `db.apply_migrations`, `db.connect`, `play_data.one`, `play_data.writing`, `play_seed.seed` | `play.make_play` |
+| `integer` | function | — | — | — | `play_data.PlayError`, `play_data.fmt` | 10 callers |
+| `iso_date` | function | — | — | — | `play_data.PlayError` | `play_ops.period`, `play_ops.register_sale` |
+| `ledger` | function | — | `play_accounts`, `play_families`, `play_wallet_events` | — | `play_data.rows` | `play.export`, `play.pulse`, `play_views.admin_context`, `play_views.family_context`, `play_views.visitor_context` |
+| `missions` | function | — | `play_accounts`, `play_campaign_members`, `play_campaigns`, `play_claims`, `play_missions`, `play_sales`, `play_scores` | — | `play_data.day`, `play_data.epoch`, `play_data.one`, `play_data.percent`, `play_data.rows`, `play_data.scalar` | `play_ops.claim`, `play_views.family_context`, `play_views.visitor_context` |
+| `month_bounds` | function | Iranian calendar month bounds, used by sales and the monthly competition. | — | — | `jalali.gregorian_to_jalali` | `play_data.ranking`, `play_data.visitor_ranks`, `play_seed.seed` |
+| `need` | function | — | — | — | `play_data.PlayError` | 19 callers |
+| `notify` | function | — | — | `play_notices` | `play_data.now`, `play_data.uid` | `play_ops.approve_sale`, `play_seed.seed` |
+| `now` | function | — | — | — | — | 32 callers |
+| `one` | function | — | — | — | — | 38 callers |
+| `percent` | function | — | — | — | — | `play_data.competitions`, `play_data.missions`, `play_data.visitor_stats`, `play_views.analytics` |
+| `rank_between` | function | — | `play_accounts`, `play_badges`, `play_families`, `play_scores` | — | `play_data.rows` | `play_data.competitions`, `play_data.ranking` |
+| `ranking` | function | — | — | — | `play_data.day`, `play_data.epoch`, `play_data.month_bounds`, `play_data.rank_between` | `play_views.analytics`, `play_views.family_context` |
+| `request_id` | function | — | — | — | `play_data.PlayError` | `play_ops.adjust`, `play_ops.register_sale`, `play_rooms.create` |
+| `reset` | function | — | `play_meta` | — | `play_data.PlayError`, `play_data.scalar`, `play_seed.seed` | `play.action` |
+| `rows` | function | — | — | — | — | 28 callers |
+| `sales_list` | function | — | `play_accounts`, `play_campaigns`, `play_sales` | — | `play_data.rows` | `play.pulse`, `play_views.admin_context`, `play_views.visitor_context` |
+| `scalar` | function | — | — | — | — | 17 callers |
+| `text` | function | — | — | — | `play_data.PlayError`, `play_data.fmt` | 15 callers |
+| `uid` | function | — | — | — | — | 23 callers |
+| `visitor_ranks` | function | — | `play_accounts`, `play_sales` | — | `play_data.day`, `play_data.month_bounds`, `play_data.rows` | `play_data.visitor_stats`, `play_views.visitor_context` |
+| `visitor_stats` | function | — | `play_sales` | — | `play_data.percent`, `play_data.scalar`, `play_data.visitor_ranks` | `play.pulse`, `play_views.admin_context`, `play_views.visitor_context` |
+| `wallet_event` | function | — | `play_wallet_events` | `play_wallet_events` | `play_data.PlayError`, `play_data.balance`, `play_data.now`, `play_data.one`, `play_data.uid` | `play_ops.adjust`, `play_ops.approve_sale`, `play_rooms.start`, `play_seed.seed` |
+| `when` | function | — | — | — | `jalali.format_jalali` | `play.export` |
+| `writing` | function | Serialize ledger and room updates; rolls back every related write on failure. | — | — | — | `play.action`, `play.admin_login`, `play.enter`, `play.invite_accept`, `play.issue_entry_code`, `play_data.initialize`, `play_rooms.room_state`, `play_rooms.settle_due` |
+
+### `app/play_ops.py`
+
+| Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
+|---|---|---|---|---|---|---|
+| `accept_invite` | function | — | — | `play_invites` | `play_data.audit`, `play_data.choice`, `play_data.text`, `play_ops.add_member`, `play_ops.available_invite` | `play.invite_accept` |
+| `add_member` | function | — | — | `play_accounts` | `play_data.now`, `play_data.uid` | `play_ops.accept_invite`, `play_ops.manage_member` |
+| `adjust` | function | — | `play_wallet_events` | — | `play_data.PlayError`, `play_data.audit`, `play_data.choice`, `play_data.fmt`, `play_data.integer`, `play_data.one`, `play_data.request_id`, `play_data.text`, `play_data.wallet_event`, `play_ops.family_for` | — |
+| `approve_sale` | function | — | `play_accounts`, `play_sales`, `play_token_rules` | `play_sales` | `play_data.audit`, `play_data.fmt`, `play_data.need`, `play_data.notify`, `play_data.now`, `play_data.one`, `play_data.rows`, `play_data.wallet_event`, `play_ops.visit` | `play.action` |
+| `available_invite` | function | — | `play_invites` | — | `play_data.need`, `play_data.now`, `play_data.one` | `play.invitation`, `play_ops.accept_invite` |
+| `claim` | function | — | — | `play_claims` | `play_data.PlayError`, `play_data.add_score`, `play_data.audit`, `play_data.grant_badge`, `play_data.missions`, `play_data.now`, `play_ops.require` | `play.action` |
+| `family_for` | function | — | `play_families` | — | `play_data.PlayError`, `play_data.need`, `play_data.one` | `play.action`, `play_ops.adjust`, `play_ops.invite`, `play_ops.manage_member` |
+| `grant_community` | function | — | `play_results`, `play_scores` | — | `play_data.competitions`, `play_data.epoch`, `play_data.grant_badge`, `play_data.rows` | `play_ops.save_competition`, `play_rooms.finish` |
+| `invite` | function | — | — | `play_invites` | `play_data.PlayError`, `play_data.audit`, `play_data.choice`, `play_data.now`, `play_ops.family_for` | `play.action` |
+| `manage_member` | function | — | `play_accounts` | `play_accounts`, `play_sessions` | `play_data.audit`, `play_data.choice`, `play_data.need`, `play_data.one`, `play_data.text`, `play_ops.add_member`, `play_ops.family_for`, `play_ops.require` | — |
+| `period` | function | — | — | — | `play_data.PlayError`, `play_data.iso_date` | `play_ops.save_campaign`, `play_ops.save_competition`, `play_ops.save_mission` |
+| `profile` | function | — | — | `play_accounts` | `play_data.choice`, `play_data.text` | `play.action` |
+| `register_sale` | function | — | `play_campaign_members`, `play_campaigns`, `play_sales` | `play_sales` | `play_data.PlayError`, `play_data.audit`, `play_data.day`, `play_data.integer`, `play_data.iso_date`, `play_data.now`, `play_data.one`, `play_data.request_id`, `play_data.text`, `play_data.uid`, `play_ops.visit` | — |
+| `require` | function | — | — | — | `play_data.PlayError` | `play.action`, `play.export`, `play.game_page`, `play.issue_entry_code`, `play_ops.claim`, `play_ops.manage_member`, `play_rooms.create`, `play_rooms.fetch` |
+| `save_campaign` | function | — | `play_campaigns` | `play_campaign_members`, `play_campaigns` | `play_data.audit`, `play_data.integer`, `play_data.need`, `play_data.one`, `play_data.text`, `play_data.uid`, `play_ops.period`, `play_ops.visit` | — |
+| `save_competition` | function | — | `play_competitions`, `play_rewards` | `play_competitions` | `play_data.audit`, `play_data.choice`, `play_data.integer`, `play_data.need`, `play_data.one`, `play_data.text`, `play_data.uid`, `play_ops.grant_community`, `play_ops.period` | — |
+| `save_content` | function | — | `play_cards`, `play_questions`, `play_words` | `play_cards`, `play_questions`, `play_words` | `play_data.PlayError`, `play_data.audit`, `play_data.choice`, `play_data.dump`, `play_data.fmt`, `play_data.integer`, `play_data.need`, `play_data.one`, `play_data.text`, `play_data.uid` | — |
+| `save_game` | function | — | — | `play_games` | `play_data.audit`, `play_data.choice`, `play_data.integer`, `play_data.text` | — |
+| `save_mission` | function | — | `play_campaigns`, `play_missions` | `play_missions` | `play_data.audit`, `play_data.choice`, `play_data.integer`, `play_data.need`, `play_data.one`, `play_data.text`, `play_data.uid`, `play_ops.period` | — |
+| `save_reward` | function | — | `play_rewards` | `play_rewards` | `play_data.audit`, `play_data.choice`, `play_data.need`, `play_data.one`, `play_data.text`, `play_data.uid` | — |
+| `save_rule` | function | — | `play_token_rules` | `play_token_rules` | `play_data.audit`, `play_data.fmt`, `play_data.integer`, `play_data.now`, `play_data.scalar` | — |
+| `save_visitor` | function | — | — | `play_accounts`, `play_families` | `play_data.audit`, `play_data.choice`, `play_data.integer`, `play_data.now`, `play_data.text`, `play_data.uid`, `play_ops.visit` | — |
+| `set_scenario` | function | — | — | `play_campaigns`, `play_competitions` | `play_data.audit`, `play_data.choice`, `play_data.competitions`, `play_data.day` | — |
+| `visit` | function | — | `play_accounts` | — | `play_data.PlayError`, `play_data.need`, `play_data.one` | `play_ops.approve_sale`, `play_ops.register_sale`, `play_ops.save_campaign`, `play_ops.save_visitor`, `play_views.admin_context` |
+
+### `app/play_rooms.py`
+
+| Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
+|---|---|---|---|---|---|---|
+| `advance` | function | — | — | — | `play_rooms.feedback`, `play_rooms.finish`, `play_rooms.next_puzzle`, `play_rooms.phase` | `play_rooms.play_action`, `play_rooms.tick` |
+| `code_from` | function | — | — | — | — | `play.entrance`, `play.room_destination`, `play.room_page`, `play_rooms.fetch` |
+| `create` | function | — | `play_games`, `play_questions`, `play_rooms` | `play_room_members`, `play_rooms` | `play_data.PlayError`, `play_data.audit`, `play_data.choice`, `play_data.dump`, `play_data.need`, `play_data.now`, `play_data.one`, `play_data.request_id`, `play_data.text`, `play_data.uid`, `play_ops.require` | `play.action` |
+| `deal` | function | — | `play_cards` | — | `play_data.PlayError`, `play_data.rows` | `play_rooms.start` |
+| `eligible_guessers` | function | — | — | — | — | `play_rooms.play_action`, `play_rooms.view` |
+| `feedback` | function | — | — | — | `play_rooms.phase` | `play_rooms.advance` |
+| `fetch` | function | — | `play_rooms` | — | `play_data.PlayError`, `play_data.one`, `play_ops.require`, `play_rooms.code_from` | `play.room_destination`, `play_rooms.join`, `play_rooms.play_action`, `play_rooms.room_state` |
+| `finish` | function | — | `play_rewards` | `play_results` | `play_data.add_score`, `play_data.audit`, `play_data.dump`, `play_data.grant_badge`, `play_data.need`, `play_data.one`, `play_data.uid`, `play_ops.grant_community`, `play_rooms.phase` | `play_rooms.advance` |
+| `join` | function | — | `play_games`, `play_room_members` | `play_room_members` | `play_data.PlayError`, `play_data.now`, `play_data.one`, `play_rooms.fetch`, `play_rooms.roster`, `play_rooms.save` | `play.action` |
+| `list_rooms` | function | — | `play_accounts`, `play_families`, `play_games`, `play_results`, `play_room_members`, `play_rooms` | — | `play_data.rows` | `play_views.admin_context`, `play_views.family_context` |
+| `next_puzzle` | function | — | — | — | `play_rooms.phase` | `play_rooms.advance`, `play_rooms.start` |
+| `normalize` | function | — | — | — | — | `play_rooms.play_action` |
+| `phase` | function | — | — | — | — | `play_rooms.advance`, `play_rooms.feedback`, `play_rooms.finish`, `play_rooms.next_puzzle`, `play_rooms.play_action`, `play_rooms.start` |
+| `phase_key` | function | — | — | — | — | `play_rooms.play_action`, `play_rooms.view` |
+| `play_action` | function | — | `play_room_members` | `play_room_members` | `play_data.PlayError`, `play_data.choice`, `play_data.integer`, `play_data.now`, `play_data.one`, `play_data.text`, `play_rooms.advance`, `play_rooms.eligible_guessers`, `play_rooms.fetch`, `play_rooms.normalize`, `play_rooms.phase`, `play_rooms.phase_key`, `play_rooms.save`, `play_rooms.start`, `play_rooms.tick`, `play_rooms.view` | `play.action` |
+| `room_state` | function | — | — | — | `play_data.PlayError`, `play_data.now`, `play_data.writing`, `play_rooms.fetch`, `play_rooms.tick`, `play_rooms.view` | `play.room_page`, `play.state` |
+| `roster` | function | — | `play_accounts`, `play_room_members` | — | `play_data.rows` | `play_rooms.join`, `play_rooms.start`, `play_rooms.view` |
+| `save` | function | — | — | `play_rooms` | `play_data.dump`, `play_data.now` | `play_rooms.join`, `play_rooms.play_action`, `play_rooms.tick` |
+| `settle_due` | function | Project overdue turns even when everyone disconnected before a deadline. | `play_rooms` | — | `play_data.now`, `play_data.rows`, `play_data.writing`, `play_rooms.tick` | `play.screen` |
+| `start` | function | — | `play_games`, `play_questions`, `play_words` | — | `play_data.PlayError`, `play_data.audit`, `play_data.balance`, `play_data.one`, `play_data.rows`, `play_data.wallet_event`, `play_rooms.deal`, `play_rooms.next_puzzle`, `play_rooms.phase`, `play_rooms.roster` | `play_rooms.play_action` |
+| `tick` | function | — | — | — | `play_rooms.advance`, `play_rooms.save` | `play_rooms.play_action`, `play_rooms.room_state`, `play_rooms.settle_due` |
+| `view` | function | — | `play_games` | — | `play_data.PlayError`, `play_data.now`, `play_data.one`, `play_rooms.eligible_guessers`, `play_rooms.phase_key`, `play_rooms.roster` | `play_rooms.play_action`, `play_rooms.room_state` |
+
+### `app/play_seed.py`
+
+| Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
+|---|---|---|---|---|---|---|
+| `seed` | function | — | — | `play_accounts`, `play_campaign_members`, `play_campaigns`, `play_cards`, `play_competitions`, `play_families`, `play_games`, `play_meta`, `play_missions`, `play_questions`, `play_results`, `play_rewards`, `play_sales`, `play_token_rules`, `play_words` | `play_data.add_score`, `play_data.audit`, `play_data.day`, `play_data.dump`, `play_data.epoch`, `play_data.grant_badge`, `play_data.month_bounds`, `play_data.notify`, `play_data.now`, `play_data.uid`, `play_data.wallet_event` | `play_data.initialize`, `play_data.reset` |
+
+### `app/play_views.py`
+
+| Symbol | Kind | Purpose (docstring) | Reads | Writes | Calls | Called by |
+|---|---|---|---|---|---|---|
+| `actor_context` | function | — | `play_families` | — | `play_data.balance`, `play_data.day`, `play_data.one`, `play_data.uid`, `play_views.unread` | `play.game_page`, `play.result_page`, `play.room_page`, `play.screen` |
+| `admin_context` | function | — | `play_accounts`, `play_badges`, `play_campaign_members`, `play_campaigns`, `play_claims`, `play_missions`, `play_rewards`, `play_token_rules` | — | `play_data.balance`, `play_data.campaigns`, `play_data.competitions`, `play_data.family_members`, `play_data.history`, `play_data.ledger`, `play_data.need`, `play_data.one`, `play_data.rows`, `play_data.sales_list`, `play_data.visitor_stats`, `play_ops.visit`, `play_rooms.list_rooms`, `play_views.analytics`, `play_views.content`, `play_views.families`, `play_views.games`, `play_views.get_game`, `play_views.invites`, `play_views.paginate`, `play_views.visitors` | `play.screen` |
+| `analytics` | function | — | `play_accounts`, `play_audit`, `play_campaigns`, `play_families`, `play_games`, `play_results`, `play_sales`, `play_wallet_events` | — | `play_data.day`, `play_data.epoch`, `play_data.history`, `play_data.one`, `play_data.percent`, `play_data.ranking`, `play_data.rows` | `play_views.admin_context` |
+| `categories` | function | — | `play_questions` | — | `play_data.rows` | `play.game_page` |
+| `content` | function | — | `play_cards`, `play_questions`, `play_words` | — | `play_data.rows` | `play_views.admin_context` |
+| `families` | function | — | `play_accounts`, `play_families`, `play_results`, `play_wallet_events` | — | `play_data.rows` | `play_views.admin_context` |
+| `family_context` | function | — | — | — | `play_data.achievements`, `play_data.competitions`, `play_data.family_members`, `play_data.family_stats`, `play_data.history`, `play_data.ledger`, `play_data.missions`, `play_data.ranking`, `play_rooms.list_rooms`, `play_views.games`, `play_views.invites`, `play_views.notices` | — |
+| `game_boards` | function | Publish family totals, but only show individual ranks within the viewer's family. | `play_accounts`, `play_families`, `play_results`, `play_scores` | — | `play_data.rows` | `play.game_page` |
+| `games` | function | — | `play_games` | — | `play_data.rows` | `play_views.admin_context`, `play_views.family_context` |
+| `get_game` | function | — | `play_games` | — | `play_data.need`, `play_data.one` | `play.game_page`, `play_views.admin_context` |
+| `invites` | function | — | `play_accounts`, `play_invites` | — | `play_data.now`, `play_data.rows` | `play_views.admin_context`, `play_views.family_context`, `play_views.visitor_context` |
+| `landing` | function | — | — | — | — | `play.admin_login`, `play.admin_login_page`, `play.back`, `play.enter`, `play.entrance`, `play.index` |
+| `notices` | function | — | `play_notices` | — | `play_data.rows` | `play_views.family_context`, `play_views.visitor_context` |
+| `paginate` | function | — | — | — | — | `play_views.admin_context` |
+| `unread` | function | — | `play_notices` | — | `play_data.scalar` | `play.pulse`, `play_views.actor_context` |
+| `visitor_context` | function | — | `play_scores` | — | `play_data.campaigns`, `play_data.family_members`, `play_data.history`, `play_data.ledger`, `play_data.missions`, `play_data.sales_list`, `play_data.scalar`, `play_data.visitor_ranks`, `play_data.visitor_stats`, `play_views.invites`, `play_views.notices` | — |
+| `visitors` | function | — | `play_accounts`, `play_families`, `play_wallet_events` | — | `play_data.rows` | `play_views.admin_context` |
 
 ### `app/sample_sales.py`
 
@@ -881,7 +1288,7 @@ graph LR
 | `get_unit` | function | — | `org_unit_types`, `org_units` | — | — | `main.tribal_org_unit` |
 | `list_units` | function | List active children in one organization using stable keyset pagination. | `org_unit_types`, `org_units` | — | `tribal._decode_cursor`, `tribal._encode_cursor` | `main.tribal_org_units` |
 
-Route handlers of `app/main.py` are listed in section 3. "Reads" and "Writes" here are
+Route handlers of `app/main.py` and `app/play.py` are listed in section 3. "Reads" and "Writes" here are
 the SQL statements written in that function only; follow "Calls" for the rest of the
 chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 
@@ -997,7 +1404,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Defined in: `db/migrations/0001_init.sql`
 - Columns: `id` TEXT PRIMARY KEY; `name` TEXT NOT NULL; `created_at` TEXT NOT NULL
 - References: —
-- Read by: —
+- Read by: `main.legacy_demo_users`
 - INSERT by: `seed.seed_demo`
 
 ### `outbox_events`
@@ -1007,6 +1414,232 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - References: —
 - Read by: —
 - INSERT by: `scoring._persist_award`, `scoring.reverse_event`
+
+### `play_accounts`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `family_id` TEXT REFERENCES play_families(id); `role` TEXT NOT NULL CHECK (role IN ('admin', 'visitor', 'member')); `name` TEXT NOT NULL; `avatar` TEXT NOT NULL; `age` TEXT NOT NULL DEFAULT 'adult' CHECK (age IN ('adult', 'child')); `active` INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)); `region` TEXT NOT NULL DEFAULT ''; `monthly_target` INTEGER NOT NULL DEFAULT 0 CHECK (monthly_target >= 0); `created_at` INTEGER NOT NULL CHECK ((role = 'admin' AND family_id IS NULL) OR (role <> 'admin' AND family_id IS NOT NULL)) CHECK (role = 'member' OR age = 'adult')
+- Indexes: UNIQUE `play_one_visitor_per_family` (family_id) WHERE role = 'visitor' — app/play_migrations/0001_play_demo.sql
+- References: `play_families`
+- Read by: `play.action`, `play.admin_login`, `play.enter`, `play.entrance`, `play.issue_entry_code`, `play.who`, `play_data.achievements`, `play_data.family_members`, `play_data.ledger`, `play_data.missions`, `play_data.rank_between`, `play_data.sales_list`, `play_data.visitor_ranks`, `play_ops.approve_sale`, `play_ops.manage_member`, `play_ops.visit`, `play_rooms.list_rooms`, `play_rooms.roster`, `play_views.admin_context`, `play_views.analytics`, `play_views.families`, `play_views.game_boards`, `play_views.invites`, `play_views.visitors`
+- INSERT by: `play_ops.add_member`, `play_ops.save_visitor`, `play_seed.seed`
+- UPDATE by: `play_ops.manage_member`, `play_ops.profile`, `play_ops.save_visitor`
+
+### `play_audit`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `actor_id` TEXT REFERENCES play_accounts(id); `action` TEXT NOT NULL; `summary` TEXT NOT NULL; `created_at` INTEGER NOT NULL
+- References: `play_accounts`
+- Read by: `play_views.analytics`
+- INSERT by: `play_data.audit`
+
+### `play_badges`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `account_id` TEXT NOT NULL REFERENCES play_accounts(id); `code` TEXT NOT NULL REFERENCES play_rewards(code); `source_id` TEXT NOT NULL; `created_at` INTEGER NOT NULL
+- Table constraints: UNIQUE (account_id, code, source_id)
+- References: `play_accounts`, `play_rewards`
+- Read by: `play_data.achievements`, `play_data.family_members`, `play_data.rank_between`, `play_views.admin_context`
+- INSERT by: `play_data.grant_badge`
+
+### `play_campaign_members`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `campaign_id` TEXT NOT NULL REFERENCES play_campaigns(id); `account_id` TEXT NOT NULL REFERENCES play_accounts(id)
+- Table constraints: PRIMARY KEY (campaign_id, account_id)
+- References: `play_accounts`, `play_campaigns`
+- Read by: `play_data.campaigns`, `play_data.missions`, `play_ops.register_sale`, `play_views.admin_context`
+- INSERT by: `play_ops.save_campaign`, `play_seed.seed`
+- DELETE by: `play_ops.save_campaign`
+
+### `play_campaigns`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `title` TEXT NOT NULL; `description` TEXT NOT NULL; `starts_on` TEXT NOT NULL; `ends_on` TEXT NOT NULL; `active` INTEGER NOT NULL CHECK (active IN (0, 1)); `bonus` INTEGER NOT NULL CHECK (bonus >= 0) CHECK (starts_on <= ends_on)
+- References: —
+- Read by: `play_data.campaigns`, `play_data.missions`, `play_data.sales_list`, `play_ops.register_sale`, `play_ops.save_campaign`, `play_ops.save_mission`, `play_views.admin_context`, `play_views.analytics`
+- INSERT by: `play_ops.save_campaign`, `play_seed.seed`
+- UPDATE by: `play_ops.set_scenario`
+
+### `play_cards`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `kind` TEXT NOT NULL CHECK (kind IN ('customer', 'product', 'feature', 'limitation', 'event')); `label` TEXT NOT NULL; `detail` TEXT NOT NULL; `archived` INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1))
+- References: —
+- Read by: `play_ops.save_content`, `play_rooms.deal`, `play_views.content`
+- INSERT by: `play_ops.save_content`, `play_seed.seed`
+
+### `play_claims`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `mission_id` TEXT NOT NULL REFERENCES play_missions(id); `account_id` TEXT NOT NULL REFERENCES play_accounts(id); `created_at` INTEGER NOT NULL
+- Table constraints: PRIMARY KEY (mission_id, account_id)
+- References: `play_accounts`, `play_missions`
+- Read by: `play_data.missions`, `play_views.admin_context`
+- INSERT by: `play_ops.claim`
+
+### `play_competitions`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `title` TEXT NOT NULL; `description` TEXT NOT NULL; `kind` TEXT NOT NULL CHECK (kind IN ('rank', 'community')); `target` INTEGER NOT NULL CHECK (target > 0); `reward_code` TEXT REFERENCES play_rewards(code); `starts_on` TEXT NOT NULL; `ends_on` TEXT NOT NULL; `active` INTEGER NOT NULL CHECK (active IN (0, 1)) CHECK (starts_on <= ends_on)
+- References: `play_rewards`
+- Read by: `play_data.competitions`, `play_ops.save_competition`
+- INSERT by: `play_ops.save_competition`, `play_seed.seed`
+- UPDATE by: `play_ops.set_scenario`
+
+### `play_families`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `name` TEXT NOT NULL; `created_at` INTEGER NOT NULL
+- References: —
+- Read by: `play.entrance`, `play.result_page`, `play_data.history`, `play_data.ledger`, `play_data.rank_between`, `play_ops.family_for`, `play_rooms.list_rooms`, `play_views.actor_context`, `play_views.analytics`, `play_views.families`, `play_views.game_boards`, `play_views.visitors`
+- INSERT by: `play_ops.save_visitor`, `play_seed.seed`
+- UPDATE by: `play.action`
+
+### `play_games`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `key` TEXT PRIMARY KEY; `title` TEXT NOT NULL; `description` TEXT NOT NULL; `enabled` INTEGER NOT NULL CHECK (enabled IN (0, 1)); `cost` INTEGER NOT NULL CHECK (cost >= 0); `reward` INTEGER NOT NULL CHECK (reward >= 0); `min_players` INTEGER NOT NULL CHECK (min_players >= 2); `max_players` INTEGER NOT NULL CHECK (max_players BETWEEN min_players AND 8); `duration` INTEGER NOT NULL CHECK (duration BETWEEN 10 AND 300); `rounds` INTEGER NOT NULL CHECK (rounds BETWEEN 1 AND 8)
+- References: —
+- Read by: `play.result_page`, `play_data.history`, `play_rooms.create`, `play_rooms.join`, `play_rooms.list_rooms`, `play_rooms.start`, `play_rooms.view`, `play_views.analytics`, `play_views.games`, `play_views.get_game`
+- INSERT by: `play_seed.seed`
+- UPDATE by: `play_ops.save_game`
+
+### `play_invites`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `code` TEXT PRIMARY KEY; `family_id` TEXT NOT NULL REFERENCES play_families(id); `created_by` TEXT NOT NULL REFERENCES play_accounts(id); `age` TEXT NOT NULL CHECK (age IN ('adult', 'child')); `expires_at` INTEGER NOT NULL; `used_by` TEXT REFERENCES play_accounts(id); `revoked` INTEGER NOT NULL DEFAULT 0 CHECK (revoked IN (0, 1))
+- References: `play_accounts`, `play_families`
+- Read by: `play_ops.available_invite`, `play_views.invites`
+- INSERT by: `play_ops.invite`
+- UPDATE by: `play_ops.accept_invite`, `play_ops.invite`
+
+### `play_meta`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `key` TEXT PRIMARY KEY; `value` TEXT NOT NULL
+- References: —
+- Read by: `play_data.initialize`, `play_data.reset`
+- INSERT by: `play_seed.seed`
+
+### `play_missions`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `title` TEXT NOT NULL; `description` TEXT NOT NULL; `audience` TEXT NOT NULL CHECK (audience IN ('visitor', 'member')); `metric` TEXT NOT NULL CHECK (metric IN ('games', 'sales', 'amount')); `goal` INTEGER NOT NULL CHECK (goal >= 1); `points` INTEGER NOT NULL CHECK (points >= 0); `campaign_id` TEXT REFERENCES play_campaigns(id); `starts_on` TEXT NOT NULL; `ends_on` TEXT NOT NULL; `active` INTEGER NOT NULL CHECK (active IN (0, 1)) CHECK (starts_on <= ends_on)
+- References: `play_campaigns`
+- Read by: `play_data.campaigns`, `play_data.missions`, `play_ops.save_mission`, `play_views.admin_context`
+- INSERT by: `play_ops.save_mission`, `play_seed.seed`
+
+### `play_notices`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `account_id` TEXT NOT NULL REFERENCES play_accounts(id); `title` TEXT NOT NULL; `message` TEXT NOT NULL; `created_at` INTEGER NOT NULL; `read_at` INTEGER
+- References: `play_accounts`
+- Read by: `play_views.notices`, `play_views.unread`
+- INSERT by: `play_data.notify`
+- UPDATE by: `play.action`
+
+### `play_questions`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `prompt` TEXT NOT NULL; `category` TEXT NOT NULL; `difficulty` TEXT NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')); `options_json` TEXT NOT NULL; `answer` INTEGER NOT NULL CHECK (answer BETWEEN 0 AND 3); `archived` INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1))
+- References: —
+- Read by: `play_ops.save_content`, `play_rooms.create`, `play_rooms.start`, `play_views.categories`, `play_views.content`
+- INSERT by: `play_ops.save_content`, `play_seed.seed`
+
+### `play_results`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `room_id` TEXT REFERENCES play_rooms(id); `family_id` TEXT NOT NULL REFERENCES play_families(id); `game_key` TEXT NOT NULL REFERENCES play_games(key); `round_no` INTEGER NOT NULL; `details_json` TEXT NOT NULL; `created_at` INTEGER NOT NULL
+- Table constraints: UNIQUE (room_id, round_no)
+- Indexes: `play_results_by_family` (family_id, created_at) — app/play_migrations/0001_play_demo.sql
+- References: `play_families`, `play_games`, `play_rooms`
+- Read by: `play.result_page`, `play_data.competitions`, `play_data.family_stats`, `play_data.history`, `play_ops.grant_community`, `play_rooms.list_rooms`, `play_views.analytics`, `play_views.families`, `play_views.game_boards`
+- INSERT by: `play_rooms.finish`, `play_seed.seed`
+- UPDATE by: `play_rooms.finish`
+
+### `play_rewards`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `code` TEXT PRIMARY KEY; `title` TEXT NOT NULL; `description` TEXT NOT NULL; `icon` TEXT NOT NULL; `active` INTEGER NOT NULL CHECK (active IN (0, 1))
+- References: —
+- Read by: `play_data.achievements`, `play_data.competitions`, `play_data.grant_badge`, `play_ops.save_competition`, `play_ops.save_reward`, `play_rooms.finish`, `play_views.admin_context`
+- INSERT by: `play_ops.save_reward`, `play_seed.seed`
+
+### `play_room_members`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `room_id` TEXT NOT NULL REFERENCES play_rooms(id); `account_id` TEXT NOT NULL REFERENCES play_accounts(id); `ready` INTEGER NOT NULL DEFAULT 0 CHECK (ready IN (0, 1)); `joined_at` INTEGER NOT NULL
+- Table constraints: PRIMARY KEY (room_id, account_id)
+- References: `play_accounts`, `play_rooms`
+- Read by: `play_rooms.join`, `play_rooms.list_rooms`, `play_rooms.play_action`, `play_rooms.roster`
+- INSERT by: `play_rooms.create`, `play_rooms.join`
+- UPDATE by: `play_rooms.play_action`
+- DELETE by: `play_rooms.play_action`
+
+### `play_rooms`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `code` TEXT NOT NULL UNIQUE; `request_id` TEXT NOT NULL UNIQUE; `family_id` TEXT NOT NULL REFERENCES play_families(id); `host_id` TEXT NOT NULL REFERENCES play_accounts(id); `game_key` TEXT NOT NULL REFERENCES play_games(key); `options_json` TEXT NOT NULL; `state_json` TEXT NOT NULL; `created_at` INTEGER NOT NULL; `updated_at` INTEGER NOT NULL
+- Indexes: `play_rooms_by_family` (family_id, created_at) — app/play_migrations/0001_play_demo.sql
+- References: `play_accounts`, `play_families`, `play_games`
+- Read by: `play_data.history`, `play_rooms.create`, `play_rooms.fetch`, `play_rooms.list_rooms`, `play_rooms.settle_due`
+- INSERT by: `play_rooms.create`
+- UPDATE by: `play_rooms.save`
+
+### `play_sales`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `request_id` TEXT NOT NULL UNIQUE; `visitor_id` TEXT NOT NULL REFERENCES play_accounts(id); `campaign_id` TEXT REFERENCES play_campaigns(id); `amount` INTEGER NOT NULL CHECK (amount > 0); `note` TEXT NOT NULL; `sold_on` TEXT NOT NULL; `created_at` INTEGER NOT NULL; `approved_at` INTEGER; `approved_by` TEXT REFERENCES play_accounts(id); `rule_version` INTEGER REFERENCES play_token_rules(version); `token_amount` INTEGER NOT NULL DEFAULT 0 CHECK (token_amount >= 0); `campaign_bonus` INTEGER NOT NULL DEFAULT 0 CHECK (campaign_bonus >= 0)
+- References: `play_accounts`, `play_campaigns`, `play_token_rules`
+- Read by: `play_data.campaigns`, `play_data.missions`, `play_data.sales_list`, `play_data.visitor_ranks`, `play_data.visitor_stats`, `play_ops.approve_sale`, `play_ops.register_sale`, `play_views.analytics`
+- INSERT by: `play_ops.register_sale`, `play_seed.seed`
+- UPDATE by: `play_ops.approve_sale`
+
+### `play_scores`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `account_id` TEXT NOT NULL REFERENCES play_accounts(id); `family_id` TEXT NOT NULL REFERENCES play_families(id); `source_type` TEXT NOT NULL CHECK (source_type IN ('game', 'mission', 'sales_mission')); `source_id` TEXT NOT NULL; `amount` INTEGER NOT NULL CHECK (amount >= 0); `created_at` INTEGER NOT NULL
+- Table constraints: UNIQUE (account_id, source_type, source_id)
+- Indexes: `play_scores_by_family` (family_id, created_at) — app/play_migrations/0001_play_demo.sql
+- References: `play_accounts`, `play_families`
+- Read by: `play_data.family_members`, `play_data.family_stats`, `play_data.missions`, `play_data.rank_between`, `play_ops.grant_community`, `play_views.game_boards`, `play_views.visitor_context`
+- INSERT by: `play_data.add_score`
+
+### `play_sessions`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `token_hash` TEXT PRIMARY KEY; `account_id` TEXT NOT NULL REFERENCES play_accounts(id); `expires_at` INTEGER NOT NULL
+- References: `play_accounts`
+- Read by: `play.enter`, `play.who`
+- INSERT by: `play.issue_entry_code`, `play.new_session`
+- DELETE by: `play.action`, `play.enter`, `play.issue_entry_code`, `play.new_session`, `play_ops.manage_member`
+
+### `play_token_rules`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `version` INTEGER PRIMARY KEY; `unit` INTEGER NOT NULL CHECK (unit > 0); `per_unit` INTEGER NOT NULL CHECK (per_unit > 0); `effective_at` INTEGER NOT NULL; `actor_id` TEXT NOT NULL REFERENCES play_accounts(id)
+- References: `play_accounts`
+- Read by: `play_ops.approve_sale`, `play_ops.save_rule`, `play_views.admin_context`
+- INSERT by: `play_ops.save_rule`, `play_seed.seed`
+
+### `play_wallet_events`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `family_id` TEXT NOT NULL REFERENCES play_families(id); `kind` TEXT NOT NULL CHECK (kind IN ('sale', 'entry', 'issue', 'deduct', 'correct')); `source_id` TEXT NOT NULL; `amount` INTEGER NOT NULL CHECK (amount <> 0); `created_at` INTEGER NOT NULL; `reason` TEXT NOT NULL; `actor_id` TEXT REFERENCES play_accounts(id)
+- Table constraints: UNIQUE (kind, source_id)
+- Indexes: `play_wallet_by_family` (family_id, created_at) — app/play_migrations/0001_play_demo.sql
+- References: `play_accounts`, `play_families`
+- Read by: `play_data.balance`, `play_data.ledger`, `play_data.wallet_event`, `play_ops.adjust`, `play_views.analytics`, `play_views.families`, `play_views.visitors`
+- INSERT by: `play_data.wallet_event`
+
+### `play_words`
+
+- Defined in: `app/play_migrations/0001_play_demo.sql`
+- Columns: `id` TEXT PRIMARY KEY; `word` TEXT NOT NULL; `hint` TEXT NOT NULL; `category` TEXT NOT NULL; `forbidden_json` TEXT NOT NULL; `archived` INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1))
+- References: —
+- Read by: `play_ops.save_content`, `play_rooms.start`, `play_views.content`
+- INSERT by: `play_ops.save_content`, `play_seed.seed`
 
 ### `point_transactions`
 
@@ -1108,7 +1741,7 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 - Table constraints: UNIQUE (organization_id, mobile)
 - Indexes: UNIQUE `ux_users_id_organization` (id, organization_id) — db/migrations/0005_tribal_org_foundation.sql
 - References: `organizations`
-- Read by: `db.init_db`, `main.demo_login`, `main.game_demo_login`, `main.game_demo_users`, `main.login_page`, `main.sales_page_context`, `repo.count_queue`, `repo.leaderboard`, `repo.list_queue`, `repo.list_sales_imports`, `repo.sales_import`, `repo.score_event_detail`, `repo.submission_detail`, `security.current_user`
+- Read by: `db.init_db`, `main.legacy_demo_users`, `main.sales_page_context`, `repo.count_queue`, `repo.leaderboard`, `repo.list_queue`, `repo.list_sales_imports`, `repo.sales_import`, `repo.score_event_detail`, `repo.submission_detail`, `security.current_user`
 - INSERT by: `seed.seed_demo`
 
 ## 6. Templates
@@ -1123,12 +1756,22 @@ chain. "Called by" shows direct callers; `Depends(...)` counts as a call.
 | `admin_sales.html` | base.html | `main.admin_sales` | `GET /admin/sales/new`, `GET /admin/sales/{import_id}` |
 | `admin_sales_new.html` | base.html | `main.admin_sales_new`, `main.admin_sales_upload` | `GET /admin/sales`, `GET /admin/sales/sample`, `POST /admin/sales` |
 | `base.html` | — | — | `GET /admin/missions`, `GET /admin/sales`, `GET /admin/submissions`, `GET /home`, `GET /leaderboard`, `GET /missions`, `GET /score`, `POST /logout` |
-| `error.html` | base.html | `main._http_error`, `main._starlette_error`, `main.admin_reverse_score`, `main.admin_sales_process`, `main.hardening` | `GET /home`, `GET /login` |
+| `error.html` | base.html | `main._http_error`, `main._starlette_error`, `main.admin_reverse_score`, `main.admin_sales_process` | `GET /home`, `GET /login` |
 | `home.html` | base.html | `main.home` | `GET /admin/submissions`, `GET /missions`, `GET /missions/{mission_id}`, `GET /score` |
 | `leaderboard.html` | base.html | `main.leaderboard_page` | — |
 | `login.html` | base.html | `main.login_page` | `POST /demo-login` |
 | `mission.html` | base.html | `main.mission_page`, `main.submit_mission` | `GET /missions`, `GET /submissions/{submission_id}`, `POST /missions/{mission_id}/submissions` |
 | `missions.html` | base.html | `main.missions_page` | `GET /missions/{mission_id}` |
+| `play_admin.html` | — | — | `GET /play/admin/export`, `GET /play/entrance`, `GET /play/{area}/{page}`, `POST /play/action`, `POST /play/enter` |
+| `play_base.html` | — | — | `GET /play/entrance`, `POST /play/action` |
+| `play_bits.html` | — | `play.pulse` | `POST /play/action` |
+| `play_error.html` | — | `play.play_error` | `GET /play/entrance` |
+| `play_family.html` | — | — | `GET /play/family/game/{key}`, `GET /play/{area}/{page}`, `POST /play/action` |
+| `play_game.html` | — | `play.game_page` | `GET /play/{area}/{page}`, `POST /play/action` |
+| `play_login.html` | — | `play.admin_login_page`, `play.entrance`, `play.invitation`, `play.issue_entry_code` | `GET /play/admin/login`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` |
+| `play_result.html` | — | `play.result_page` | — |
+| `play_room.html` | — | `play.room_page` | `GET /play/{area}/{page}` |
+| `play_visitor.html` | — | — | `GET /play/entrance`, `GET /play/{area}/{page}` |
 | `score.html` | base.html | `main.score_page` | — |
 | `submission.html` | base.html | `main.submission_page` | `GET /evidence/{evidence_id}`, `GET /missions/{mission_id}`, `POST /admin/score-events/{event_id}/reverse` |
 
@@ -1242,6 +1885,28 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_formatting_uses_persian_digits` | — | `jalali.format_jalali` | — |
 | `test_digits` | — | `jalali.to_persian_digits` | — |
 
+### `tests/test_kilos_play.py` (17 tests)
+
+| Test | Routes exercised | Direct domain calls | IDs |
+|---|---|---|---|
+| `test_fa_routes_and_role_guards` | `GET /`, `GET /login`, `GET /play/state/{code}`, `GET /play/{area}/{page}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | — | — |
+| `test_sales_ledger_connected_and_versioned` | `GET /play/admin/export`, `GET /play/pulse`, `GET /play/state/{code}`, `GET /play/{area}/{page}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | `play_data.balance`, `play_data.day`, `play_data.one`, `play_data.scalar`, `play_data.uid` | — |
+| `test_admin_manages_resources_and_configuration` | `GET /play/state/{code}`, `GET /play/{area}/{page}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | `play_data.day`, `play_data.one`, `play_data.scalar` | — |
+| `test_adjustment_is_idempotent_and_reset_is_isolated` | `GET /play/pulse`, `GET /play/state/{code}`, `GET /play/{area}/{page}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | `db.connect`, `db.init_db`, `play_data.balance`, `play_data.scalar`, `play_data.uid` | — |
+| `test_private_family_invitation_and_child_scope` | `GET /play/invitation/{code}`, `GET /play/state/{code}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code`, `POST /play/invitation/{code}` | `play_data.scalar`, `play_data.uid` | — |
+| `test_shir_three_independent_accounts_to_result_and_replay` | `GET /play/state/{code}`, `GET /play/{area}/result/{result_id}`, `GET /play/{area}/{page}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | `play_data.balance`, `play_data.one`, `play_data.uid` | — |
+| `test_quiz_answer_privacy_progress_and_score` | `GET /play/state/{code}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | `play_data.balance`, `play_data.scalar`, `play_data.uid` | — |
+| `test_word_modes_turn_restrictions_and_results` | `GET /play/state/{code}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | `play_data.balance`, `play_data.scalar`, `play_data.uid` | — |
+| `test_no_funds_rolls_back_and_timeout_is_projected_by_admin` | `GET /play/state/{code}`, `GET /play/{area}/{page}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | `play_data.balance`, `play_data.now`, `play_data.uid` | — |
+| `test_play_is_not_mounted_outside_demo` | `GET /`, `GET /play/` | — | — |
+| `test_https_preview_uses_http_only_partitioned_session` | `GET /play/pulse`, `GET /play/state/{code}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | — | — |
+| `test_uat01_admin_requires_credential_and_old_passwordless_sessions_are_invalid` | `GET /play/admin/export`, `GET /play/state/{code}`, `GET /play/{area}/{page}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | `play_data.now` | — |
+| `test_uat01_entry_codes_are_admin_issued_single_use_and_not_cookies` | `GET /play/pulse`, `GET /play/state/{code}`, `GET /play/{area}/{page}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | `play_data.scalar` | — |
+| `test_uat04_room_links_hide_account_catalogue_and_entry_checks_family` | `GET /play/entrance`, `GET /play/state/{code}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | `play_data.uid` | — |
+| `test_uat04_private_invite_never_advertises_family_and_ignores_scope_fields` | `GET /play/state/{code}`, `GET /play/{area}/{page}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | `play_data.now`, `play_data.one`, `play_data.scalar` | — |
+| `test_uat02_pulse_tracks_one_approved_sale_and_game_debits` | `GET /play/pulse`, `GET /play/state/{code}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | `play_data.day`, `play_data.one`, `play_data.scalar`, `play_data.uid` | — |
+| `test_uat03_uncommitted_move_can_retry_but_committed_guess_cannot_duplicate` | `GET /play/state/{code}`, `POST /play/action`, `POST /play/admin/login`, `POST /play/enter`, `POST /play/entry-code` | `play_data.scalar`, `play_data.uid` | — |
+
 ### `tests/test_sales.py` (13 tests)
 
 | Test | Routes exercised | Direct domain calls | IDs |
@@ -1291,8 +1956,17 @@ helper so the `?s=` session token survives (see `app/main.py::create_app`).
 | `test_org_tree_and_membership_are_generic_and_tenant_scoped` | — | — | — |
 | `test_org_membership_cannot_cross_organization_boundary` | — | — | — |
 
-89 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
-Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::post`, `conftest::row_id`, `conftest::settings`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_game_store::csrf_header`, `test_game_store::set_game_coins`, `test_hardening::token_csrf`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`.
+### `tests/test_uat_legacy_auth.py` (4 tests)
+
+| Test | Routes exercised | Direct domain calls | IDs |
+|---|---|---|---|
+| `test_uat05_play_never_dispatches_legacy_routes_or_reads_legacy_db` | `GET /`, `GET /login`, `GET /play/admin/export` | `db.connect`, `db.init_db`, `security.make_token` | — |
+| `test_uat05_off_and_prod_have_no_demo_picker_or_url_auth` | `GET /admin/sales`, `GET /api/v1/game/demo-users`, `GET /login`, `GET /play/`, `POST /api/v1/game/demo-login`, `POST /demo-login` | `db.connect`, `db.init_db`, `security.make_token` | — |
+| `test_uat05_explicit_legacy_demo_only_allows_seed_identities_and_staff_key` | `GET /`, `GET /admin/sales`, `GET /api/v1/game/demo-users`, `GET /login`, `POST /api/v1/game/demo-login`, `POST /demo-login` | `db.connect` | — |
+| `test_uat01_demo_mode_fails_closed_without_an_independent_operator_key` | — | — | — |
+
+110 test functions. `tests/test_docs.py` is the pair that keeps this file honest.
+Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db`, `conftest::login`, `conftest::play_client`, `conftest::play_settings`, `conftest::post`, `conftest::row_id`, `conftest::settings`, `test_corrections::awarded_submission`, `test_demo_stability::_day`, `test_demo_stability::_mission_form`, `test_docs::load_tool`, `test_flow::submit`, `test_game_api::completion_payload`, `test_game_api::csrf_header`, `test_game_api::game_bootstrap`, `test_game_store::csrf_header`, `test_game_store::set_game_coins`, `test_hardening::token_csrf`, `test_kilos_play::admin_sign_in`, `test_kilos_play::csrf_from`, `test_kilos_play::demos`, `test_kilos_play::engine_room`, `test_kilos_play::entry_code`, `test_kilos_play::launch`, `test_kilos_play::new_client`, `test_kilos_play::play_conn`, `test_sales::upload`, `test_sales::workbook_bytes`, `test_tribal_org_api::_id`, `test_tribal_org_schema::_id`, `test_uat_legacy_auth::add_non_demo_account`.
 
 ## 8. Error codes
 
@@ -1380,6 +2054,8 @@ Shared helpers and fixtures: `conftest::client`, `conftest::csrf`, `conftest::db
 | Environment variable | Default (as written in code) | `Settings` field |
 |---|---|---|
 | `KILOOS_DB` | `REPO_ROOT / 'var' / 'kiloos.db'` | `db_path` |
+| `KILOOS_DEMO_MODE` | `'off'` | `demo_mode` |
+| `KILOOS_DEMO_OPERATOR_KEY` | `''` | `demo_operator_key` |
 | `KILOOS_ENV` | `'dev'` | `env` |
 | `KILOOS_EVIDENCE_DIR` | `REPO_ROOT / 'var' / 'evidence'` | `evidence_dir` |
 | `KILOOS_EVIDENCE_RETENTION_DAYS` | `90` | `evidence_retention_days` |
@@ -1422,4 +2098,6 @@ Read in `app/config.py::Settings.from_env`. Meaning of each variable:
 Paths written in templates or tests that match no route. An entry is expected when a
 test asks for an unknown page on purpose; anything else is a broken link.
 
+- app/templates/play_admin.html: POST /play/admin/visitors matches no route
 - tests/test_hardening.py::test_unknown_route_renders_persian_404: GET /no-such-page matches no route
+- tests/test_uat_legacy_auth.py::test_uat05_play_never_dispatches_legacy_routes_or_reads_legacy_db: GET {}?s={} matches no route

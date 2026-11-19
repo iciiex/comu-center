@@ -1,0 +1,60 @@
+{% extends 'play_base.html' %}
+{% import 'play_bits.html' as b with context %}
+{% macro community_card(c) -%}
+<article class="community-card"><img class="community-art" src="/static/play-town.webp" width="600" height="400" alt=""><div class="community-top"><span class="community-tag"><i></i> هدف همگانی</span><h3>{{ c.title }}</h3><p>{{ c.description }}</p></div><div class="community-bottom"><div><strong>{{ c.progress|num }} از {{ c.target|num }} بازی</strong><b>{{ c.percent|num }}٪</b></div>{{ b.progress(c.percent,'پیشرفت هدف همگانی') }}<div><small>{{ 'هدف تکمیل شد!' if not c.remaining else 'سهم خانوادهٔ شما: ' ~ (c.contribution|num) ~ ' بازی' }}</small><a href="/play/family/competitions#community" aria-label="جزئیات چالش همگانی">{{ b.icon('arrow-left') }}</a></div></div></article>
+{%- endmacro %}
+{% block content %}
+{% if current=='home' %}
+  <section class="home-intro"><div><span class="eyebrow home-eyebrow">{{ b.icon('sparkles') }} دنیای بازی خانواده</span><h1>سلام، {{ family.name }}! <span class="hello-star" aria-hidden="true">✦</span></h1><p>آماده‌اید امروز با هم بازی کنید و یک خاطرهٔ تازه بسازید؟</p></div>
+  <a class="level-card panel" href="/play/family/achievements"><span class="level-emblem">{{ b.icon('medal') }}</span><div><div><strong>سطح {{ stats.level|num }} خانواده</strong><small>{{ 'کاوشگر' if stats.level<5 else 'پیشتاز' }}</small></div>{{ b.progress(stats.level_progress,'پیشرفت سطح خانواده') }}<span>{{ stats.level_progress|num }} از ۱۰۰ امتیاز تا سطح بعد</span></div></a></section>
+  {% if signature %}<section id="featured" class="family-hero"><div class="hero-visual" aria-hidden="true"></div><div class="hero-grain" aria-hidden="true"></div><div class="hero-content"><span class="featured-chip">{{ b.icon('star') }} انتخاب ویژهٔ باشگاه</span><h2>{{ signature.title }}</h2><p>یه مشتری عجیب، چند کارت غافلگیرکننده<br class="desktop-br"> و فقط یک راه برای بردن: خلاقیت!</p><div class="actions hero-actions">
+    {% if actor.age=='adult' %}<form method="post" action="/play/action">{{ b.hidden('create_room','',nonce=request_id) }}<input type="hidden" name="game" value="shir"><button class="btn btn-hero" type="submit">{{ b.icon('play') }} شروع بازی {{ b.icon('arrow-left') }}</button></form>{% else %}<a class="btn btn-hero" href="/play/family/rooms#join">{{ b.icon('play') }} ورود به اتاق بازی {{ b.icon('arrow-left') }}</a>{% endif %}
+    <a class="btn btn-hero-outline" href="/play/family/game/shir#rules">{{ b.icon('help') }} راهنمای بازی</a></div>
+    <div class="hero-meta"><span>{{ b.icon('users') }} {{ signature.min_players|num }} تا {{ signature.max_players|num }} بازیکن</span><span></span><span>{{ b.icon('radio') }} بازی آنلاین خانوادگی</span></div></div></section>
+  {% else %}<section class="panel spaced"><h2>آمادهٔ بازی هستید؟</h2><p>بازی‌های فعال باشگاه را ببینید یا به اتاق خانواده بپیوندید.</p><a class="btn btn-primary" href="/play/family/games">بازی‌ها {{ b.icon('arrow-left') }}</a></section>{% endif %}
+  <div class="home-grid">
+    <section>{{ b.section('بازی‌های باشگاه','game','/play/family/games','همهٔ بازی‌ها','هر بازی، یک ماجرای تازه با خانواده') }}<div class="game-grid">{% for game in games %}{{ b.game_card(game) }}{% else %}{{ b.empty('هنوز بازی فعالی نیست','بازی‌های فعال به‌زودی اینجا ظاهر می‌شوند.','game') }}{% endfor %}</div></section>
+    <section>{{ b.section('چالش همگانی','flag',caption='با هم یک قدم جلوتر') }}{% if community %}{{ community_card(community) }}{% else %}{{ b.empty('چالش فعالی نیست','چالش بعدی از بخش رقابت‌ها در دسترس است.','flag') }}{% endif %}</section>
+  </div>
+  <div class="home-grid home-lower">
+    <section>{{ b.section('مأموریت‌های امروز','target','/play/family/missions','همهٔ مأموریت‌ها') }}{{ b.mission_cards(missions[:2],true) }}</section>
+    <section>{{ b.section('دستاوردهای تازه','medal','/play/family/achievements','همهٔ نشان‌ها') }}<div class="panel spaced badge-preview">{% for item in badges[:2] %}<div>{{ b.icon(item.icon) }}<div><strong>{{ item.title }}</strong><small>{{ item.name }}</small></div></div>{% else %}{{ b.empty('آغاز ماجرا','با اولین بازی، اولین نشان را بگیرید.','medal') }}{% endfor %}</div></section>
+  </div>
+{% elif current=='games' %}
+  {{ b.heading('بازی‌های خانوادگی','خلاقیت، دانستنی‌ها یا سرعت؟ بازی موردعلاقه‌تان را انتخاب کنید.','game','باشگاه بازی') }}
+  <div class="game-grid game-library">{% for game in games %}{{ b.game_card(game) }}{% else %}{{ b.empty('در حال حاضر بازی فعالی نیست','بعداً دوباره سر بزنید.','game') }}{% endfor %}</div>
+  <section class="panel spaced block-gap">{{ b.section('تاریخچهٔ بازی خانواده','clock') }}{{ b.history(history,area) }}</section>
+{% elif current=='rooms' %}
+  {% call b.heading('اتاق‌های بازی','در یک اتاق خصوصی از دستگاه‌های جداگانه کنار هم بازی کنید.','doors','اتاق آنلاین') %}{% if actor.age=='adult' %}<a class="btn btn-primary" href="/play/family/games">{{ b.icon('plus') }} ساخت اتاق جدید</a>{% endif %}{% endcall %}
+  <div id="join" class="panel spaced join-panel"><div><h2>{{ b.icon('link') }} کد اتاق دارید؟</h2><p>کد شش‌نویسه‌ای را از میزبان خانواده بگیرید.</p></div><form class="inline-form" action="/play/action" method="post">{{ b.hidden('join_room') }}<label><span>کد اتاق</span><input name="code" dir="ltr" placeholder="••••••" maxlength="6" minlength="6" required autocomplete="off"></label><button class="btn btn-primary" type="submit">پیوستن {{ b.icon('arrow-left') }}</button></form></div>
+  <section class="block-gap">{{ b.section('اتاق‌های خانواده','doors') }}<div class="room-grid">{% for room in rooms %}<article class="room-tile panel"><span class="symbol {{ 'gold' if room.game_key=='shir' else 'mint' }}">{{ b.icon(art[room.game_key].icon) }}</span><div><h3>{{ room.game }}</h3><small>{{ phase_labels[room.phase] }} · {{ room.total|num }} بازیکن · دور {{ room.round|num }}</small></div>{% if room.phase=='lobby' or (room.joined and room.phase!='closed') %}<a class="text-link" href="/play/family/room/{{ room.code }}">باز کردن {{ b.icon('arrow-left') }}</a>{% elif room.result_id %}<a class="text-link" href="/play/family/result/{{ room.result_id }}">نتیجه {{ b.icon('arrow-left') }}</a>{% endif %}</article>{% else %}{{ b.empty('هنوز اتاقی ندارید','بازی‌تان را انتخاب کنید یا با کد اتاق بپیوندید.','doors') }}{% endfor %}</div></section>
+  <section class="panel spaced block-gap">{{ b.section('تاریخچهٔ بازی','clock') }}{{ b.history(history,area) }}</section>
+{% elif current=='competitions' %}
+  {{ b.heading('رقابت‌ها و چالش‌ها','در لیگ خانواده‌ها پیش بروید؛ در چالش همگانی با همه هم‌تیمی شوید.','trophy','افتخار خانوادگی') }}
+  <div class="competition-layout"><section class="panel spaced">{{ b.section('رتبه‌بندی خانواده‌ها','trophy',caption='امتیاز بازی، مأموریت، نشان و تداوم مشارکت') }}
+    <div class="segmented" aria-label="بازهٔ رتبه‌بندی"><a class="{{ 'selected' if period=='week' }}" href="?period=week">هفتگی</a><a class="{{ 'selected' if period=='month' }}" href="?period=month">ماهانه</a></div>
+    <ul class="ranking-list">{% for item in ranking %}<li class="{{ 'is-you' if item.id==actor.family_id }}"><span>{{ item.rank|num }}</span><strong>{{ item.name }}{% if item.id==actor.family_id %} <small>· شما</small>{% endif %}</strong><b>{{ item.points|num }} امتیاز</b></li>{% endfor %}</ul></section>
+  <section id="community"><div class="section-head"><h2>{{ b.icon('flag') }} هدف‌های همگانی</h2></div>{% for event in events if event.kind=='community' %}{{ community_card(event) }}<dl class="community-facts panel spaced"><div><dt>تعداد باقی‌مانده</dt><dd>{{ event.remaining|num }} بازی</dd></div><div><dt>سهم خانوادهٔ شما</dt><dd>{{ event.contribution|num }} بازی</dd></div><div><dt>پاداش تکمیل</dt><dd>{{ event.reward or 'بدون نشان' }}</dd></div></dl>{% else %}{{ b.empty('چالشی در جریان نیست','هدف‌های تازه در اینجا نمایش داده می‌شوند.','flag') }}{% endfor %}</section></div>
+  <div class="card-list block-gap">{% for event in events if event.kind=='rank' %}<article class="panel spaced">{{ b.section(event.title,'trophy',caption=event.description) }}<p class="muted">{{ event.starts_on|playdate }} تا {{ event.ends_on|playdate }}</p><ul class="ranking-list">{% for r in event.board[:5] %}<li><span>{{ r.rank|num }}</span><strong>{{ r.name }}</strong><b>{{ r.points|num }} امتیاز</b></li>{% endfor %}</ul></article>{% endfor %}</div>
+{% elif current=='missions' %}
+  {{ b.heading('مأموریت‌های خانواده','مأموریت‌ها با بازی واقعی پیش می‌روند. پس از تکمیل، امتیازتان را بگیرید.','target','مأموریت و پیشرفت') }}{{ b.mission_cards(missions) }}
+{% elif current=='wallet' %}
+  {{ b.heading('کیف توکن خانواده','توکن فروش، امتیاز بازی و نشان‌ها سه چیز جداگانه‌اند. فقط توکن برای ورود مصرف می‌شود.','wallet','کیف مشترک') }}
+  <div class="wallet-hero"><span class="symbol gold">{{ b.icon('coin') }}</span><div><span>موجودی قابل استفاده</span><strong><span data-balance>{{ wallet_balance|num }}</span> <small>توکن</small></strong><p>بین تمام اعضای {{ family.name }} مشترک است.</p></div></div>
+  <section class="panel spaced block-gap">{{ b.section('تاریخچهٔ تراکنش‌ها','arrows') }}<div data-pulse-table="wallet" data-revision="{{ table_revision }}">{{ b.tx_table(transactions,area,tx) }}</div></section>
+{% elif current=='avatars' %}
+  {{ b.heading('آواتارها','شخصیت همراهتان را انتخاب کنید؛ بقیهٔ بازیکنان این تصویر را در اتاق می‌بینند.','sparkles','سبک بازی شما') }}{{ b.profile_form(true) }}
+{% elif current=='achievements' %}
+  {{ b.heading('دستاوردهای خانواده','هر نشان یک خاطره از بازی، همکاری یا تکمیل یک مأموریت است.','medal','تالار افتخار') }}
+  <div class="segmented"><a class="{{ '' if request.query_params.get('mine') else 'selected' }}" href="/play/family/achievements">نشان‌های خانواده</a><a class="{{ 'selected' if request.query_params.get('mine') }}" href="?mine=1">نشان‌های من</a></div>
+  <div class="badge-grid">{% for item in badges %}<article class="badge-card panel"><span class="badge-medallion">{{ b.icon(item.icon) }}</span><h3>{{ item.title }}</h3><p>{{ item.description }}</p><strong>{{ item.name }}</strong><small>{{ item.created_at|playtime }}</small></article>{% else %}{{ b.empty('هنوز نشانی ثبت نشده','اولین بازی‌تان را تمام کنید و اولین نشان را بگیرید.','medal') }}{% endfor %}</div>
+{% elif current=='members' %}
+  {{ b.heading('اعضای خانواده','هر بازیکن حساب، آواتار، امتیاز و دستاوردهای خودش را دارد.','users','تیم خانوادگی') }}{{ b.member_cards(members) }}
+  {% if actor.age=='adult' %}<section class="block-gap">{{ b.invite_panel(invites,actor.family_id) }}</section>{% else %}<div class="flash info block-gap">{{ b.icon('shield') }} حساب کودک فقط در اتاق خصوصی خانواده بازی می‌کند و نمی‌تواند دعوت‌نامه بسازد.</div>{% endif %}
+{% elif current=='profile' %}
+  {{ b.heading('حساب من','هویت بازی و تاریخچهٔ شخصی‌تان را در همین‌جا ببینید.','profile','بازیکن خانواده') }}{{ b.profile_form() }}
+  <section class="panel spaced block-gap">{{ b.section('بازی‌های من','game') }}{{ b.history(history,area) }}</section>
+{% elif current=='notices' %}
+  {{ b.heading('اعلان‌ها','خبرهای مهم بازی، فروش و کیف خانواده را اینجا ببینید.','bell','صندوق پیام') }}{{ b.notice_panel(notices) }}
+{% endif %}
+{% endblock %}

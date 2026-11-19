@@ -18,6 +18,7 @@ import hmac
 import sqlite3
 import time
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from fastapi import Request, Response
 
@@ -51,7 +52,7 @@ def _sign(value: str, secret: str) -> str:
 
 def _unsign(token: str, secret: str) -> str | None:
     value, _, digest = token.rpartition(".")
-    if not value or not digest:
+    if not value or len(digest) != 64 or not digest.isascii():
         return None
     expected = hmac.new(secret.encode(), value.encode(), hashlib.sha256).hexdigest()
     return value if hmac.compare_digest(digest, expected) else None
@@ -101,15 +102,53 @@ def read_token(
     return user_id
 
 
-def session_token(request: Request) -> str | None:
-    """Effective session token: ``?s=`` first (iframe fallback), then cookie."""
+def cross_origin(request: Request) -> bool:
+    """Reject cross-origin credential posts; normal server clients may omit Origin."""
+    site = request.headers.get("sec-fetch-site")
+    if site == "cross-site":
+        return True
+    origin = request.headers.get("origin")
+    if origin == "null":
+        # Referrer-Policy: no-referrer can suppress Origin on same-origin form navigation.
+        # Sec-Fetch-Site is browser-controlled; "same-site" alone is not sufficient.
+        return site != "same-origin"
+    if not origin:
+        return False
+    try:
+        supplied = urlsplit(origin)
+        return (supplied.scheme, supplied.netloc.lower()) != (
+            request.url.scheme,
+            request.headers.get("host", "").lower(),
+        )
+    except ValueError:
+        return True
+
+
+def credential_transport(request: Request) -> bool:
+    """Require TLS for credentials, except for direct loopback development."""
+    if request.url.scheme == "https":
+        return True
+    hosts = {"localhost", "127.0.0.1", "::1"}
+    return bool(request.client and request.client.host in hosts and request.url.hostname in hosts)
+
+
+def url_session_token(request: Request) -> str | None:
+    settings = request.app.state.settings
+    if not settings.legacy_demo_enabled:
+        return None
     candidate = request.query_params.get("s")
-    secret = request.app.state.settings.secret
-    ttl = request.app.state.settings.session_ttl_seconds
-    if candidate and read_token(candidate, secret, ttl_seconds=ttl):
+    if read_token(
+        candidate, settings.legacy_session_secret, ttl_seconds=settings.session_ttl_seconds
+    ):
         return candidate
-    raw = request.cookies.get(COOKIE_NAME)
-    return raw or None
+    return None
+
+
+def session_token(request: Request) -> str | None:
+    """The URL fallback is restricted to the deliberately isolated legacy demo."""
+    if not request.app.state.settings.legacy_sessions_enabled:
+        return None
+    return url_session_token(request) or request.cookies.get(COOKIE_NAME) or None
 
 
 def csrf_for(token: str, secret: str) -> str:
@@ -121,10 +160,18 @@ def csrf_token(request: Request) -> str:
     token = session_token(request)
     if not token:
         return ""
-    return csrf_for(token, request.app.state.settings.secret)
+    return csrf_for(token, request.app.state.settings.legacy_session_secret)
 
 
-def set_session(response: Response, user_id: str, secret: str, token: str | None = None) -> str:
+def set_session(
+    response: Response,
+    user_id: str,
+    secret: str,
+    token: str | None = None,
+    *,
+    secure: bool = False,
+    ttl_seconds: int = SESSION_TTL_SECONDS,
+) -> str:
     """Set the cookie and return the token (reused for the ``?s=`` fallback)."""
     token = token or make_token(user_id, secret)
     response.set_cookie(
@@ -132,7 +179,8 @@ def set_session(response: Response, user_id: str, secret: str, token: str | None
         token,
         httponly=True,
         samesite="lax",
-        max_age=SESSION_TTL_SECONDS,
+        secure=secure,
+        max_age=ttl_seconds,
     )
     return token
 
@@ -143,19 +191,13 @@ def clear_session(response: Response) -> None:
 
 def current_user(request: Request, conn: sqlite3.Connection) -> CurrentUser | None:
     settings = request.app.state.settings
-    token = request.cookies.get(COOKIE_NAME)
-    from_url = False
-    candidate = request.query_params.get("s")
-    ttl = settings.session_ttl_seconds
-    if candidate and read_token(candidate, settings.secret, ttl_seconds=ttl):
-        token, from_url = candidate, True
-
-    user_id = read_token(token, settings.secret, ttl_seconds=settings.session_ttl_seconds)
+    token = session_token(request)
+    user_id = read_token(
+        token, settings.legacy_session_secret, ttl_seconds=settings.session_ttl_seconds
+    )
     if not user_id:
         return None
 
-    request.state.session_token = token
-    request.state.session_in_url = from_url
     row = conn.execute(
         "SELECT id, organization_id, full_name, role, is_active FROM users WHERE id = ?",
         (user_id,),

@@ -1,0 +1,36 @@
+{% extends 'play_base.html' %}
+{% import 'play_bits.html' as b with context %}
+{% block content %}
+{% if current=='home' %}
+  {{ b.heading('سلام، ' ~ actor.name ~ '!','از هر فروش تا یک بازی؛ مسیر پیشرفت شما و خانواده اینجاست.','chart','میز کار ویزیتور') }}
+  <section class="visitor-hero"><div><span class="featured-chip">{{ b.icon('target') }} هدف فروش این ماه</span><h2><span data-sales-value="amount">{{ stats.amount|num }}</span> <small>تومان فروش تأییدشده</small></h2><div class="visitor-progress">{{ b.progress(stats.target_pct,'پیشرفت ماهانه','sales-meter') }}<strong data-sales-value="target_pct" data-suffix="٪">{{ stats.target_pct|num }}٪</strong></div><p>هدف ماهانه: {{ actor.monthly_target|num }} تومان · منطقهٔ {{ actor.region }}</p></div>{{ b.avatar(actor.avatar,'visitor-mascot') }}</section>
+  <div class="stats-grid stats-three block-gap">{{ b.stat('توکن کسب‌شده',stats.tokens|num,'coin','gold',live='tokens') }}{{ b.stat('موجودی کیف خانواده',wallet_balance|num,'wallet','mint',live='balance') }}{{ b.stat('رتبهٔ فروش این ماه',stats.rank|num,'trophy','purple',live='rank') }}</div>
+  <section class="visitor-cta panel spaced block-gap"><span class="symbol gold">{{ b.icon('game') }}</span><div><h2>فروش امروز، بازی امشب</h2><p>توکن‌های فروش در کیف مشترک خانواده آماده‌اند؛ برای بازی، حساب یکی از اعضا را انتخاب کنید.</p></div><a class="btn btn-primary" href="/play/entrance?role=family">{{ b.icon('play') }} ورود به دنیای بازی خانواده {{ b.icon('arrow-left') }}</a></section>
+  <div class="visitor-grid block-gap"><section class="panel spaced">{{ b.section('آخرین فروش‌ها','chart','/play/visitor/sales') }}<div data-pulse-table="home" data-revision="{{ table_revision }}">{{ b.sales_table(sales[:3]) }}</div></section><section>{{ b.section('مأموریت‌های فعال','target','/play/visitor/missions') }}{{ b.mission_cards(missions,true) }}</section></div>
+  <section class="panel spaced block-gap">{{ b.section('آخرین فعالیت خانواده','game','/play/visitor/family') }}{{ b.history(history[:3],area) }}</section>
+{% elif current=='sales' %}
+  {{ b.heading('عملکرد فروش','فقط فروش تأییدشده در هدف و رتبهٔ ماهانه محاسبه می‌شود.','chart','فروش من') }}
+  <div class="stats-grid stats-three">{{ b.stat('فروش تأییدشدهٔ ماه', (stats.amount|num), 'chart', live='amount', suffix=' تومان') }}{{ b.stat('هدف ماهانه',(actor.monthly_target|num) ~ ' تومان','target','purple') }}{{ b.stat('درصد تحقق هدف',(stats.target_pct|num),'flag','gold',live='target_pct',suffix='٪') }}</div>
+  <section class="panel spaced block-gap">{{ b.section('فروش‌های ثبت‌شده','reports') }}<div data-pulse-table="sales" data-revision="{{ table_revision }}">{{ b.sales_table(sales) }}</div></section>
+{% elif current=='wallet' %}
+  {{ b.heading('کیف توکن','پاداش فروش شما مستقیماً به کیف مشترک خانواده می‌رسد.','wallet','گردش توکن') }}
+  <div class="stats-grid stats-three">{{ b.stat('موجودی کیف خانواده',wallet_balance|num,'wallet','mint','توکن قابل استفاده',live='balance') }}{{ b.stat('کل توکن‌های فروش',stats.tokens|num,'coin','gold','به حساب خانواده واریز شده',live='tokens') }}</div>
+  <section class="panel spaced block-gap">{{ b.section('تراکنش‌های کیف مشترک','arrows') }}<div data-pulse-table="wallet" data-revision="{{ table_revision }}">{{ b.tx_table(transactions,area,tx) }}</div></section>
+{% elif current=='missions' %}
+  {{ b.heading('مأموریت‌های فروش','مأموریت‌ها با تأیید فروش پیش می‌روند. امتیاز مأموریت به توکن تبدیل نمی‌شود.','target','مسیر پیشرفت') }}
+  <div class="stats-grid stats-three">{{ b.stat('امتیاز مأموریت‌های من',mission_score|num,'target','gold') }}</div><div class="block-gap">{{ b.mission_cards(missions) }}</div>
+{% elif current=='leaderboard' %}
+  {{ b.heading('رتبه‌بندی فروش','بر پایهٔ مبلغ فروش تأییدشده در ماه جاری.','trophy','مقایسهٔ عملکرد') }}
+  <section class="panel spaced"><ul class="ranking-list">{% for item in ranking %}<li class="{{ 'is-you' if item.id==actor.id }}"><span>{{ item.rank|num }}</span>{{ b.avatar(item.avatar) }}<strong>{{ item.name }}{% if item.id==actor.id %} <small>· شما</small>{% endif %}</strong><b>{{ item.amount|num }} تومان</b></li>{% endfor %}</ul></section>
+{% elif current=='family' %}
+  {% call b.heading(family.name,'حساب بازیکنان، دعوت‌های خصوصی و نتیجهٔ بازی‌های خانواده.','users','خانوادهٔ من') %}<a class="btn btn-primary" href="/play/entrance?role=family">{{ b.icon('game') }} ورود به دنیای بازی خانواده</a>{% endcall %}
+  {{ b.member_cards(members) }}<div class="block-gap">{{ b.invite_panel(invites,actor.family_id) }}</div><section class="panel spaced block-gap">{{ b.section('فعالیت خانواده','clock') }}{{ b.history(history,area) }}</section>
+{% elif current=='campaigns' %}
+  {{ b.heading('کمپین‌های من','بازه‌ها، پاداش‌ها و میزان مشارکت شما در هر کمپین.','flag','فروش و انگیزه') }}
+  <div class="card-list">{% for c in campaigns %}<article class="panel spaced"><div class="section-head"><h2>{{ b.icon('flag') }} {{ c.title }}</h2>{{ b.tag(c.status,'mint' if c.status=='فعال' else 'gray') }}</div><p>{{ c.description }}</p><p class="muted">{{ c.starts_on|playdate }} تا {{ c.ends_on|playdate }}</p><dl class="summary-list"><div><dt>پاداش هر فروش</dt><dd>{{ c.bonus|num }} توکن اضافه</dd></div><div><dt>فروش‌های تأییدشده</dt><dd>{{ c.approvals|num }}</dd></div><div><dt>مبلغ کل</dt><dd>{{ c.volume|num }} تومان</dd></div></dl>{% if c.status=='فعال' and c.missions %}<a class="text-link" href="/play/visitor/missions">مأموریت‌های کمپین {{ b.icon('arrow-left') }}</a>{% endif %}</article>{% else %}{{ b.empty('کمپینی برای شما ثبت نشده','کمپین‌های اختصاص‌یافته از طرف مدیر اینجا ظاهر می‌شوند.','flag') }}{% endfor %}</div>
+{% elif current=='profile' %}
+  {{ b.heading('حساب کاربری','نام نمایشی و آواتارتان را تغییر دهید. تغییر منطقه با مدیر است.','profile','ویزیتور فروش') }}{{ b.profile_form() }}
+{% elif current=='notices' %}
+  {{ b.heading('اعلان‌ها','تأیید فروش و واریز توکن برای شما پیام ایجاد می‌کند.','bell','صندوق پیام') }}{{ b.notice_panel(notices) }}
+{% endif %}
+{% endblock %}

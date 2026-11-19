@@ -1,51 +1,55 @@
 # API Specification (implemented surface)
 
 - Status: **IMPLEMENTED (prototype)** — subset of the target contract in the source spec (doc 07).
-- Mode: P · Last updated: 2026-11-11
+- Mode: P · Last updated: 2026-11-18
 - Generated route table (guard, CSRF, handler, template, tests): `docs/agent-guide/code-map.md` §2;
   call chain of each route: §3; every error code and where it is raised: §8
-- Auth: signed session token (`HMAC-SHA256`, 12h TTL) delivered as an HttpOnly cookie **or** as `?s=`
-  in the URL. Demo login only (OD-01). See «Session transport» below.
-- Response type: HTML pages for the app; `GET /health` returns JSON. Machine-readable schema: `GET /api/docs` (OpenAPI).
+- Auth: versioned signed legacy cookie; a URL token is only a legacy demo fallback. Play uses a
+  separate opaque cookie and authentication rules ([Play API](kilos-play.md)).
+- Response type: HTML pages for the legacy app; `/health` and `/api/v1/game` return JSON.
 
-> Planned REST surface `POST /api/v1/...` is **not** implemented yet; this document describes what exists so
-> the next agent does not invent endpoints or break the contract. The proposed BFF contract for the public
-> Sales Quest Arena frontend is documented separately in [`game-bff-alignment.md`](game-bff-alignment.md);
-> none of those game routes are implemented by this prototype.
+## Authentication modes
 
----
+Both demo modes require `KILOOS_ENV=dev` or `test` and a separate random
+`KILOOS_DEMO_OPERATOR_KEY` (32+ characters). Use a synthetic dataset and a controlled HTTPS host.
+
+| Legacy surface | `play` (only Play on this host) | `legacy` (explicit isolated Club demo) | `off` (default) / non-dev/test |
+|---|---|---|---|
+| `GET /`, `GET /login` | `303 /play/` or `303 /play/entrance`, no `s` propagation | Seed picker; only active rows matching the seeded organization, mobiles, names and roles | No picker; verified cookie goes to home, otherwise login responds `401` |
+| `POST /demo-login` | `404` | Seed `user_id` only; admin/operator also require `operator_key`, HTTPS or direct loopback | `404` |
+| `GET /api/v1/game/demo-users`, `POST /api/v1/game/demo-login` | `404` | Seed visitors only, no mobile numbers or staff sessions | `404` |
+| `POST /logout`, `POST /api/v1/game/logout` | `404` — separate Play logout uses `POST /play/action` | Legacy session transport and CSRF unchanged | CSRF-checked verified cookie only |
+| Legacy protected pages/APIs | `404`; no legacy DB handle opened | Existing user/role/org guards | Existing guards, cookie only; no prototype login issuer |
+| `?s=` / pre-remediation cookie | Ignored / rejected | Versioned HTML session fallback only; old passwordless signatures rejected | Query ignored for HTML and rejected by game BFF; old passwordless signatures rejected |
+
+`/login` redirects before querying any accounts in Play mode; other legacy handlers are not dispatched.
+The standard cookie verifier is not an OTP or an identity provider. No production credential issuer is
+implemented; OD-01 remains open.
+
 ## Session transport (D-002)
 
-The shared preview runs inside an iframe where browsers block third-party cookies, so a cookie-only
-session silently logs the user out. The prototype therefore accepts the **same signed token** in two places:
+`kiloos_session` is `base64url("<user_id>.<issued_at>.<hmac>")`, HttpOnly, and Secure over HTTPS.
+The legacy demo and non-demo session signers are separated (`Settings.legacy_session_secret`), so old
+pre-remediation cookies and demo tokens cannot verify as non-demo sessions. TTL defaults to 12 hours
+(`KILOOS_SESSION_TTL`). Outside the legacy demo, a known development signing key cannot authenticate.
 
-| Transport | Format | Used when |
-|---|---|---|
-| Cookie `kiloos_session` | `base64url("<user_id>.<issued_at>.<hmac>")` | normal top-level browsing |
-| Query parameter `?s=` | identical token | cookie was rejected (embedded preview) |
-
-- Token TTL: `KILOOS_SESSION_TTL` (default 12h); expired/forged tokens are ignored.
-- `?s=` wins over the cookie when both are present.
-- Pages and redirects keep the token in internal links and form actions **only** when the request itself
-  arrived with `?s=`. Cookie-based sessions keep clean URLs.
-- `POST /demo-login` is exempt from CSRF (no session exists yet) and answers `303 → <target>?s=<token>`.
-
-> ⚠️ Token-in-URL is a **demo-only fallback** (see decision log D-002): URLs leak into history, logs and
-> referrers. `Referrer-Policy: no-referrer` mitigates but does not remove the risk. Production requires
-> first-party hosting (no third-party cookie problem) or real OTP (OD-01) with a server-side session.
+Only in intentionally isolated `legacy` mode does `POST /demo-login` redirect with `?s=<token>`.
+That signed token takes precedence over the cookie and travels through internal HTML links and forms
+for cookie-blocked previews. **Do not use it on a public host**: URLs can remain in logs and history,
+and a previously issued URL is not revoked by clearing the cookie. BFF routes never accept `?s=`.
 
 ## CSRF
 
-Every state-changing browser form request (all `POST`s except `/demo-login` and the dev/test-only
+Every state-changing browser form request (all `POST`s except `/demo-login` and the legacy-demo-only
 `/api/v1/game/demo-login`) must carry a hidden `csrf` field whose value is
-`HMAC-SHA256(secret, "csrf:" + session_token)`. The game BFF instead accepts this value in
+`HMAC-SHA256(legacy_session_secret, "csrf:" + session_token)`. Login posts enforce origin checks. The game BFF instead accepts this value in
 `X-CSRF-Token`; URL session tokens are forbidden on BFF routes. Missing or mismatched → `403`; anonymous
 HTML `POST` → `303 /login`, anonymous BFF calls → JSON `401`. Implemented as a route dependency (`csrf_guard`),
 so multipart uploads stay intact.
 
 ## Rate limiting
 
-`POST /demo-login` and dev/test-only `POST /api/v1/game/demo-login` share a per-IP limit controlled by
+`POST /demo-login` and `POST /api/v1/game/demo-login` (legacy demo only) share a per-IP limit controlled by
 `KILOOS_LOGIN_RATE_LIMIT` and `KILOOS_LOGIN_RATE_WINDOW` (defaults 10 / 60 seconds). HTML login returns a
 `429` page; game login returns JSON `429`. The counter is in-process memory: a demo guard, not a multi-worker limiter.
 
@@ -64,14 +68,14 @@ in an iframe. Narrow both before real users.
 
 These JSON routes are implemented under `/api/v1/game`; details, content snapshot and frontend integration
 requirements are in [`game-bff-alignment.md`](game-bff-alignment.md). Game-state routes require an authenticated
-visitor account; anonymous requests receive JSON `401`. `/demo-users` and `/demo-login` are public only in dev/test.
+visitor account; anonymous requests receive JSON `401`. `/demo-users` and `/demo-login` are available only in the explicitly opted-in legacy demo.
 URL session tokens (`?s=`) are rejected. Mutations require `X-CSRF-Token` from `/bootstrap`; completion additionally
 requires `Idempotency-Key`.
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/game/demo-users` | Dev/test only: list active visitor demo accounts (no mobile numbers) |
-| POST | `/api/v1/game/demo-login` | Dev/test only: JSON login, sets HttpOnly cookie + returns CSRF header |
+| GET | `/api/v1/game/demo-users` | Legacy demo only: list active seed visitors (no mobile numbers) |
+| POST | `/api/v1/game/demo-login` | Legacy demo only: JSON login, sets HttpOnly cookie + returns CSRF header |
 | POST | `/api/v1/game/logout` | CSRF-checked JSON logout |
 | GET | `/api/v1/game/bootstrap` | Versioned catalog/config + user game projection + CSRF token |
 | GET | `/api/v1/game/progress` | Refresh canonical server-owned game state |
@@ -89,8 +93,8 @@ the React frontend has not yet been wired to these endpoints.
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/health` | Liveness + mode banner |
-| GET | `/login` | Demo user picker |
-| POST | `/demo-login` | Form `user_id` → sets cookie, `303 → /home?s=<token>` or `/admin/submissions?s=<token>` |
+| GET | `/login` | See authentication modes above |
+| POST | `/demo-login` | Legacy demo form `user_id` (`operator_key` for staff) → sets cookie, `303 → /home?s=<token>` or `/admin/submissions?s=<token>` |
 | POST | `/logout` | CSRF-checked; clears cookie, `303 → /login` |
 
 `GET /health`:

@@ -3,6 +3,8 @@
 > ترتیب مطالعه: `../AGENTS.md` → `../.agent/CONTEXT.md` → `handoffs/current-state.md` → این فایل.
 > تحویل‌گیرنده پروژه: `handoffs/handover.md` · ایجنت یا توسعه‌دهنده: `agent-guide/README.md`.
 
+نمایش تعاملی جدید: [راهنمای کیلوس‌پلی](delivery/kilos-play-demo.md) · [قرارداد مهندسی](engineering/kilos-play.md) · [اصلاحات و بازآزمایی UAT](delivery/kilos-play-uat-remediation.md).
+
 ## شروع، ادامه و تحویل (راهنمای ایجنت)
 
 | موضوع | مسیر | وضعیت |

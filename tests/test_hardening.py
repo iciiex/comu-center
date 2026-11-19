@@ -16,19 +16,19 @@ from app.main import create_app
 from app.maintenance import purge_evidence
 from app.security import COOKIE_NAME, csrf_for, make_token
 from app.seed import PNG_1PX
-from tests.conftest import OPERATOR, VISITOR, login, post, row_id
+from tests.conftest import OPERATOR, TEST_OPERATOR_KEY, VISITOR, login, post, row_id
 
 MISSION_ONE = "ثبت تصویر یخچال فروشگاه"
 
 
 def token_csrf(settings: Settings, token: str) -> str:
-    return csrf_for(token, settings.secret)
+    return csrf_for(token, settings.legacy_session_secret)
 
 
 def test_session_token_in_url_works_without_cookies(
     client: TestClient, settings: Settings
 ) -> None:
-    """The shared preview iframe blocks cookies; the signed token is the fallback."""
+    """The isolated legacy demo still supports its cookie-less HTML fallback."""
     user_id = row_id(settings, "SELECT id FROM users WHERE mobile = ?", (VISITOR,))
     response = client.post(
         "/demo-login", data={"user_id": user_id}, follow_redirects=False
@@ -80,7 +80,9 @@ def test_admin_queue_carries_token_between_pages(
 ) -> None:
     operator_id = row_id(settings, "SELECT id FROM users WHERE mobile = ?", (OPERATOR,))
     location = client.post(
-        "/demo-login", data={"user_id": operator_id}, follow_redirects=False
+        "/demo-login",
+        data={"user_id": operator_id, "operator_key": settings.demo_operator_key},
+        follow_redirects=False,
     ).headers["location"]
     assert location.startswith("/admin/submissions?s=")
 
@@ -130,7 +132,7 @@ def test_forms_render_a_csrf_field(client: TestClient, settings: Settings) -> No
 
 def test_expired_token_is_rejected(client: TestClient, settings: Settings) -> None:
     user_id = row_id(settings, "SELECT id FROM users WHERE mobile = ?", (VISITOR,))
-    stale = make_token(user_id, settings.secret, now=time.time() - 48 * 3600)
+    stale = make_token(user_id, settings.legacy_session_secret, now=time.time() - 48 * 3600)
     response = client.get(f"/home?s={stale}", follow_redirects=False)
     assert response.status_code == 303
     assert response.headers["location"] == "/login"
@@ -174,8 +176,10 @@ def test_admin_queue_paginates(tmp_path: Path) -> None:
         evidence_dir=tmp_path / "evidence",
         secret="test-secret-that-is-long-enough-1234567890",
         queue_page_size=1,
+        demo_mode="legacy",
+        demo_operator_key=TEST_OPERATOR_KEY,
     )
-    with TestClient(create_app(settings)) as client:
+    with TestClient(create_app(settings), base_url="https://legacy.test") as client:
         mission_id = row_id(settings, "SELECT id FROM missions WHERE title = ?", (MISSION_ONE,))
         conn = connect(settings.db_path)
         try:

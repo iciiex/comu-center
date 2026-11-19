@@ -1,0 +1,9 @@
+{% extends 'play_base.html' %}
+{% import 'play_bits.html' as b with context %}
+{% block title %}نتیجهٔ بازی | کیلوس‌پلی{% endblock %}
+{% block content %}
+{{ b.heading('نتیجهٔ ' ~ item.title, item.family ~ ' · ' ~ (item.created_at|playtime), 'trophy','نتیجهٔ ثبت‌شده') }}
+<section class="panel spaced result-panel"><div class="result-lead"><span class="result-medal">{{ b.icon('trophy') }}</span><h2>{{ 'به برنده‌ها تبریک می‌گوییم!' if item.result.winners else 'این دور بدون برنده پایان یافت' }}</h2>{% if item.result.mode %}<p>نوع بازی: {{ word_modes[item.result.mode] }}</p>{% endif %}</div><ul class="ranking-list result-ranks">{% for s in item.result.scores %}<li><span>{{ loop.index|num }}</span>{{ b.avatar(s.avatar) }}<strong>{{ s.name }}{% if s.id in item.result.winners %} {{ b.tag('برنده','gold') }}{% endif %}</strong>{% if s.votes is defined %}<small>{{ s.votes|num }} رأی</small>{% endif %}<b>{{ s.score|num }} امتیاز</b></li>{% endfor %}</ul></section>
+{% if item.result.badges %}<section class="panel spaced block-gap">{{ b.section('نشان‌های تازه','medal') }}<ul class="simple-list">{% for award in item.result.badges %}<li><span class="symbol gold">{{ b.icon(award.icon) }}</span><strong>{{ award.title }}</strong><small>{{ award.name }}</small></li>{% endfor %}</ul></section>{% endif %}
+{% if item.result.log %}<section class="panel spaced block-gap">{{ b.section('پاسخ‌های این بازی','reports') }}<ol class="steps">{% for note in item.result.log %}<li><span>{{ loop.index|num }}</span>{{ note.prompt }} — {{ note.answer }}</li>{% endfor %}</ol></section>{% endif %}
+{% endblock %}

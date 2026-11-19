@@ -34,13 +34,20 @@ def test_generated_agent_docs_are_fresh(capsys) -> None:
     )
 
 
-def test_code_map_lists_exactly_the_routes_the_app_serves(client: TestClient) -> None:
-    """The map reads `app/main.py` statically; this proves it sees what FastAPI serves."""
+def test_code_map_lists_exactly_the_routes_the_app_serves(client: TestClient, play_client) -> None:
+    """Discover route declarations in both the legacy app and the demo mount."""
     documented = {(route.method, route.path) for route in load_tool().build_model().routes}
-    served = {
-        (method, route.path)
-        for route in client.app.routes
-        if getattr(getattr(route, "endpoint", None), "__module__", "") == "app.main"
-        for method in route.methods - {"HEAD", "OPTIONS"}
-    }
+    assert all(route.path != "/play" for route in client.app.routes)
+    mount = next(route for route in play_client.app.routes if route.path == "/play")
+    served = set()
+    for prefix, routes, module in (
+        ("", client.app.routes, "app.main"),
+        (mount.path, mount.app.routes, "app.play"),
+    ):
+        served.update(
+            (method, prefix + route.path)
+            for route in routes
+            if getattr(getattr(route, "endpoint", None), "__module__", "") == module
+            for method in route.methods - {"HEAD", "OPTIONS"}
+        )
     assert documented == served

@@ -1,0 +1,71 @@
+{% macro icon(name, cls='') -%}<svg class="p-icon {{ cls }}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="/static/play-icons.svg#{{ name }}"></use></svg>{%- endmacro %}
+{% macro avatar(name, cls='') -%}<svg class="p-avatar {{ cls }}" aria-hidden="true"><use href="/static/play-icons.svg#{{ name }}"></use></svg>{%- endmacro %}
+{% macro brand(href='/play/') -%}
+<a class="brand" href="{{ href }}"><span class="brand-icon">{{ icon('game') }}<i></i></span><span><strong>کیلوس<span>‌پلی</span></strong><small>باشگاه بازی خانواده</small></span></a>
+{%- endmacro %}
+{% macro demo(with_build=false) -%}
+<div class="demo-bar"><span>{{ icon('flask') }} محیط نمایشی – اطلاعات این محیط واقعی نیست.</span>{% if with_build %}<small><i></i> نسخهٔ آزمایشی</small>{% endif %}</div>
+{%- endmacro %}
+{% macro hidden(action, url='', id='', nonce='') -%}
+<input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="{{ action }}"><input type="hidden" name="return" value="{{ url or here }}">{% if id %}<input type="hidden" name="id" value="{{ id }}">{% endif %}{% if nonce %}<input type="hidden" name="request_id" value="{{ nonce }}">{% endif %}
+{%- endmacro %}
+{% macro empty(title='چیزی برای نمایش نیست', desc='داده‌ای در این بخش ثبت نشده است.', sign='sparkles') -%}
+<div class="empty"><span class="symbol mint">{{ icon(sign) }}</span><strong>{{ title }}</strong><p>{{ desc }}</p></div>
+{%- endmacro %}
+{% macro heading(title, description='', emblem='', kicker='') -%}
+<div class="page-intro"><div>{% if kicker %}<span class="eyebrow">{{ icon(emblem or 'sparkles') }} {{ kicker }}</span>{% endif %}<h1>{{ title }}</h1>{% if description %}<p>{{ description }}</p>{% endif %}</div>{{ caller() if caller is defined }}</div>
+{%- endmacro %}
+{% macro section(title, emblem, href='', label='مشاهدهٔ همه', caption='') -%}
+<div class="section-head"><div><h2>{{ icon(emblem) }} {{ title }}</h2>{% if caption %}<p>{{ caption }}</p>{% endif %}</div>{% if href %}<a class="text-link" href="{{ href }}">{{ label }} {{ icon('arrow-left') }}</a>{% endif %}</div>
+{%- endmacro %}
+{% macro progress(pct, label, cls='') -%}<progress class="meter {{ cls }}" value="{{ pct }}" max="100" aria-label="{{ label }}">{{ pct|num }}٪</progress>{%- endmacro %}
+{% macro tag(label, cls='gray') -%}<span class="tag {{ cls }}">{{ label }}</span>{%- endmacro %}
+{% macro stat(title,value,name,theme='mint',sub='',live='',suffix='') -%}<article class="stat panel"><span class="symbol {{theme}}">{{ icon(name) }}</span><div><div class="muted">{{ title }}</div><strong{% if live=='balance' %} data-balance{% elif live %} data-sales-value="{{ live }}" data-suffix="{{ suffix }}"{% endif %}>{{ value }}{{ suffix }}</strong>{% if sub %}<small>{{ sub }}</small>{% endif %}</div></article>{%- endmacro %}
+{% macro game_card(game) -%}
+{% set g=art[game.key] %}<a class="game-card panel theme-{{ g.color }}" href="/play/family/game/{{ game.key }}">
+  <div class="game-cover"><img src="/static/play-{{ game.key }}.webp" alt="" width="580" height="370"><span class="cover-tag">{{ icon(g.icon) }}{{ g.tag }}</span></div>
+  <div class="game-body"><span class="game-genre">{{ g.genre }}</span><h3>{{ game.title }}</h3><p>{{ game.description }}</p>
+    <div class="game-foot"><span>{{ icon('users') }} {{ game.min_players|num }} تا {{ game.max_players|num }} نفر</span><span class="circle-arrow" aria-label="جزئیات بازی">{{ icon('arrow-left') }}</span></div>
+  </div>
+</a>
+{%- endmacro %}
+{% macro history(items, area) -%}
+{% if items %}<div class="table-scroll"><table><thead><tr><th>بازی</th>{% if area=='admin' %}<th>خانواده</th>{% endif %}<th>زمان</th><th>بازیکنان</th><th>نتیجه</th></tr></thead><tbody>
+{% for item in items %}<tr><td><span class="inline-icon">{{ icon(art[item.game_key].icon) }} {{ item.game }}</span></td>{% if area=='admin' %}<td>{{ item.family }}</td>{% endif %}<td>{{ item.created_at|playtime }}</td><td>{{ item.result.scores|length|num }} نفر</td><td><a class="text-link" href="/play/{{ area }}/result/{{ item.id }}">جزئیات {{ icon('arrow-left') }}</a></td></tr>{% endfor %}</tbody></table></div>
+{% else %}{{ empty('هنوز بازی‌ای ثبت نشده', 'نتیجهٔ بازی‌های تکمیل‌شده اینجا نمایش داده می‌شود.', 'game') }}{% endif %}
+{%- endmacro %}
+{% macro sales_table(items) -%}
+{% if items %}<div class="table-scroll"><table><thead><tr><th>شرح فروش</th><th>تاریخ فروش</th><th>مبلغ به تومان</th><th>وضعیت</th><th>توکن</th></tr></thead><tbody>{% for s in items %}<tr><td><strong>{{ s.note }}</strong>{% if s.campaign %}<small class="table-sub">{{ s.campaign }}</small>{% endif %}</td><td>{{ s.sold_on|playdate }}</td><td>{{ s.amount|num }}</td><td>{{ tag('تأیید شده' if s.approved_at else 'در انتظار تأیید','mint' if s.approved_at else 'gold') }}</td><td>{{ s.token_amount|num if s.approved_at else '—' }}</td></tr>{% endfor %}</tbody></table></div>{% else %}{{ empty('فروشی ثبت نشده','پس از ثبت فروش توسط مدیر، اینجا نمایش داده می‌شود.','chart') }}{% endif %}
+{%- endmacro %}
+{% macro tx_table(items, area, selected='', extra='') -%}
+{% if items %}<div class="table-scroll"><table><thead><tr><th>نوع تراکنش</th>{% if area=='admin' %}<th>خانواده</th>{% endif %}<th>دلیل</th><th>تعداد توکن</th><th>زمان</th><th>جزئیات</th></tr></thead><tbody>
+{% for item in items %}<tr><td>{{ tag(tx_kinds[item.kind], 'mint' if item.amount>0 else 'gold') }}</td>{% if area=='admin' %}<td>{{ item.family }}</td>{% endif %}<td>{{ item.reason }}</td><td><b class="{{ 'positive' if item.amount>0 else 'negative' }}" dir="ltr">{{ '+' if item.amount>0 }}{{ item.amount|num }}</b></td><td class="nowrap">{{ item.created_at|playtime }}</td><td><details class="tx-details" data-tx-id="{{ item.id }}" {{ 'open' if selected and item.id==selected }}><summary aria-label="جزئیات تراکنش">مشاهده</summary><div><small>شناسهٔ تراکنش</small><code dir="ltr">{{ item.id }}</code>{% if area=='admin' %}<small>ثبت‌کننده: {{ item.actor or 'سیستم' }}</small><small>شناسهٔ مرجع</small><code dir="ltr">{{ item.source_id }}</code>{% endif %}</div></details></td></tr>{% endfor %}</tbody></table></div>
+{% else %}{{ empty('تراکنشی پیدا نشد', 'گردش توکن خانواده بعد از ثبت فروش یا ورود به بازی نمایش داده می‌شود.', 'wallet') }}{% endif %}
+{%- endmacro %}
+{% macro mission_cards(items, compact=false) -%}
+<div class="mission-stack">
+{% for item in items %}<article class="mission panel"><span class="symbol {{ 'purple' if loop.index is even else 'gold' }}">{{ icon('target' if loop.index is odd else 'flag') }}</span><div class="mission-main"><h3>{{ item.title }}</h3><p>{{ item.description }}</p>{% if item.campaign %}<small class="muted">کمپین: {{ item.campaign }}</small>{% endif %}<div class="mission-progress">{{ progress(item.percent,'پیشرفت مأموریت') }}<span>{{ [item.progress,item.goal]|min|num }} از {{ item.goal|num }}</span></div></div><div class="mission-action">{{ tag('+' ~ (item.points|num) ~ ' امتیاز','gold') }}{% if item.claimed %}<small class="positive">{{ icon('check') }} دریافت شد</small>{% elif item.ready %}<form method="post" action="/play/action">{{ hidden('claim','',item.id) }}<button class="btn btn-small btn-mint" type="submit">دریافت امتیاز</button></form>{% elif not compact %}<small class="muted">تا {{ item.ends_on|playdate }}</small>{% endif %}</div></article>
+{% else %}{{ empty('مأموریت فعالی ندارید', 'مأموریت‌های تازه در همین بخش ظاهر می‌شوند.', 'target') }}{% endfor %}
+</div>
+{%- endmacro %}
+{% macro member_cards(items) -%}
+<div class="member-grid">{% for m in items %}<article class="panel member-card">{{ avatar(m.avatar,'avatar-large') }}<div><h3>{{ m.name }} {% if m.id==actor.id %}<small class="muted">(شما)</small>{% endif %}</h3><span>{{ 'بازیکن کودک' if m.age=='child' else 'بازیکن بزرگسال' }}</span></div><div class="member-stats"><span>{{ icon('game') }} {{ m.games|num }} بازی</span><span>{{ icon('bolt') }} {{ m.score|num }} امتیاز</span><span>{{ icon('medal') }} {{ m.badges|num }} نشان</span></div></article>{% else %}{{ empty('هنوز بازیکنی اضافه نشده است', 'با یک دعوت‌نامه اولین بازیکن را اضافه کنید.', 'users') }}{% endfor %}</div>
+{%- endmacro %}
+{% macro invite_panel(items, family_id) -%}
+<div class="panel spaced"><div class="section-head"><div><h2>{{ icon('link') }} دعوت‌نامه‌های خانواده</h2><p>لینک یک‌بارمصرف برای ایجاد حساب مستقل، معتبر تا سه روز.</p></div></div>
+<form class="inline-form" method="post" action="/play/action">{{ hidden('invite') }}<input type="hidden" name="family" value="{{ family_id }}"><label><span>گروه سنی دعوت</span><select name="age" aria-label="گروه سنی دعوت"><option value="adult">بزرگسال</option><option value="child">کودک</option></select></label><button class="btn btn-primary" type="submit">{{ icon('plus') }} ساخت دعوت‌نامه</button></form>
+{% if items %}<ul class="simple-list">{% for item in items %}<li><div><strong>{{ 'دعوت کودک' if item.age=='child' else 'دعوت بزرگسال' }}</strong><small>{{ item.expires_at|playtime }}</small></div>{% if item.usable %}<div class="actions"><button type="button" class="btn btn-small btn-mint" data-copy="/play/invitation/{{ item.code }}" data-full-url>{{ icon('copy') }} کپی لینک</button><a href="/play/invitation/{{ item.code }}" class="btn btn-small btn-quiet" target="_blank" rel="noopener">باز کردن</a><form method="post" action="/play/action">{{ hidden('revoke','',item.code) }}<input type="hidden" name="family" value="{{ family_id }}"><button class="btn btn-small btn-quiet" type="submit">لغو</button></form></div>{% else %}{{ tag(('عضو: '~item.used_name) if item.used_name else 'نامعتبر') }}{% endif %}</li>{% endfor %}</ul>{% else %}<p class="muted small-note">هنوز دعوت‌نامه‌ای ثبت نشده است.</p>{% endif %}
+</div>
+{%- endmacro %}
+{% macro profile_form(just_avatars=false) -%}
+<form class="panel spaced profile-form" method="post" action="/play/action">{{ hidden('profile') }}
+{% if not just_avatars %}<div class="profile-lead">{{ avatar(actor.avatar,'avatar-large') }}<div><h2>{{ actor.name }}</h2><p>{{ 'بازیکن کودک' if actor.age=='child' else 'بازیکن بزرگسال' if area=='family' else actor.region or 'مدیر' }}</p></div></div>{% endif %}
+{% if actor.age!='child' and not just_avatars %}<label class="label"><span>نام نمایشی</span><input name="name" value="{{ actor.name }}" required maxlength="55"></label>{% endif %}
+<fieldset class="avatar-picker"><legend>آواتار دلخواه</legend>{% for key,label in avatars.items() %}<label><input type="radio" name="avatar" value="{{ key }}" {{ 'checked' if actor.avatar==key }} required><span>{{ avatar(key,'avatar-medium') }}{{ label }}</span></label>{% endfor %}</fieldset>
+<button class="btn btn-primary" type="submit">{{ icon('check') }} ذخیرهٔ آواتار{{ '' if just_avatars else ' و حساب' }}</button></form>
+{%- endmacro %}
+{% macro notice_panel(items) -%}
+<div class="panel spaced"><div class="section-head"><h2>{{ icon('bell') }} صندوق اعلان‌ها</h2>{% if unread %}<form method="post" action="/play/action">{{ hidden('notices') }}<button class="btn btn-small btn-mint" type="submit">علامت‌زدن همه به‌عنوان خوانده‌شده</button></form>{% endif %}</div>
+{% if items %}<ul class="simple-list">{% for item in items %}<li class="notice-item"><span class="symbol {{ 'mint' if not item.read_at else 'gray' }}">{{ icon('bell') }}</span><div><strong>{{ item.title }}</strong><p>{{ item.message }}</p><small>{{ item.created_at|playtime }}</small></div>{% if not item.read_at %}{{ tag('تازه','mint') }}{% endif %}</li>{% endfor %}</ul>{% else %}{{ empty('اعلان تازه‌ای ندارید', 'خبرهای فروش و تغییرات کیف خانواده اینجا می‌آیند.', 'bell') }}{% endif %}
+</div>
+{%- endmacro %}

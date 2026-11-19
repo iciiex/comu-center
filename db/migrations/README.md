@@ -10,6 +10,9 @@ Prototype policy (MODE: P):
 - Never edit or rename an applied file; add the next number. The runner has no checksums and no
   downgrades: it is a prototype stopgap.
 - `make seed` deletes the database for demo resets.
+- The separate Kilos Play demo opens only its own SQLite file and applies
+  `app/play_migrations/0001_play_demo.sql`; the migration and the in-app Play reset
+  do not touch the original schema. See `docs/engineering/kilos-play.md`.
 - Tables, columns and who reads or writes them: `docs/agent-guide/code-map.md` §5.
   Recipe for a schema change: `docs/agent-guide/02-continue.md`.
 
